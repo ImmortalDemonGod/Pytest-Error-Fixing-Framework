@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>User & Developer Guide - Pytest Error Fixing Framework</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "User \u0026 Developer Guide";
+        var mkdocs_page_input_path = "pytest-fixer-User-\u0026-Developer-Guide.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Pytest Error Fixing Framework
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../DDD-for-pytest-fixer-Concepts-and-Implementation-Guide/">DDD for Pytest Fixer Concepts and Implementation Guide</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Pytest-Fixer-TDD-Blueprint/">Pytest Fixer TDD Blueprint</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Repository-Structure-and-Architecture-Design-Proposal/">Repository Structure and Architecture Design Proposal</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">User & Developer Guide</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#core-architecture">Core Architecture</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#component-structure">Component Structure</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#component-interaction">Component Interaction</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#key-features">Key Features</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#test-processing">Test Processing</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#ai-integration">AI Integration</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#interactive-modes">Interactive Modes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#state-management">State Management</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#git-integration">Git Integration</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#setup">Setup</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#requirements">Requirements</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#installation">Installation</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#configuration">Configuration</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#usage">Usage</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#error-handling">Error Handling</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#error-propagation">Error Propagation</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#recovery-mechanisms">Recovery Mechanisms</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#known-limitations">Known Limitations</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#technical">Technical</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#operational">Operational</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#best-practices">Best Practices</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#support">Support</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Pytest Error Fixing Framework</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">User & Developer Guide</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <p>Here's a cleaned-up version of your document in <strong>pretty Markdown</strong> that maintains all the key features while improving readability and formatting:</p>
+<hr />
+<h1 id="pytest-fixer-documentation"><strong>pytest-fixer Documentation</strong></h1>
+<h2 id="overview"><strong>Overview</strong></h2>
+<p><strong>pytest-fixer</strong> is an AI-powered tool designed to automatically identify and fix failing <code>pytest</code> tests in Python projects. By combining OpenAI's GPT models with intelligent error analysis and Git-based change management, it provides a robust solution for testing automation.</p>
+<hr />
+<h2 id="core-architecture"><strong>Core Architecture</strong></h2>
+<h3 id="component-structure"><strong>Component Structure</strong></h3>
+<ol>
+<li><strong>PytestErrorFixer</strong>  </li>
+<li>Orchestrates all components.  </li>
+<li>
+<p>Manages execution flow, state, initialization, and cleanup.</p>
+</li>
+<li>
+<p><strong>TestRunner</strong>  </p>
+</li>
+<li>Discovers test files matching <code>test_*.py</code>.  </li>
+<li>Executes individual tests or full test suites.  </li>
+<li>
+<p>Captures <code>stdout</code>, <code>stderr</code>, and results as standardized objects.</p>
+</li>
+<li>
+<p><strong>ErrorProcessor</strong>  </p>
+</li>
+<li>Parses <code>pytest</code> output into structured data.  </li>
+<li>Handles test failures, collection errors, and runtime issues.  </li>
+<li>
+<p>Extracts error context and details for fixing.</p>
+</li>
+<li>
+<p><strong>DependencyMapper</strong>  </p>
+</li>
+<li>Analyzes imports and code references.  </li>
+<li>Maps relationships between test and source files.  </li>
+<li>
+<p>Supports both relative and absolute imports.</p>
+</li>
+<li>
+<p><strong>AIManager</strong>  </p>
+</li>
+<li>Manages OpenAI API interactions.  </li>
+<li>Implements a temperature-based retry strategy.  </li>
+<li>
+<p>Constructs prompts and parses AI responses into actionable changes.</p>
+</li>
+<li>
+<p><strong>StateManager</strong>  </p>
+</li>
+<li>Tracks execution progress and state.  </li>
+<li>
+<p>Handles checkpoints, recovery, and logs.</p>
+</li>
+<li>
+<p><strong>ChangeHandler</strong>  </p>
+</li>
+<li>Applies, verifies, and reverts code changes.  </li>
+<li>Manages logs and ensures smooth operations.</li>
+</ol>
+<hr />
+<h3 id="component-interaction"><strong>Component Interaction</strong></h3>
+<pre><code class="language-mermaid">graph TD
+    TestRunner --&gt; ErrorProcessor --&gt; AIManager
+    AIManager --&gt; ChangeHandler
+    ChangeHandler --&gt; StateManager
+    StateManager --&gt; LogStore
+    DependencyMapper --&gt; PytestErrorFixer
+</code></pre>
+<hr />
+<h2 id="key-features"><strong>Key Features</strong></h2>
+<h3 id="test-processing"><strong>Test Processing</strong></h3>
+<ul>
+<li>Automatic test discovery (excludes <code>.venv</code>).  </li>
+<li>Execution of individual test functions or files.  </li>
+<li>Dependency analysis and detailed error extraction.</li>
+</ul>
+<h3 id="ai-integration"><strong>AI Integration</strong></h3>
+<ul>
+<li><strong>OpenAI GPT model integration</strong> with retry mechanism:<br />
+<code>python
+   initial_temperature = 0.4
+   temperature_increment = 0.1
+   max_retries = 3</code></li>
+<li><strong>Context-aware prompt construction</strong>, including:</li>
+<li>Error details and stack traces.  </li>
+<li>Previous attempt history.  </li>
+<li>Code context and dependencies.  </li>
+<li>Test output and logs.</li>
+</ul>
+<h3 id="interactive-modes"><strong>Interactive Modes</strong></h3>
+<p>Operational modes for flexibility:
+- <code>DISABLED</code>: Fully automated.<br />
+- <code>ON_FAILURE</code>: Interactive on failures.<br />
+- <code>ALWAYS</code>: Always interactive.<br />
+- <code>MANUAL</code>: Triggered manually.</p>
+<p>Interactive commands:
+- <code>show</code>: Display errors and changes.<br />
+- <code>edit</code>: Open changes in the default editor.<br />
+- <code>apply</code>: Apply and test changes.<br />
+- <code>retry</code>: Retry with higher temperature.<br />
+- <code>prompt</code>: Modify AI prompt.<br />
+- <code>diff</code>: Show Git differences.<br />
+- <code>history</code>: View change history.<br />
+- <code>quit</code>: Exit without changes.</p>
+<h3 id="state-management"><strong>State Management</strong></h3>
+<ul>
+<li>Tracks session progress and checkpoints.  </li>
+<li>Logs state changes and error progression.</li>
+</ul>
+<h3 id="git-integration"><strong>Git Integration</strong></h3>
+<ul>
+<li>Creates isolated fix branches.  </li>
+<li>Handles branch lifecycle and change management.  </li>
+<li>Enables Git-based reversion and recovery.</li>
+</ul>
+<hr />
+<h2 id="setup"><strong>Setup</strong></h2>
+<h3 id="requirements"><strong>Requirements</strong></h3>
+<pre><code class="language-plaintext">Python 3.8+
+Git
+OpenAI API Key
+pytest
+</code></pre>
+<h3 id="installation"><strong>Installation</strong></h3>
+<pre><code class="language-bash">git clone https://github.com/your-repo/pytest-fixer.git
+cd pytest-fixer
+pip install -r requirements.txt
+</code></pre>
+<h3 id="configuration"><strong>Configuration</strong></h3>
+<p>Create a <code>.env</code> file:</p>
+<pre><code class="language-env">OPENAI_API_KEY=your-api-key
+MODEL_NAME=gpt-4o-mini
+INITIAL_TEMPERATURE=0.4
+TEMPERATURE_INCREMENT=0.1
+MAX_RETRIES=3
+</code></pre>
+<h3 id="usage"><strong>Usage</strong></h3>
+<pre><code class="language-bash">python -m pytest_fixer.main /path/to/project [options]
+
+Options:
+  --initial-temperature FLOAT   Initial AI temperature (default: 0.4)
+  --temperature-increment FLOAT Temperature increment (default: 0.1)
+  --max-retries INT             Maximum fix attempts (default: 3)
+  --model STRING                AI model (default: gpt-4o-mini)
+  --debug                       Enable debug logging
+  --manual-fix                  Enable manual fix mode
+</code></pre>
+<hr />
+<h2 id="error-handling"><strong>Error Handling</strong></h2>
+<h3 id="error-propagation"><strong>Error Propagation</strong></h3>
+<ol>
+<li><strong>Component-level errors</strong>:  </li>
+<li>Managed within components.  </li>
+<li>Errors logged and propagated.  </li>
+<li>
+<p>State preserved when possible.</p>
+</li>
+<li>
+<p><strong>System-level errors</strong>:  </p>
+</li>
+<li>Managed by <code>PytestErrorFixer</code>.  </li>
+<li>Trigger session cleanup while preserving logs.</li>
+</ol>
+<h3 id="recovery-mechanisms"><strong>Recovery Mechanisms</strong></h3>
+<ol>
+<li><strong>State Recovery</strong>:  </li>
+<li>Checkpoint-based restoration.  </li>
+<li>
+<p>Log-based state reconstruction.</p>
+</li>
+<li>
+<p><strong>Change Recovery</strong>:  </p>
+</li>
+<li>Git-based reversion.  </li>
+<li>Preserves logs and session state.</li>
+</ol>
+<hr />
+<h2 id="known-limitations"><strong>Known Limitations</strong></h2>
+<h3 id="technical"><strong>Technical</strong></h3>
+<ul>
+<li>Assumes "main" branch in Git.  </li>
+<li>No parallel test execution.  </li>
+<li>Basic pytest plugin support.  </li>
+<li>OpenAI-specific AI integration.</li>
+</ul>
+<h3 id="operational"><strong>Operational</strong></h3>
+<ul>
+<li>Single-branch workflow.  </li>
+<li>Limited error pattern recognition.  </li>
+<li>No historical learning.</li>
+</ul>
+<hr />
+<h2 id="best-practices"><strong>Best Practices</strong></h2>
+<ol>
+<li><strong>Version Control</strong>:  </li>
+<li>Use a clean working directory.  </li>
+<li>Create dedicated fix branches.  </li>
+<li>
+<p>Review all changes before merging.</p>
+</li>
+<li>
+<p><strong>Configuration</strong>:  </p>
+</li>
+<li>Use default temperatures initially.  </li>
+<li>
+<p>Enable debug mode for investigation.</p>
+</li>
+<li>
+<p><strong>Monitoring</strong>:  </p>
+</li>
+<li>
+<p>Track progress logs and state changes.</p>
+</li>
+<li>
+<p><strong>Troubleshooting</strong>:</p>
+</li>
+<li>Verify API keys, Git permissions, and pytest setup.</li>
+</ol>
+<hr />
+<h2 id="support"><strong>Support</strong></h2>
+<p>For assistance:
+1. Enable debug logging.<br />
+2. Check logs in <code>~/.pytest_fixer/logs</code>.<br />
+3. Include the following in issues:
+   - Error details.<br />
+   - Logs.<br />
+   - Steps to reproduce.<br />
+   - Configuration details.</p>
+<hr />
+<p>This version is streamlined for readability while keeping technical details intact. It uses headings, lists, code blocks, and diagrams for clarity and organization. Let me know if you'd like further tweaks!</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../Repository-Structure-and-Architecture-Design-Proposal/" class="btn btn-neutral float-left" title="Repository Structure and Architecture Design Proposal"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../Repository-Structure-and-Architecture-Design-Proposal/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
