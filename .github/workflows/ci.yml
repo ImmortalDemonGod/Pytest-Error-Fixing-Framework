@@ -23,6 +23,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install .
 
+      - name: Install pytest
+        run: |
+          pip install pytest
+
       - name: Run Tests
         run: |
-          pytest  # Ensure you have pytest configured in your project
+          pytest
