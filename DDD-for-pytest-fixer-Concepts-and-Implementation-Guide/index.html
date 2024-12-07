@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>DDD for Pytest Fixer Concepts and Implementation Guide - Pytest Error Fixing Framework</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "DDD for Pytest Fixer Concepts and Implementation Guide";
+        var mkdocs_page_input_path = "DDD-for-pytest-fixer-Concepts-and-Implementation-Guide.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Pytest Error Fixing Framework
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">DDD for Pytest Fixer Concepts and Implementation Guide</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#table-of-contents">Table of Contents</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#core-ddd-concepts">Core DDD Concepts</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#1-ubiquitous-language">1. Ubiquitous Language</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2-bounded-contexts">2. Bounded Contexts</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#3-aggregates">3. Aggregates</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#1-testerror-aggregate">1. TestError Aggregate</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#2-fixsession-aggregate">2. FixSession Aggregate</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#4-entities">4. Entities</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#1-fixattempt">1. FixAttempt</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#2-testcase">2. TestCase</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#5-value-objects">5. Value Objects</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#6-domain-services">6. Domain Services</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#7-repositories">7. Repositories</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#8-domain-events">8. Domain Events</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#9-application-services">9. Application Services</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#common-ddd-patterns">Common DDD Patterns</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#1-factory-pattern">1. Factory Pattern</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2-specification-pattern">2. Specification Pattern</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#3-anti-corruption-layer">3. Anti-Corruption Layer</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#ddd-best-practices">DDD Best Practices</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#avoiding-common-mistakes">Avoiding Common Mistakes</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#practical-tips-for-pytest-fixer">Practical Tips for pytest-fixer</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#additional-blueprint-aligning-on-goals">Additional Blueprint: Aligning on Goals</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#key-design-principles">Key Design Principles</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#project-structure">Project Structure</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#detailed-implementation">Detailed Implementation</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#domainmodelspy">domain/models.py</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#domaineventspy">domain/events.py</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#domainrepositoriespy">domain/repositories.py</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#domainservicespy">domain/services.py</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#applicationusecasespy">application/usecases.py</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#infrastructureai_managerpy">infrastructure/ai_manager.py</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#infrastructuretest_runnerpy">infrastructure/test_runner.py</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#infrastructurevcs_managerpy">infrastructure/vcs_manager.py</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#infrastructurechange_applierpy">infrastructure/change_applier.py</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#infrastructurerepository_implpy">infrastructure/repository_impl.py</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mainpy-example-entry-point">main.py (Example Entry Point)</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#next-steps">Next Steps</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#visual-enhancements">Visual Enhancements</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Pytest-Fixer-TDD-Blueprint/">Pytest Fixer TDD Blueprint</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Repository-Structure-and-Architecture-Design-Proposal/">Repository Structure and Architecture Design Proposal</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../pytest-fixer-User-%26-Developer-Guide/">User & Developer Guide</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Pytest Error Fixing Framework</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">DDD for Pytest Fixer Concepts and Implementation Guide</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="domain-driven-design-concepts-guide-for-pytest-fixer">Domain-Driven Design Concepts Guide for pytest-fixer</h1>
+<h2 id="introduction">Introduction</h2>
+<p>This guide explains the Domain-Driven Design (DDD) concepts necessary to rebuild <code>pytest-fixer</code>. Each concept is illustrated with concrete examples from our domain.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#core-ddd-concepts">Core DDD Concepts</a></li>
+<li><a href="#1-ubiquitous-language">1. Ubiquitous Language</a></li>
+<li><a href="#2-bounded-contexts">2. Bounded Contexts</a></li>
+<li><a href="#3-aggregates">3. Aggregates</a></li>
+<li><a href="#4-entities">4. Entities</a></li>
+<li><a href="#5-value-objects">5. Value Objects</a></li>
+<li><a href="#6-domain-services">6. Domain Services</a></li>
+<li><a href="#7-repositories">7. Repositories</a></li>
+<li><a href="#8-domain-events">8. Domain Events</a></li>
+<li><a href="#9-application-services">9. Application Services</a></li>
+<li><a href="#common-ddd-patterns">Common DDD Patterns</a></li>
+<li><a href="#1-factory-pattern">1. Factory Pattern</a></li>
+<li><a href="#2-specification-pattern">2. Specification Pattern</a></li>
+<li><a href="#3-anti-corruption-layer">3. Anti-Corruption Layer</a></li>
+<li><a href="#ddd-best-practices">DDD Best Practices</a></li>
+<li><a href="#avoiding-common-mistakes">Avoiding Common Mistakes</a></li>
+<li><a href="#practical-tips-for-pytest-fixer">Practical Tips for pytest-fixer</a></li>
+</ol>
+<hr />
+<h2 id="core-ddd-concepts">Core DDD Concepts</h2>
+<h3 id="1-ubiquitous-language">1. Ubiquitous Language</h3>
+<p>The shared language between developers and domain experts. For <code>pytest-fixer</code>, this includes:</p>
+<ul>
+<li><strong>Test Error</strong>: A failing pytest test that needs fixing</li>
+<li><strong>Fix Attempt</strong>: A single try at fixing a test error</li>
+<li><strong>Fix Generation</strong>: The process of creating a fix</li>
+<li><strong>Verification</strong>: Checking if a fix works</li>
+<li><strong>Code Changes</strong>: Modifications made to fix an error</li>
+</ul>
+<p><strong>Why it matters</strong>: Using consistent terminology prevents confusion and misunderstandings. For example, we always say "fix attempt" rather than "try" or "fix iteration".</p>
+<hr />
+<h3 id="2-bounded-contexts">2. Bounded Contexts</h3>
+<p>Separate domains with their own models and rules. In <code>pytest-fixer</code>:</p>
+<ol>
+<li><strong>Error Analysis Context</strong></li>
+<li>Handles test error parsing and analysis</li>
+<li>Own concept of what an error means</li>
+<li>
+<p>Focuses on error details and classification</p>
+</li>
+<li>
+<p><strong>Fix Generation Context</strong></p>
+</li>
+<li>Handles creating and applying fixes</li>
+<li>Manages AI interaction</li>
+<li>
+<p>Tracks fix attempts and results</p>
+</li>
+<li>
+<p><strong>Test Execution Context</strong></p>
+</li>
+<li>Handles running tests</li>
+<li>Manages test discovery</li>
+<li>
+<p>Processes test results</p>
+</li>
+<li>
+<p><strong>Version Control Context</strong></p>
+</li>
+<li>Manages code changes</li>
+<li>Handles branching strategy</li>
+<li>Controls commit operations</li>
+</ol>
+<p>Each context has its own:
+- Models and rules
+- Interfaces and services
+- Data structures and validation</p>
+<hr />
+<h3 id="3-aggregates">3. Aggregates</h3>
+<p>Clusters of related objects treated as a single unit. Key aggregates in <code>pytest-fixer</code>:</p>
+<h4 id="1-testerror-aggregate">1. TestError Aggregate</h4>
+<pre><code class="language-python">class TestError:  # Aggregate Root
+    id: UUID
+    test_file: Path
+    test_function: str
+    error_details: ErrorDetails  # Value Object
+    location: CodeLocation      # Value Object
+    fix_attempts: List[FixAttempt]  # Child Entity
+    status: FixStatus          # Value Object
+
+    def start_fix_attempt(self, temperature: float) -&gt; FixAttempt:
+        &quot;&quot;&quot;Create and track a new fix attempt&quot;&quot;&quot;
+</code></pre>
+<h4 id="2-fixsession-aggregate">2. FixSession Aggregate</h4>
+<pre><code class="language-python">class FixSession:  # Aggregate Root
+    id: UUID
+    error: TestError
+    current_attempt: Optional[FixAttempt]
+    attempts: List[FixAttempt]
+    status: FixSessionStatus
+</code></pre>
+<p><strong>Rules for Aggregates</strong>:
+- Only reference other aggregates by ID
+- Maintain consistency boundaries
+- Handle transactional requirements</p>
+<hr />
+<h3 id="4-entities">4. Entities</h3>
+<p>Objects with identity that changes over time. Key entities:</p>
+<h4 id="1-fixattempt">1. FixAttempt</h4>
+<pre><code class="language-python">@dataclass
+class FixAttempt:
+    id: UUID
+    error_id: UUID
+    attempt_number: int
+    temperature: float
+    changes: Optional[CodeChanges]
+    status: FixStatus
+</code></pre>
+<h4 id="2-testcase">2. TestCase</h4>
+<pre><code class="language-python">@dataclass
+class TestCase:
+    id: UUID
+    file_path: Path
+    function_name: str
+    source_code: str
+</code></pre>
+<p><strong>Entity characteristics</strong>:
+- Have unique identity
+- Mutable over time
+- Track state changes
+- Maintain history</p>
+<hr />
+<h3 id="5-value-objects">5. Value Objects</h3>
+<p>Immutable objects without identity. Examples:</p>
+<pre><code class="language-python">@dataclass(frozen=True)
+class CodeLocation:
+    file_path: Path
+    line_number: int
+    column: Optional[int] = None
+    function_name: Optional[str] = None
+
+@dataclass(frozen=True)
+class ErrorDetails:
+    error_type: str
+    message: str
+    stack_trace: Optional[str] = None
+    captured_output: Optional[str] = None
+
+@dataclass(frozen=True)
+class CodeChanges:
+    original: str
+    modified: str
+    location: CodeLocation
+    description: Optional[str] = None
+</code></pre>
+<p><strong>Value Object rules</strong>:
+- Immutable
+- No identity
+- Equality based on attributes
+- Self-validating</p>
+<hr />
+<h3 id="6-domain-services">6. Domain Services</h3>
+<p>Services that handle operations not belonging to any entity:</p>
+<pre><code class="language-python">class ErrorAnalysisService:
+    &quot;&quot;&quot;Analyzes test output to create TestError instances&quot;&quot;&quot;
+    def analyze_error(self, test_output: str, test_file: Path) -&gt; TestError:
+        &quot;&quot;&quot;Extract error information from test output&quot;&quot;&quot;
+
+class FixGenerationService:
+    &quot;&quot;&quot;Generates fixes using AI&quot;&quot;&quot;
+    def generate_fix(self, error: TestError, attempt: FixAttempt) -&gt; CodeChanges:
+        &quot;&quot;&quot;Generate a fix for the error&quot;&quot;&quot;
+</code></pre>
+<p><strong>When to use Services</strong>:
+- Operation spans multiple entities
+- Complex domain logic
+- External system integration</p>
+<hr />
+<h3 id="7-repositories">7. Repositories</h3>
+<p>Interfaces for persisting and retrieving aggregates:</p>
+<pre><code class="language-python">class TestErrorRepository(Protocol):
+    def get_by_id(self, error_id: UUID) -&gt; Optional[TestError]:
+        &quot;&quot;&quot;Retrieve a TestError by ID&quot;&quot;&quot;
+
+    def save(self, error: TestError) -&gt; None:
+        &quot;&quot;&quot;Save a TestError&quot;&quot;&quot;
+
+    def get_unfixed_errors(self) -&gt; List[TestError]:
+        &quot;&quot;&quot;Get all unfixed errors&quot;&quot;&quot;
+</code></pre>
+<p><strong>Repository principles</strong>:
+- One repository per aggregate
+- Hide storage details
+- Return fully-loaded aggregates
+- Handle persistence concerns</p>
+<hr />
+<h3 id="8-domain-events">8. Domain Events</h3>
+<p>Notifications of significant changes in the domain:</p>
+<pre><code class="language-python">@dataclass
+class FixAttemptStarted:
+    error_id: UUID
+    attempt_id: UUID
+    timestamp: datetime
+
+@dataclass
+class FixVerificationCompleted:
+    error_id: UUID
+    attempt_id: UUID
+    success: bool
+    verification_output: str
+</code></pre>
+<p><strong>When to use Events</strong>:
+- State changes matter to other contexts
+- Need to maintain audit trail
+- Cross-context communication needed</p>
+<hr />
+<h3 id="9-application-services">9. Application Services</h3>
+<p>Orchestrate the use cases of the application:</p>
+<pre><code class="language-python">class TestFixingApplicationService:
+    def __init__(
+        self,
+        error_analysis: ErrorAnalysisService,
+        fix_generation: FixGenerationService,
+        version_control: VersionControlService,
+        error_repository: TestErrorRepository,
+        event_publisher: EventPublisher
+    ):
+        # Initialize dependencies...
+
+    def attempt_fix(self, error_id: UUID, temperature: float = 0.4) -&gt; FixAttempt:
+        &quot;&quot;&quot;Coordinate the process of attempting a fix&quot;&quot;&quot;
+</code></pre>
+<p><strong>Application Service responsibilities</strong>:
+- Use case orchestration
+- Transaction management
+- Event publishing
+- Error handling</p>
+<hr />
+<h2 id="common-ddd-patterns">Common DDD Patterns</h2>
+<h3 id="1-factory-pattern">1. Factory Pattern</h3>
+<p>Use factories to create complex aggregates:</p>
+<pre><code class="language-python">class TestErrorFactory:
+    def from_test_output(
+        self,
+        test_output: str,
+        test_file: Path,
+        test_function: str
+    ) -&gt; TestError:
+        &quot;&quot;&quot;Create TestError from test output&quot;&quot;&quot;
+</code></pre>
+<hr />
+<h3 id="2-specification-pattern">2. Specification Pattern</h3>
+<p>Express complex queries or validations:</p>
+<pre><code class="language-python">class FixableErrorSpecification:
+    def is_satisfied_by(self, error: TestError) -&gt; bool:
+        &quot;&quot;&quot;Check if error can be fixed&quot;&quot;&quot;
+</code></pre>
+<hr />
+<h3 id="3-anti-corruption-layer">3. Anti-Corruption Layer</h3>
+<p>Protect domain model from external systems:</p>
+<pre><code class="language-python">class AIServiceAdapter:
+    &quot;&quot;&quot;Adapt AI service responses to our domain model&quot;&quot;&quot;
+    def adapt_response(self, ai_response: dict) -&gt; CodeChanges:
+        &quot;&quot;&quot;Convert AI response to domain model&quot;&quot;&quot;
+</code></pre>
+<hr />
+<h2 id="ddd-best-practices">DDD Best Practices</h2>
+<ol>
+<li><strong>Start with Bounded Contexts</strong></li>
+<li>Identify clear boundaries first</li>
+<li>Define context interactions</li>
+<li>
+<p>Document context maps</p>
+</li>
+<li>
+<p><strong>Focus on Behavior</strong></p>
+</li>
+<li>Model behavior, not just data</li>
+<li>Use rich domain models</li>
+<li>
+<p>Encapsulate business rules</p>
+</li>
+<li>
+<p><strong>Use Value Objects</strong></p>
+</li>
+<li>Create immutable value objects</li>
+<li>Validate on creation</li>
+<li>
+<p>Make invalid states unrepresentable</p>
+</li>
+<li>
+<p><strong>Handle Edge Cases</strong></p>
+</li>
+<li>Define error scenarios</li>
+<li>Use domain events</li>
+<li>
+<p>Maintain consistency</p>
+</li>
+<li>
+<p><strong>Test Domain Logic</strong></p>
+</li>
+<li>Unit test aggregates</li>
+<li>Test business rules</li>
+<li>Mock infrastructure</li>
+</ol>
+<hr />
+<h2 id="avoiding-common-mistakes">Avoiding Common Mistakes</h2>
+<ol>
+<li><strong>Anemic Domain Model</strong></li>
+<li>Don't create data-only classes</li>
+<li>Include business logic</li>
+<li>
+<p>Use rich behavior</p>
+</li>
+<li>
+<p><strong>Leaky Abstractions</strong></p>
+</li>
+<li>Keep infrastructure out of domain</li>
+<li>Use clean interfaces</li>
+<li>
+<p>Maintain boundaries</p>
+</li>
+<li>
+<p><strong>Missing Events</strong></p>
+</li>
+<li>Use events for important changes</li>
+<li>Track state transitions</li>
+<li>
+<p>Maintain audit trail</p>
+</li>
+<li>
+<p><strong>Complex Aggregates</strong></p>
+</li>
+<li>Keep aggregates focused</li>
+<li>Use proper boundaries</li>
+<li>Split if too complex</li>
+</ol>
+<hr />
+<h2 id="practical-tips-for-pytest-fixer">Practical Tips for pytest-fixer</h2>
+<ol>
+<li><strong>Start with Core Domain Model (TestError)</strong></li>
+<li><strong>Add Behavior Incrementally</strong></li>
+<li><strong>Use Events for Tracking</strong></li>
+<li><strong>Keep Interfaces Clean</strong></li>
+<li><strong>Test Domain Logic Thoroughly</strong></li>
+</ol>
+<hr />
+<h2 id="additional-blueprint-aligning-on-goals">Additional Blueprint: Aligning on Goals</h2>
+<p>🧙🏾‍♂️: Below is a cohesive, from-scratch rewrite that combines the strengths of previous approaches into a cleaner, domain-driven, and modular architecture. It clarifies domain logic, separates concerns, and provides a strong foundation for future extensions. This blueprint focuses on core functionality: discovering test errors, generating fixes using AI (via a hypothetical <code>AIManager</code> or <code>Coder</code>), applying changes, verifying them, and persisting state. It employs DDD patterns, a clear layering approach, and sets up a workable starting point.</p>
+<h3 id="key-design-principles">Key Design Principles</h3>
+<ol>
+<li><strong>Domain-Driven Design (DDD)</strong></li>
+<li><strong>Domain Model</strong>: Defines <code>TestError</code>, <code>FixAttempt</code>, <code>ErrorDetails</code>, and related entities as the heart of the domain.</li>
+<li><strong>Value Objects</strong>: <code>CodeLocation</code>, <code>CodeChanges</code> are immutable and model specific domain concepts clearly.</li>
+<li><strong>Repositories</strong>: Abstract away persistence details behind interfaces.</li>
+<li>
+<p><strong>Domain Services</strong>: Provide business logic that doesn't belong inside entities.</p>
+</li>
+<li>
+<p><strong>Clean Architecture Layers</strong></p>
+</li>
+<li><strong>Domain (Core)</strong>: Entities, Value Objects, Domain Services, Repository Interfaces.</li>
+<li><strong>Application</strong>: Orchestrates use cases, coordinates domain objects, and triggers domain services.</li>
+<li>
+<p><strong>Infrastructure</strong>: Implementation details like Git-based repository, AI integration, running <code>pytest</code>, file I/O.</p>
+</li>
+<li>
+<p><strong>Events &amp; Extensibility</strong></p>
+</li>
+<li>Define domain events minimally for the starting point.</li>
+<li>
+<p>Events can be published to other interested parties (e.g., logging, analytics, asynchronous pipelines).</p>
+</li>
+<li>
+<p><strong>Testing &amp; Configuration</strong></p>
+</li>
+<li>Testing can be added incrementally.</li>
+<li>Configuration handled through environment variables or a config file.</li>
+<li>Placeholders for integration points (<code>AIManager</code>, <code>TestRunner</code>, <code>VCSManager</code>) to be implemented concretely later.</li>
+</ol>
+<h3 id="project-structure">Project Structure</h3>
+<pre><code>pytest_fixer/
+├── domain/
+│   ├── models.py        # Entities, Value Objects
+│   ├── events.py        # Domain events
+│   ├── repositories.py  # Repository interfaces
+│   ├── services.py      # Domain services (e.g., ErrorAnalysis)
+│   └── __init__.py
+├── application/
+│   ├── usecases.py      # Application services (Use cases)
+│   ├── dto.py           # Data Transfer Objects if needed
+│   └── __init__.py
+├── infrastructure/
+│   ├── ai_manager.py     # AI integration (fix generation)
+│   ├── test_runner.py    # Pytest integration
+│   ├── vcs_manager.py    # Git operations
+│   ├── repository_impl.py# Git or file-based repository implementation
+│   ├── change_applier.py # Applying and reverting code changes
+│   └── __init__.py
+└── main.py
+</code></pre>
+<hr />
+<h3 id="detailed-implementation">Detailed Implementation</h3>
+<h4 id="domainmodelspy"><code>domain/models.py</code></h4>
+<pre><code class="language-python">from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from typing import List, Optional
+from uuid import UUID, uuid4
+
+@dataclass(frozen=True)
+class CodeLocation:
+    file_path: Path
+    line_number: int
+    column: Optional[int] = None
+    function_name: Optional[str] = None
+
+@dataclass(frozen=True)
+class ErrorDetails:
+    error_type: str
+    message: str
+    stack_trace: Optional[str] = None
+    captured_output: Optional[str] = None
+
+@dataclass(frozen=True)
+class CodeChanges:
+    original: str
+    modified: str
+    description: Optional[str] = None
+
+@dataclass
+class FixAttempt:
+    id: UUID = field(default_factory=uuid4)
+    error_id: UUID = field(default_factory=uuid4)
+    attempt_number: int = 1
+    temperature: float = 0.4
+    changes: Optional[CodeChanges] = None
+    status: str = &quot;pending&quot;
+    started_at: datetime = field(default_factory=datetime.utcnow)
+    completed_at: Optional[datetime] = None
+
+    def mark_success(self, changes: CodeChanges):
+        self.changes = changes
+        self.status = &quot;success&quot;
+        self.completed_at = datetime.utcnow()
+
+    def mark_failure(self):
+        self.status = &quot;failed&quot;
+        self.completed_at = datetime.utcnow()
+
+@dataclass
+class TestError:
+    id: UUID = field(default_factory=uuid4)
+    test_file: Path = field(default_factory=Path)
+    test_function: str = &quot;&quot;
+    error_details: ErrorDetails = field(default_factory=ErrorDetails)
+    location: CodeLocation = field(default_factory=lambda: CodeLocation(Path(&quot;.&quot;), 0))
+    fix_attempts: List[FixAttempt] = field(default_factory=list)
+    status: str = &quot;unfixed&quot;
+
+    def start_fix_attempt(self, temperature: float) -&gt; FixAttempt:
+        attempt = FixAttempt(
+            error_id=self.id,
+            attempt_number=len(self.fix_attempts) + 1,
+            temperature=temperature
+        )
+        self.fix_attempts.append(attempt)
+        return attempt
+
+    def mark_fixed(self, attempt: FixAttempt):
+        attempt.status = &quot;success&quot;
+        self.status = &quot;fixed&quot;
+
+    def mark_attempt_failed(self, attempt: FixAttempt):
+        attempt.mark_failure()
+
+    def can_attempt_fix(self) -&gt; bool:
+        return self.status == &quot;unfixed&quot;
+</code></pre>
+<hr />
+<h4 id="domaineventspy"><code>domain/events.py</code></h4>
+<pre><code class="language-python">from dataclasses import dataclass
+from datetime import datetime
+from uuid import UUID
+
+@dataclass
+class FixAttemptStarted:
+    error_id: UUID
+    attempt_id: UUID
+    timestamp: datetime
+
+@dataclass
+class FixAttemptCompleted:
+    error_id: UUID
+    attempt_id: UUID
+    success: bool
+    timestamp: datetime
+</code></pre>
+<hr />
+<h4 id="domainrepositoriespy"><code>domain/repositories.py</code></h4>
+<pre><code class="language-python">from abc import ABC, abstractmethod
+from typing import Optional, List
+from uuid import UUID
+
+from .models import TestError
+
+class TestErrorRepository(ABC):
+    @abstractmethod
+    def get_by_id(self, error_id: UUID) -&gt; Optional[TestError]:
+        pass
+
+    @abstractmethod
+    def save(self, error: TestError) -&gt; None:
+        pass
+
+    @abstractmethod
+    def get_unfixed_errors(self) -&gt; List[TestError]:
+        pass
+</code></pre>
+<hr />
+<h4 id="domainservicespy"><code>domain/services.py</code></h4>
+<pre><code class="language-python">import re
+from pathlib import Path
+from typing import Optional, List
+from .models import ErrorDetails, TestError, CodeLocation
+
+class ErrorAnalysisService:
+    def analyze_errors(self, test_output: str) -&gt; Optional[List[TestError]]:
+        # Basic regex-based approach to find failing tests:
+        # Placeholder: Real logic might integrate directly with pytest APIs.
+        pattern = r&quot;(.*?::(.*?) FAILED (.*)\n([\s\S]*?)(?=\n\n|$))&quot;
+        matches = re.finditer(pattern, test_output)
+        errors = []
+        for m in matches:
+            file_path, test_func, err_type, details = m.groups()
+            location = CodeLocation(Path(file_path), 0)
+            err_details = ErrorDetails(
+                error_type=err_type.strip(),
+                message=details.strip(),
+                stack_trace=details
+            )
+            errors.append(TestError(
+                test_file=Path(file_path),
+                test_function=test_func,
+                error_details=err_details,
+                location=location
+            ))
+        return errors if errors else None
+</code></pre>
+<hr />
+<h4 id="applicationusecasespy"><code>application/usecases.py</code></h4>
+<pre><code class="language-python">from typing import Optional
+from uuid import UUID
+
+from ..domain.models import TestError
+from ..domain.repositories import TestErrorRepository
+from ..infrastructure.ai_manager import AIManager
+from ..infrastructure.test_runner import TestRunner
+from ..infrastructure.vcs_manager import VCSManager
+from ..infrastructure.change_applier import ChangeApplier
+
+class TestFixingService:
+    def __init__(
+        self,
+        error_repo: TestErrorRepository,
+        ai_manager: AIManager,
+        test_runner: TestRunner,
+        vcs_manager: VCSManager,
+        change_applier: ChangeApplier,
+        initial_temp: float = 0.4,
+        temp_increment: float = 0.1,
+        max_retries: int = 3
+    ):
+        self.error_repo = error_repo
+        self.ai_manager = ai_manager
+        self.test_runner = test_runner
+        self.vcs = vcs_manager
+        self.change_applier = change_applier
+        self.initial_temp = initial_temp
+        self.temp_increment = temp_increment
+        self.max_retries = max_retries
+
+    def discover_and_record_errors(self) -&gt; None:
+        stdout, stderr = self.test_runner.run_all_tests()
+        analysis_service = self.test_runner.get_analysis_service()
+        errors = analysis_service.analyze_errors(stdout + stderr)
+        if not errors:
+            return
+        for e in errors:
+            self.error_repo.save(e)
+
+    def attempt_fix(self, error_id: UUID) -&gt; bool:
+        error = self.error_repo.get_by_id(error_id)
+        if not error or not error.can_attempt_fix():
+            return False
+
+        temperature = self.initial_temp
+        for _ in range(self.max_retries):
+            attempt = error.start_fix_attempt(temperature)
+            # Generate fix
+            changes = self.ai_manager.generate_fix(error, temperature)
+            if not changes:
+                # No fix generated, increase temp and continue
+                error.mark_attempt_failed(attempt)
+                temperature += self.temp_increment
+                continue
+
+            # Apply changes
+            self.change_applier.apply(changes, error.location)
+
+            # Verify fix
+            passed = self.test_runner.run_test_and_check(
+                error.test_file, error.test_function
+            )
+
+            if passed:
+                # Commit changes to VCS
+                self.vcs.commit_changes(f&quot;Fix {error.test_file}:{error.test_function}&quot;)
+                attempt.mark_success(changes)
+                error.mark_fixed(attempt)
+                self.error_repo.save(error)
+                return True
+            else:
+                # Revert changes and mark attempt failed
+                self.change_applier.revert()
+                error.mark_attempt_failed(attempt)
+                self.error_repo.save(error)
+                temperature += self.temp_increment
+
+        # No success after max retries
+        self.error_repo.save(error)
+        return False
+</code></pre>
+<hr />
+<h4 id="infrastructureai_managerpy"><code>infrastructure/ai_manager.py</code></h4>
+<pre><code class="language-python">from typing import Optional
+from ..domain.models import TestError, CodeChanges
+
+class AIManager:
+    def __init__(self, model_name: str = &quot;gpt-4&quot;):
+        self.model_name = model_name
+
+    def generate_fix(self, error: TestError, temperature: float) -&gt; Optional[CodeChanges]:
+        # Placeholder logic - integrate with OpenAI or Aider coder
+        # Construct a prompt from error details
+        prompt = f&quot;Fix this test error:\n{error.error_details.message}&quot;
+        # Here you'd call the AI API or Aider coder to get a changed version of the file
+        # For demonstration, let's pretend we got a changed file content:
+        modified = error.location.file_path.read_text().replace(&quot;bug&quot;, &quot;fix&quot;)
+        original = error.location.file_path.read_text()
+        return CodeChanges(original=original, modified=modified, description=&quot;AI suggested fix&quot;)
+</code></pre>
+<hr />
+<h4 id="infrastructuretest_runnerpy"><code>infrastructure/test_runner.py</code></h4>
+<pre><code class="language-python">from typing import Tuple
+from .ai_manager import AIManager
+from ..domain.services import ErrorAnalysisService
+from pathlib import Path
+import subprocess
+
+class TestRunner:
+    def __init__(self, project_dir: Path):
+        self.project_dir = project_dir
+        self.analysis_service = ErrorAnalysisService()
+
+    def run_all_tests(self) -&gt; Tuple[str, str]:
+        cmd = [&quot;pytest&quot;, &quot;-v&quot;]
+        result = subprocess.run(cmd, cwd=self.project_dir, capture_output=True, text=True)
+        return result.stdout, result.stderr
+
+    def run_test_and_check(self, test_file: Path, test_function: str) -&gt; bool:
+        cmd = [&quot;pytest&quot;, &quot;-q&quot;, f&quot;{test_file}::{test_function}&quot;]
+        result = subprocess.run(cmd, cwd=self.project_dir, capture_output=True, text=True)
+        # If it returns 0 and '1 passed' is in stdout, we consider it passed
+        return (result.returncode == 0 and &quot;1 passed&quot; in result.stdout.lower())
+
+    def get_analysis_service(self) -&gt; ErrorAnalysisService:
+        return self.analysis_service
+</code></pre>
+<hr />
+<h4 id="infrastructurevcs_managerpy"><code>infrastructure/vcs_manager.py</code></h4>
+<pre><code class="language-python">import subprocess
+from pathlib import Path
+
+class VCSManager:
+    def __init__(self, project_dir: Path):
+        self.project_dir = project_dir
+
+    def commit_changes(self, message: str):
+        subprocess.run([&quot;git&quot;, &quot;add&quot;, &quot;.&quot;], cwd=self.project_dir, check=True)
+        subprocess.run([&quot;git&quot;, &quot;commit&quot;, &quot;-m&quot;, message], cwd=self.project_dir, check=True)
+</code></pre>
+<hr />
+<h4 id="infrastructurechange_applierpy"><code>infrastructure/change_applier.py</code></h4>
+<pre><code class="language-python">from ..domain.models import CodeChanges, CodeLocation
+
+class ChangeApplier:
+    def __init__(self):
+        self.backup_content = None
+        self.target_file = None
+
+    def apply(self, changes: CodeChanges, location: CodeLocation):
+        self.target_file = location.file_path
+        self.backup_content = self.target_file.read_text()
+        self.target_file.write_text(changes.modified)
+
+    def revert(self):
+        if self.target_file and self.backup_content is not None:
+            self.target_file.write_text(self.backup_content)
+</code></pre>
+<hr />
+<h4 id="infrastructurerepository_implpy"><code>infrastructure/repository_impl.py</code></h4>
+<pre><code class="language-python">from uuid import UUID
+from typing import Optional, List
+from pathlib import Path
+import json
+
+from ..domain.models import TestError
+from ..domain.repositories import TestErrorRepository
+
+class FileBasedTestErrorRepository(TestErrorRepository):
+    &quot;&quot;&quot;Simple file-based repository using JSON to store errors.&quot;&quot;&quot;
+    def __init__(self, storage_path: Path):
+        self.storage_path = storage_path
+        self.storage_path.mkdir(parents=True, exist_ok=True)
+
+    def _get_error_file(self, error_id: UUID) -&gt; Path:
+        return self.storage_path / f&quot;{error_id}.json&quot;
+
+    def get_by_id(self, error_id: UUID) -&gt; Optional[TestError]:
+        f = self._get_error_file(error_id)
+        if not f.exists():
+            return None
+        data = json.loads(f.read_text())
+        return self._deserialize_testerror(data)
+
+    def save(self, error: TestError) -&gt; None:
+        f = self._get_error_file(error.id)
+        f.write_text(json.dumps(self._serialize_testerror(error), indent=2))
+
+    def get_unfixed_errors(self) -&gt; List[TestError]:
+        errors = []
+        for f in self.storage_path.glob(&quot;*.json&quot;):
+            data = json.loads(f.read_text())
+            err = self._deserialize_testerror(data)
+            if err.status == &quot;unfixed&quot;:
+                errors.append(err)
+        return errors
+
+    def _serialize_testerror(self, error: TestError) -&gt; dict:
+        return {
+            &quot;id&quot;: str(error.id),
+            &quot;test_file&quot;: str(error.test_file),
+            &quot;test_function&quot;: error.test_function,
+            &quot;status&quot;: error.status,
+            &quot;error_details&quot;: {
+                &quot;error_type&quot;: error.error_details.error_type,
+                &quot;message&quot;: error.error_details.message,
+                &quot;stack_trace&quot;: error.error_details.stack_trace,
+                &quot;captured_output&quot;: error.error_details.captured_output
+            },
+            &quot;location&quot;: {
+                &quot;file_path&quot;: str(error.location.file_path),
+                &quot;line_number&quot;: error.location.line_number,
+                &quot;column&quot;: error.location.column
+            },
+            &quot;fix_attempts&quot;: [
+                {
+                    &quot;id&quot;: str(a.id),
+                    &quot;error_id&quot;: str(a.error_id),
+                    &quot;attempt_number&quot;: a.attempt_number,
+                    &quot;temperature&quot;: a.temperature,
+                    &quot;status&quot;: a.status,
+                    &quot;started_at&quot;: a.started_at.isoformat(),
+                    &quot;completed_at&quot;: a.completed_at.isoformat() if a.completed_at else None,
+                    &quot;changes&quot;: {
+                        &quot;original&quot;: a.changes.original if a.changes else None,
+                        &quot;modified&quot;: a.changes.modified if a.changes else None,
+                        &quot;description&quot;: a.changes.description if a.changes else None
+                    } if a.changes else None
+                } for a in error.fix_attempts
+            ]
+        }
+
+    def _deserialize_testerror(self, data: dict) -&gt; TestError:
+        from datetime import datetime
+        from uuid import UUID
+        from ..domain.models import ErrorDetails, CodeLocation, CodeChanges, FixAttempt, TestError
+        fix_attempts = []
+        for a in data.get(&quot;fix_attempts&quot;, []):
+            changes = a[&quot;changes&quot;]
+            fix_attempts.append(FixAttempt(
+                id=UUID(a[&quot;id&quot;]),
+                error_id=UUID(a[&quot;error_id&quot;]),
+                attempt_number=a[&quot;attempt_number&quot;],
+                temperature=a[&quot;temperature&quot;],
+                status=a[&quot;status&quot;],
+                started_at=datetime.fromisoformat(a[&quot;started_at&quot;]),
+                completed_at=datetime.fromisoformat(a[&quot;completed_at&quot;]) if a[&quot;completed_at&quot;] else None,
+                changes=CodeChanges(**changes) if changes and changes[&quot;original&quot;] else None
+            ))
+
+        return TestError(
+            id=UUID(data[&quot;id&quot;]),
+            test_file=Path(data[&quot;test_file&quot;]),
+            test_function=data[&quot;test_function&quot;],
+            status=data[&quot;status&quot;],
+            error_details=ErrorDetails(**data[&quot;error_details&quot;]),
+            location=CodeLocation(
+                Path(data[&quot;location&quot;][&quot;file_path&quot;]),
+                data[&quot;location&quot;][&quot;line_number&quot;],
+                data[&quot;location&quot;][&quot;column&quot;]
+            ),
+            fix_attempts=fix_attempts
+        )
+</code></pre>
+<hr />
+<h4 id="mainpy-example-entry-point"><code>main.py</code> (Example Entry Point)</h4>
+<pre><code class="language-python">import sys
+from pathlib import Path
+from uuid import UUID
+
+from pytest_fixer.domain.repositories import TestErrorRepository
+from pytest_fixer.infrastructure.repository_impl import FileBasedTestErrorRepository
+from pytest_fixer.infrastructure.ai_manager import AIManager
+from pytest_fixer.infrastructure.test_runner import TestRunner
+from pytest_fixer.infrastructure.vcs_manager import VCSManager
+from pytest_fixer.infrastructure.change_applier import ChangeApplier
+from pytest_fixer.application.usecases import TestFixingService
+
+def main():
+    project_dir = Path(&quot;.&quot;)
+    storage_path = project_dir / &quot;.pytest_fixer_storage&quot;
+    error_repo: TestErrorRepository = FileBasedTestErrorRepository(storage_path)
+    ai_manager = AIManager(model_name=&quot;gpt-4&quot;)
+    test_runner = TestRunner(project_dir)
+    vcs_manager = VCSManager(project_dir)
+    change_applier = ChangeApplier()
+
+    service = TestFixingService(
+        error_repo=error_repo,
+        ai_manager=ai_manager,
+        test_runner=test_runner,
+        vcs_manager=vcs_manager,
+        change_applier=change_applier,
+        initial_temp=0.4,
+        temp_increment=0.1,
+        max_retries=3
+    )
+
+    # Discover new errors
+    service.discover_and_record_errors()
+
+    # Attempt fix on all unfixed errors
+    unfixed = error_repo.get_unfixed_errors()
+    for err in unfixed:
+        print(f&quot;Attempting to fix error {err.id} in {err.test_file}:{err.test_function}&quot;)
+        success = service.attempt_fix(err.id)
+        if success:
+            print(f&quot;Error {err.id} fixed!&quot;)
+        else:
+            print(f&quot;Failed to fix error {err.id}&quot;)
+
+if __name__ == &quot;__main__&quot;:
+    main()
+</code></pre>
+<hr />
+<h3 id="next-steps">Next Steps</h3>
+<ul>
+<li><strong>Add Tests</strong>: Unit tests for domain models, application services, and repositories.</li>
+<li><strong>Robust Error Analysis</strong>: Improve parsing logic to handle real pytest output.</li>
+<li><strong>Real AI Integration</strong>: Implement <code>AIManager</code> to communicate with OpenAI or a local LLM.</li>
+<li><strong>Enhanced Verification</strong>: Capture test output logs, enable incremental verification, and implement more robust revert strategies.</li>
+<li><strong>Event Handling</strong>: Integrate event dispatchers or log all domain events as needed.</li>
+<li><strong>Configuration &amp; Logging</strong>: Integrate a configuration file or environment variables and a structured logging solution.</li>
+</ul>
+<hr />
+<p>This setup is cleaner, better modularized, and follows best practices by combining a domain-driven structure with a clear separation of concerns. It enhances maintainability and extensibility, providing a solid foundation that can be refined and expanded as the project’s complexity grows.</p>
+<hr />
+<h2 id="visual-enhancements">Visual Enhancements</h2>
+<p>To further enhance the readability and visual appeal of your Markdown document, consider the following tips:</p>
+<ul>
+<li><strong>Consistent Heading Levels</strong>: Ensure that heading levels (<code>#</code>, <code>##</code>, <code>###</code>, etc.) are used consistently to represent the document structure.</li>
+<li><strong>Code Blocks</strong>: Use triple backticks (```) for code blocks with proper syntax highlighting by specifying the language (e.g., ```python).</li>
+<li><strong>Lists and Indentation</strong>: Use bullet points or numbered lists to organize information clearly.</li>
+<li><strong>Bold and Italics</strong>: Highlight key terms and important points using <strong>bold</strong> or <em>italics</em>.</li>
+<li><strong>Tables</strong>: For comparing options or presenting structured data, use Markdown tables.</li>
+<li><strong>Spacing</strong>: Add blank lines between sections and elements to prevent clutter and improve readability.</li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href=".." class="btn btn-neutral float-left" title="Home"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../Pytest-Fixer-TDD-Blueprint/" class="btn btn-neutral float-right" title="Pytest Fixer TDD Blueprint">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href=".." style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../Pytest-Fixer-TDD-Blueprint/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
