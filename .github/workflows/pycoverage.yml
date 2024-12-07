@@ -29,9 +29,9 @@ jobs:
         with:
           requirements-file: requirements.txt
           pytest-root-dir: .
-          coverage-badge-path: badges/coverage.svg
-          commit-badge: true
-          coverage-comment: true
+          output: badges/coverage.svg
+          commit_badge: true
+          coverage_comment: true
 
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v3
