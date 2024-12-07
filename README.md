@@ -1,3 +1,5 @@
 # Pytest-Error-Fixing-Framework
  
-[![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://ImmortalDemonGod.github.io/Pytest-Error-Fixing-Framework/)
+[![Documentation Status](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/actions/workflows/deploy.yml/badge.svg)](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/actions/workflows/deploy.yml)
+
+[![Test Status](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/actions/workflows/test.yml/badge.svg)](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/actions/workflows/test.yml)
