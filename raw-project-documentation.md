@@ -1,159 +1,602 @@
-# Repository Structure and Architecture Design Proposal
+# pytest-fixer Documentation
 
-This document outlines the proposed repository structure for the `pytest_fixer` project, aligning with Domain-Driven Design (DDD) and Clean Architecture principles. It includes recommendations for optimizing the structure for maintainability, scalability, and clarity.
+## Overview
 
-## Proposed Repository Structure
+pytest-fixer is an AI-powered tool that automatically identifies and fixes failing pytest tests in Python projects. It combines OpenAI's GPT models with intelligent error analysis and Git-based change management to provide a robust testing automation solution.
 
+## Core Architecture
+
+### Component Structure
+1. **PytestErrorFixer**
+   - Main orchestrator coordinating all components
+   - Manages execution flow and state
+   - Handles component initialization and cleanup
+
+2. **TestRunner**
+   - Discovers test files matching `test_*.py`
+   - Executes individual tests or full suites
+   - Captures stdout, stderr, and results
+   - Provides standardized test result objects
+
+3. **ErrorProcessor**
+   - Parses pytest output into structured data
+   - Handles test failures, collection errors, runtime errors
+   - Extracts context and error details
+   - Manages error state through fixing process
+
+4. **DependencyMapper**
+   - Analyzes imports and code references
+   - Maps relationships between test and source files
+   - Handles both direct and convention-based mappings
+   - Supports relative and absolute imports
+
+5. **AIManager**
+   - Manages OpenAI API interactions
+   - Implements temperature-based retry strategy
+   - Constructs and manages prompts
+   - Parses AI responses into actionable changes
+
+6. **StateManager**
+   - Tracks execution progress
+   - Manages checkpoints and recovery
+   - Coordinates with LogStore
+   - Handles session state
+
+7. **ChangeHandler**
+   - Applies code modifications
+   - Manages change verification
+   - Handles reversions
+   - Preserves logs during operations
+
+### Component Interaction
 ```
-pytest_fixer/
-├── domain/
-│   ├── models.py        # Entities, Value Objects
-│   ├── events.py        # Domain events
-│   ├── repositories.py  # Repository interfaces
-│   ├── services.py      # Domain services (e.g., ErrorAnalysisService)
-│   └── __init__.py
-├── application/
-│   ├── usecases.py      # Application services (Use cases)
-│   ├── dto.py           # Data Transfer Objects, if needed
-│   └── __init__.py
-├── infrastructure/
-│   ├── ai_manager.py     # AI integration (fix generation)
-│   ├── test_runner.py    # Pytest integration
-│   ├── vcs_manager.py    # Git operations
-│   ├── repository_impl.py# Repository implementations
-│   ├── change_applier.py # Applying and reverting code changes
-│   └── __init__.py
-├── tests/
-│   ├── test_domain_models.py
-│   ├── test_error_analysis_service.py
-│   ├── test_application_usecases.py
-│   ├── test_integration.py
-│   └── __init__.py
-├── config/
-│   ├── settings.py      # Configuration settings
-│   └── __init__.py
-├── scripts/
-│   ├── setup_env.sh     # Environment setup script
-│   └── migrate.py       # Database migration script, if needed
-├── docs/
-│   ├── architecture.md  # Architectural documentation
-│   └── user_guide.md    # User guide and tutorials
-├── requirements.txt
-├── setup.py
-├── main.py
-├── README.md
-└── .github/
-    └── workflows/
-        └── ci.yml       # Continuous Integration configuration
+TestRunner → ErrorProcessor → AIManager
+     ↑            ↓             ↓
+StateManager ← ChangeHandler ← LogStore
+     ↓            ↑
+DependencyMapper → PytestErrorFixer
 ```
 
-## Layered Structure
+## Key Features
 
-1. **Domain Layer**
-   - **Core business logic:** Entities, value objects, domain services, and repository interfaces.
-   - **Contains files like:** `models.py`, `services.py`, and `repositories.py`.
+### Test Processing
+- Automatic test discovery with `.venv` exclusion
+- Individual test function or file execution
+- Output and error capture
+- Dependency analysis and mapping
+- Comprehensive error detail extraction
 
-2. **Application Layer**
-   - **Manages use cases and coordinates between the domain and infrastructure layers.**
-   - **Contains files like:** `usecases.py` and `dto.py`.
-
-3. **Infrastructure Layer**
-   - **Implements functionalities such as AI integration, test running, and version control.**
-   - **Contains files like:** `ai_manager.py`, `test_runner.py`, and `vcs_manager.py`.
-
-4. **Tests Directory**
-   - **Organized to ensure comprehensive test coverage for all layers.**
-
-## Recommendations
-
-### 1. Separate Concerns Clearly
-
-- **Keep the domain, application, and infrastructure layers distinct.**
-- **Maintain test files corresponding to each layer in the `tests/` directory.**
-
-### 2. Add a `config` Module
-
-- **Use a dedicated `config/` directory for environment settings and configurations.**
-  
-  **Example:**
-  
+### AI Integration
+- OpenAI GPT model integration
+- Smart retry mechanism:
+  ```python
+  initial_temperature = 0.4
+  temperature_increment = 0.1
+  max_retries = 3
   ```
-  pytest_fixer/
-  ├── config/
-  │   ├── settings.py      # Configuration settings
-  │   └── __init__.py
-  ```
+- Context-aware prompt construction:
+  - Error details and stack traces
+  - Previous attempt history
+  - Code context and dependencies
+  - Test output and logs
 
-### 3. Logging Setup
+### Interactive Mode
+Four operational modes:
+- `DISABLED`: Fully automated operation
+- `ON_FAILURE`: Interactive after failed attempts
+- `ALWAYS`: Interactive for all fixes
+- `MANUAL`: Only when explicitly triggered
 
-- **Include a `logger.py` file in the `infrastructure/` layer for centralized logging.**
-  
-  **Example:**
-  
-  ```
-  infrastructure/
-  ├── logger.py           # Logging setup
-  ```
+Interactive commands:
+```
+show    - Display current error and changes
+edit    - Edit changes in default editor
+apply   - Apply and test changes
+retry   - Retry with higher temperature
+prompt  - Modify AI prompt
+diff    - Show git differences
+history - View change history
+quit    - Exit without changes
+```
 
-### 4. Scripts and Utilities
+### State Management
+- Session state tracking
+- Checkpoint creation and restoration
+- Error state progression monitoring
+- Change history tracking
+- Log persistence
 
-- **Add a `scripts/` directory for utility scripts like migrations and environment setup.**
-  
-  **Example:**
-  
-  ```
-  pytest_fixer/
-  ├── scripts/
-  │   ├── setup_env.sh      # Environment setup script
-  │   └── migrate.py        # Database migration script
-  ```
+### Git Integration
+- Isolated fix branches
+- Base automation branch ("pytest-aider-automation")
+- Change management and reversion
+- Branch lifecycle handling
 
-### 5. Documentation
+## Setup
 
-- **Use a `docs/` directory to maintain architectural documentation and user guides.**
-  
-  **Example:**
-  
-  ```
-  pytest_fixer/
-  ├── docs/
-  │   ├── architecture.md
-  │   └── user_guide.md
-  ```
+### Requirements
+```
+Python 3.8+
+Git
+OpenAI API Key
+pytest
+```
 
-### 6. Virtual Environment and Dependencies
+### Installation
+```bash
+git clone https://github.com/your-repo/pytest-fixer.git
+cd pytest-fixer
+pip install -r requirements.txt
+```
 
-- **Ensure `.venv/` is excluded in `.gitignore`.**
-- **Manage dependencies using `requirements.txt` or `Pipfile`.**
+### Configuration
+```env
+OPENAI_API_KEY=your-api-key
+MODEL_NAME=gpt-4o-mini
+INITIAL_TEMPERATURE=0.4
+TEMPERATURE_INCREMENT=0.1
+MAX_RETRIES=3
+```
 
-### 7. Continuous Integration (CI)
+### Usage
+```bash
+python -m pytest_fixer.main /path/to/project [options]
 
-- **Include CI configurations for automated testing and deployment in `.github/workflows/`.**
+Options:
+  --initial-temperature FLOAT  Initial AI temperature (default: 0.4)
+  --temperature-increment FLOAT Temperature increase (default: 0.1)
+  --max-retries INT          Maximum fix attempts (default: 3)
+  --model STRING            AI model name (default: gpt-4o-mini)
+  --debug                   Enable debug logging
+  --manual-fix             Enable manual fix mode
+```
 
-  **Example:**
-  
-  ```
-  pytest_fixer/
-  ├── .github/
-  │   └── workflows/
-  │       └── ci.yml       # Continuous Integration configuration
-  ```
+## Error Handling
 
-### 8. Main Entry Point
+### Error Propagation
+1. Component-level errors:
+   - Each component handles domain-specific errors
+   - Errors are logged and propagated up
+   - State is preserved when possible
 
-- **Use `main.py` as the starting point for service initialization and orchestration.**
+2. System-level errors:
+   - Managed by PytestErrorFixer
+   - Trigger session cleanup
+   - Preserve logs and state
 
-## Final Thoughts
+### Recovery Mechanisms
+1. State Recovery:
+   - Checkpoint-based recovery
+   - Log-based state reconstruction
+   - Branch restoration
 
-This structure, based on DDD and Clean Architecture, provides a robust foundation for your project. Implementing these recommendations incrementally will ensure:
+2. Change Recovery:
+   - Git-based change reversion
+   - Log preservation
+   - State rollback
 
-- **Clear separation of concerns.**
-- **Easy onboarding for new contributors.**
-- **Scalable and maintainable code.**
+## Known Limitations
 
-Feel free to adapt the structure and suggestions to suit your specific needs.
+### Technical Limitations
+- Git integration assumes "main" branch
+- No parallel test execution
+- Basic pytest plugin support
+- OpenAI-specific AI integration
+- Limited session recovery
 
-Let me know if you’d like further refinements!
+### Operational Limitations
+- Single branch workflow
+- Basic prompt management
+- No learning from history
+- Limited error pattern recognition
+
+## Best Practices
+
+### Operation
+1. Version Control:
+   - Clean working directory
+   - Dedicated fix branches
+   - Review before merging
+
+2. Configuration:
+   - Start with default temperatures
+   - Enable debug for investigation
+   - Use interactive mode for complex fixes
+
+3. Monitoring:
+   - Watch progress logs
+   - Review generated fixes
+   - Monitor state changes
+
+### Troubleshooting
+1. AI Issues:
+   - Verify API key
+   - Check model availability
+   - Review prompt formatting
+
+2. Git Issues:
+   - Clean working directory
+   - Check permissions
+   - Verify branch state
+
+3. Test Issues:
+   - Verify pytest setup
+   - Check test discovery
+   - Review dependencies
+
+## Implementation Details
+
+### State Persistence
+```python
+@dataclass
+class CheckpointState:
+    timestamp: str
+    current_error: Optional[Dict[str, Any]]
+    current_branch: Optional[str]
+    completed_files: List[str]
+    failed_files: List[str]
+    in_progress: bool
+    current_status: FixStatus
+```
+
+### Error Processing
+```python
+@dataclass
+class RawError:
+    test_file: str
+    function: str
+    error_type: str
+    error_details: str
+    line_number: str
+    code_snippet: str
+    captured_output: str
+    captured_log: str
+```
+
+### Change Management
+```python
+@dataclass
+class ChangeRecord:
+    changes: str
+    timestamp: str
+    branch: Optional[str]
+    reverted: bool
+    error: Optional[str]
+```
+
+## Support
+
+For assistance:
+1. Enable debug logging
+2. Check logs in ~/.pytest_fixer/logs
+3. Include with issues:
+   - Error details
+   - Log files
+   - Steps to reproduce
+   - Configuration details
+
+# Domain-Driven Design Concepts Guide for pytest-fixer
+
+## Introduction
+This guide explains the Domain-Driven Design (DDD) concepts you need to understand to rebuild pytest-fixer. Each concept is explained with concrete examples from our domain.
+
+## Core DDD Concepts
+
+### 1. Ubiquitous Language
+The shared language between developers and domain experts. For pytest-fixer, this includes:
+
+- **Test Error**: A failing pytest test that needs fixing
+- **Fix Attempt**: A single try at fixing a test error
+- **Fix Generation**: The process of creating a fix
+- **Verification**: Checking if a fix works
+- **Code Changes**: Modifications made to fix an error
+
+Why it matters: Using consistent terminology prevents confusion and misunderstandings. For example, we always say "fix attempt" rather than "try" or "fix iteration".
+
+### 2. Bounded Contexts
+Separate domains with their own models and rules. In pytest-fixer:
+
+1. **Error Analysis Context**
+   - Handles test error parsing and analysis
+   - Own concept of what an error means
+   - Focuses on error details and classification
+
+2. **Fix Generation Context**
+   - Handles creating and applying fixes
+   - Manages AI interaction
+   - Tracks fix attempts and results
+
+3. **Test Execution Context**
+   - Handles running tests
+   - Manages test discovery
+   - Processes test results
+
+4. **Version Control Context**
+   - Manages code changes
+   - Handles branching strategy
+   - Controls commit operations
+
+Each context has its own:
+- Models and rules
+- Interfaces and services
+- Data structures and validation
+
+### 3. Aggregates
+Clusters of related objects treated as a single unit. Key aggregates in pytest-fixer:
+
+1. **TestError Aggregate**
+```python
+class TestError:  # Aggregate Root
+    id: UUID
+    test_file: Path
+    test_function: str
+    error_details: ErrorDetails  # Value Object
+    location: CodeLocation      # Value Object
+    fix_attempts: List[FixAttempt]  # Child Entity
+    status: FixStatus          # Value Object
+
+    def start_fix_attempt(self, temperature: float) -> FixAttempt:
+        """Create and track a new fix attempt"""
+```
+
+2. **FixSession Aggregate**
+```python
+class FixSession:  # Aggregate Root
+    id: UUID
+    error: TestError
+    current_attempt: Optional[FixAttempt]
+    attempts: List[FixAttempt]
+    status: FixSessionStatus
+```
+
+Rules for Aggregates:
+- Only reference other aggregates by ID
+- Maintain consistency boundaries
+- Handle transactional requirements
+
+### 4. Entities
+Objects with identity that changes over time. Key entities:
+
+1. **FixAttempt**
+```python
+@dataclass
+class FixAttempt:
+    id: UUID
+    error_id: UUID
+    attempt_number: int
+    temperature: float
+    changes: Optional[CodeChanges]
+    status: FixStatus
+```
+
+2. **TestCase**
+```python
+@dataclass
+class TestCase:
+    id: UUID
+    file_path: Path
+    function_name: str
+    source_code: str
+```
+
+Entity characteristics:
+- Have unique identity
+- Mutable over time
+- Track state changes
+- Maintain history
+
+### 5. Value Objects
+Immutable objects without identity. Examples:
+
+```python
+@dataclass(frozen=True)
+class CodeLocation:
+    file_path: Path
+    line_number: int
+    column: Optional[int] = None
+    function_name: Optional[str] = None
+
+@dataclass(frozen=True)
+class ErrorDetails:
+    error_type: str
+    message: str
+    stack_trace: Optional[str] = None
+    captured_output: Optional[str] = None
+
+@dataclass(frozen=True)
+class CodeChanges:
+    original: str
+    modified: str
+    location: CodeLocation
+    description: Optional[str] = None
+```
+
+Value Object rules:
+- Immutable
+- No identity
+- Equality based on attributes
+- Self-validating
+
+### 6. Domain Services
+Services that handle operations not belonging to any entity:
+
+```python
+class ErrorAnalysisService:
+    """Analyzes test output to create TestError instances"""
+    def analyze_error(self, test_output: str, test_file: Path) -> TestError:
+        """Extract error information from test output"""
+
+class FixGenerationService:
+    """Generates fixes using AI"""
+    def generate_fix(self, error: TestError, attempt: FixAttempt) -> CodeChanges:
+        """Generate a fix for the error"""
+```
+
+When to use Services:
+- Operation spans multiple entities
+- Complex domain logic
+- External system integration
+
+### 7. Repositories
+Interfaces for persisting and retrieving aggregates:
+
+```python
+class TestErrorRepository(Protocol):
+    def get_by_id(self, error_id: UUID) -> Optional[TestError]:
+        """Retrieve a TestError by ID"""
+    
+    def save(self, error: TestError) -> None:
+        """Save a TestError"""
+    
+    def get_unfixed_errors(self) -> List[TestError]:
+        """Get all unfixed errors"""
+```
+
+Repository principles:
+- One repository per aggregate
+- Hide storage details
+- Return fully-loaded aggregates
+- Handle persistence concerns
+
+### 8. Domain Events
+Notifications of significant changes in the domain:
+
+```python
+@dataclass
+class FixAttemptStarted:
+    error_id: UUID
+    attempt_id: UUID
+    timestamp: datetime
+
+@dataclass
+class FixVerificationCompleted:
+    error_id: UUID
+    attempt_id: UUID
+    success: bool
+    verification_output: str
+```
+
+When to use Events:
+- State changes matter to other contexts
+- Need to maintain audit trail
+- Cross-context communication needed
+
+### 9. Application Services
+Orchestrate the use cases of the application:
+
+```python
+class TestFixingApplicationService:
+    def __init__(
+        self,
+        error_analysis: ErrorAnalysisService,
+        fix_generation: FixGenerationService,
+        version_control: VersionControlService,
+        error_repository: TestErrorRepository,
+        event_publisher: EventPublisher
+    ):
+        # Initialize dependencies...
+
+    def attempt_fix(self, error_id: UUID, temperature: float = 0.4) -> FixAttempt:
+        """Coordinate the process of attempting a fix"""
+```
+
+Application Service responsibilities:
+- Use case orchestration
+- Transaction management
+- Event publishing
+- Error handling
+
+## Common DDD Patterns
+
+### 1. Factory Pattern
+Use factories to create complex aggregates:
+
+```python
+class TestErrorFactory:
+    def from_test_output(
+        self,
+        test_output: str,
+        test_file: Path,
+        test_function: str
+    ) -> TestError:
+        """Create TestError from test output"""
+```
+
+### 2. Specification Pattern
+Express complex queries or validations:
+
+```python
+class FixableErrorSpecification:
+    def is_satisfied_by(self, error: TestError) -> bool:
+        """Check if error can be fixed"""
+```
+
+### 3. Anti-Corruption Layer
+Protect domain model from external systems:
+
+```python
+class AIServiceAdapter:
+    """Adapt AI service responses to our domain model"""
+    def adapt_response(self, ai_response: dict) -> CodeChanges:
+        """Convert AI response to domain model"""
+```
+
+## DDD Best Practices
+
+1. **Start with Bounded Contexts**
+   - Identify clear boundaries first
+   - Define context interactions
+   - Document context maps
+
+2. **Focus on Behavior**
+   - Model behavior, not just data
+   - Use rich domain models
+   - Encapsulate business rules
+
+3. **Use Value Objects**
+   - Create immutable value objects
+   - Validate on creation
+   - Make invalid states unrepresentable
+
+4. **Handle Edge Cases**
+   - Define error scenarios
+   - Use domain events
+   - Maintain consistency
+
+5. **Test Domain Logic**
+   - Unit test aggregates
+   - Test business rules
+   - Mock infrastructure
+
+## Avoiding Common Mistakes
+
+1. **Anemic Domain Model**
+   - Don't create data-only classes
+   - Include business logic
+   - Use rich behavior
+
+2. **Leaky Abstractions**
+   - Keep infrastructure out of domain
+   - Use clean interfaces
+   - Maintain boundaries
+
+3. **Missing Events**
+   - Use events for important changes
+   - Track state transitions
+   - Maintain audit trail
+
+4. **Complex Aggregates**
+   - Keep aggregates focused
+   - Use proper boundaries
+   - Split if too complex
+
+## Practical Tips for pytest-fixer
+
+1. Start with core domain model (TestError)
+2. Add behavior incrementally
+3. Use events for tracking
+4. Keep interfaces clean
+5. Test domain logic thoroughly
 ==========
 🧙🏾‍♂️: [aligning on my goal]  
 [emoji]: Below is a cohesive, from-scratch rewrite that combines the strengths of the previous approaches into a cleaner, domain-driven, and modular architecture. It clarifies domain logic, separates concerns, and provides a strong foundation for future extensions. This blueprint focuses on the core functionality: discovering test errors, generating fixes using AI (via a hypothetical `AIManager` or `Coder`), applying changes, verifying them, and persisting state. It uses domain-driven design patterns, a clear layering approach, and sets up a workable starting point.
