@@ -31,7 +31,9 @@ jobs:
           pytest-root-dir: .
           output: badges/coverage.svg
           commit_badge: true
-          coverage_comment: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          
+package-extras: ''
 
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v3
