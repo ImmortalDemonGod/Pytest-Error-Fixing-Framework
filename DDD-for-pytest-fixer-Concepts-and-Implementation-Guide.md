@@ -1,0 +1,1 @@
+Domain-Driven Design for pytest-fixer: Concepts and Implementation Guide
