@@ -42,7 +42,7 @@ class FailureParser:
         for line in lines:
             stripped = line.strip()
 
-            if "FAILURES" in line:
+            if self._should_start_capturing(stripped):
                 capture_traceback = True
                 continue
 
@@ -50,21 +50,13 @@ class FailureParser:
                 continue
 
             if self._is_test_header(stripped):
-                test_name = self._get_test_name_from_header(stripped)
-                if test_name:
-                    current_function = test_name
-                    traceback_lines = [line]
-                    error_details_lines = []
-                    # current_error = None  # if needed
-                else:
-                    # Underscore line isn't a test name, treat as traceback line
-                    traceback_lines.append(line)
+                current_function, traceback_lines, error_details_lines = self._handle_test_header(
+                    line, stripped, current_function
+                )
                 continue
 
             if self._is_error_detail(stripped):
-                error_line = stripped[2:].strip()
-                traceback_lines.append(line)
-                error_details_lines.append(error_line)
+                self._handle_error_detail(line, stripped, traceback_lines, error_details_lines)
                 continue
 
             if self._is_failing_line_indicator(stripped):
@@ -78,6 +70,46 @@ class FailureParser:
                 errors.append(error_info)
 
         return errors
+
+    def _should_start_capturing(self, stripped_line: str) -> bool:
+        """Determine if traceback capturing should start."""
+        return "FAILURES" in stripped_line
+
+    def _handle_test_header(
+        self, line: str, stripped_line: str, current_function: Optional[str]
+    ) -> Tuple[Optional[str], List[str], List[str]]:
+        """
+        Handle lines that are test headers.
+
+        Returns the updated current function name, reset traceback lines, and reset error details lines.
+        """
+        test_name = self._get_test_name_from_header(stripped_line)
+        if test_name:
+            current_function = test_name
+            traceback_lines = [line]
+            error_details_lines = []
+        else:
+            # Underscore line isn't a test name, treat as traceback line
+            # Do not modify current_function
+            traceback_lines = [line]
+            error_details_lines = []
+        return current_function, traceback_lines, error_details_lines
+
+    def _handle_error_detail(
+        self,
+        line: str,
+        stripped_line: str,
+        traceback_lines: List[str],
+        error_details_lines: List[str],
+    ) -> None:
+        """
+        Handle lines that contain error details.
+
+        Updates traceback_lines and error_details_lines accordingly.
+        """
+        error_line = stripped_line[2:].strip()
+        traceback_lines.append(line)
+        error_details_lines.append(error_line)
 
     def _is_test_header(self, stripped_line: str) -> bool:
         """Check if the line is a test header."""
