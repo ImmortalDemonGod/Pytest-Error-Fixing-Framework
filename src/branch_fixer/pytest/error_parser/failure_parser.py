@@ -4,17 +4,9 @@ from typing import List, Optional, Tuple
 
 from branch_fixer.pytest.error_info import ErrorInfo
 
-FAILURE_PATTERNS = [
-    # Pattern for standard pytest failure headers
-    r"_{20,}\s+(\w+::\w+|\w+)(?:\[\w+\])?\s+_{20,}",
-    # Pattern for file paths with line numbers and error types
-    r"([\w\/\._-]+):(\d+):\s+(\w+(?:\.\w+)*Error)",
-    # Pattern for failures in test collection
-    r"FAILED\s+([\w\/\._-]+)::([\w_\[\]\-]+)\s*(?:-\s*)?([\w\.]+Error)?:?\s*(.*?)$",
-    # Pattern for simple failures without dash
-    r"FAILED\s+([\w\/\._-]+)::([\w_\[\]\-]+)\s*$",
-    # Pattern for test IDs in pytest format
-    r"([\w\/\._-]+)::(\w+)::\w+(?:\[\w+\])?$",
+PATTERNS = [
+    # File path with line number and error type
+    r"([\w\/\._-]+):(\d+):\s+([\w\.]+Error)",
 ]
 
 
@@ -24,157 +16,129 @@ class FailureParser:
     @property
     def patterns(self) -> List[str]:
         """Returns list of failure patterns used for matching."""
-        return FAILURE_PATTERNS
+        return PATTERNS
+
+    def _get_test_name_from_header(self, line: str) -> Optional[str]:
+        """Extract test name from header line with underscores."""
+        # The header lines look like:
+        # ___________________ TestFailureParser.test_extract_traceback ___________________
+        # or
+        # _________________________ test_param[1-2-expected] __________________________
+        # We want only the test function name.
+        if line.startswith("_") and line.endswith("_"):
+            content = line.strip("_ ")
+            if content:
+                # If there's a dot, we might have ClassName.test_name
+                # Split by dot and take the last segment as test name
+                if "." in content:
+                    return content.split(".")[-1]
+                return content
+        return None
 
     def parse_test_failures(self, output: str) -> List[ErrorInfo]:
-        """
-        Parse pytest output and extract test failures.
-
-        Args:
-            output: Complete pytest output string
-
-        Returns:
-            List of ErrorInfo objects representing test failures
-        """
-        errors = []
+        """Parse pytest output and extract test failures."""
+        errors: List[ErrorInfo] = []
         lines = output.splitlines()
+
+        capture_traceback = False
+        current_function: Optional[str] = None
+        traceback_lines = []
+        error_details_lines = []
+        current_error = None
+
         i = 0
-
         while i < len(lines):
-            line = lines[i].strip()
+            line = lines[i]
+            stripped = line.strip()
 
-            # Skip empty lines and session info
-            if not line or "test session starts" in line:
+            # Start capturing after seeing FAILURES
+            if "FAILURES" in line:
+                capture_traceback = True
                 i += 1
                 continue
 
-            # Look for failure sections
-            if "FAILURES" in line:
-                i += 1
-                while i < len(lines):
-                    error = self.process_failure_line(lines[i].strip())
-                    if error:
-                        # Extract traceback for this error
-                        traceback, end_idx = self.extract_traceback(lines, i + 1)
-                        i = end_idx
+            if capture_traceback:
+                # Check for test header lines
+                if stripped.startswith("_") and stripped.endswith("_"):
+                    # New test block
+                    current_function = self._get_test_name_from_header(stripped)
+                    # Reset accumulators for this new test's traceback
+                    traceback_lines = [line]
+                    error_details_lines = []
+                    current_error = None
+                else:
+                    # Process lines within a test block
+                    if stripped.startswith("E "):
+                        # Error detail line
+                        error_line = stripped[2:].strip()
+                        traceback_lines.append(line)
+                        error_details_lines.append(error_line)
+                    elif stripped.startswith(">"):
+                        # Line indicator for error location
+                        traceback_lines.append(line)
+                    else:
+                        # Check if this line contains file:line:error pattern
+                        match = re.search(PATTERNS[0], line)
+                        if match:
+                            # We found a line indicating the file, line and error type
+                            test_file = match.group(1)
+                            line_number = match.group(2)
+                            error_type = match.group(3)
 
-                        # Update error with traceback info
-                        if traceback:
-                            error.code_snippet = traceback
+                            # Create the error entry now that we have all info
+                            current_error = ErrorInfo(
+                                test_file=test_file,
+                                function=current_function or "unknown",
+                                error_type=error_type,
+                                error_details="\n".join(error_details_lines),
+                                line_number=line_number,
+                                code_snippet="\n".join(traceback_lines)
+                            )
+                            errors.append(current_error)
+                        else:
+                            # Just a regular traceback line, include it
+                            # (only if not underscores)
+                            if stripped and not stripped.startswith("_"):
+                                traceback_lines.append(line)
 
-                            # Try to extract better error details from traceback
-                            for line in traceback.splitlines():
-                                if line.startswith("E       "):
-                                    error.error_details = line.replace(
-                                        "E       ", ""
-                                    ).strip()
-                                    break
-
-                        errors.append(error)
-                    i += 1
-            else:
-                i += 1
+            i += 1
 
         return errors
 
     def process_failure_line(self, line: str) -> Optional[ErrorInfo]:
-        """
-        Process a single line to extract error information.
-
-        Args:
-            line: Single line from pytest output
-
-        Returns:
-            ErrorInfo object if line contains error info, None otherwise
-        """
-        # Skip empty or irrelevant lines
-        if (
-            not line
-            or "collected" in line
-            or "[" in line
-            and "]" in line
-            and "%" in line
-        ):
+        """Process a single line to extract error information."""
+        if not line:
             return None
 
-        # Try all patterns
-        for pattern in self.patterns:
-            match = re.search(pattern, line)
-            if match:
-                groups = match.groups()
-
-                # Handle different pattern matches
-                if len(groups) >= 2:
-                    # Extract file and function name
-                    test_file = groups[0]
-
-                    # For file:line:error pattern
-                    if len(groups) >= 3 and groups[1].isdigit():
-                        return ErrorInfo(
-                            test_file=test_file,
-                            function="unknown",  # Function name will be updated from traceback
-                            error_type=groups[2],
-                            error_details="",
-                            line_number=groups[1],
-                        )
-
-                    # For failure header pattern
-                    else:
-                        function = groups[1]
-                        error_type = groups[2] if len(groups) > 2 else "Error"
-                        error_details = groups[3] if len(groups) > 3 else ""
-
-                        return ErrorInfo(
-                            test_file=test_file,
-                            function=function,
-                            error_type=error_type,
-                            error_details=error_details,
-                        )
-
+        match = re.search(PATTERNS[0], line)
+        if match:
+            return ErrorInfo(
+                test_file=match.group(1),
+                function="unknown",
+                error_type=match.group(3),
+                error_details="",
+                line_number=match.group(2)
+            )
         return None
 
-    def extract_traceback(self, lines: List[str], start_idx: int) -> Tuple[str, int]:
-        """
-        Extract traceback information from pytest output lines.
+    def extract_traceback(self, lines: List[str], start_idx: int, end_idx: Optional[int] = None) -> Tuple[str, int]:
+        """Extract traceback information from pytest output lines."""
+        if end_idx is None:
+            end_idx = len(lines)
 
-        Args:
-            lines: List of output lines
-            start_idx: Starting index to look for traceback
-
-        Returns:
-            Tuple of (traceback string, ending index)
-        """
         traceback_lines = []
         i = start_idx
 
-        while i < len(lines):
-            line = lines[i].strip()
+        # We'll gather lines until we hit a file:line:error pattern or run out of lines
+        while i < end_idx:
+            stripped = lines[i].strip()
+            if stripped and not stripped.startswith("_"):
+                traceback_lines.append(lines[i])
 
-            # Stop at empty lines after we've started collecting
-            if not line and traceback_lines:
-                break
-
-            # Stop at new test failure section
-            if line and ("_" * 20) in line:
-                break
-
-            # Collect relevant lines
-            if line and (
-                line.startswith(">")
-                or line.startswith("E")
-                or line.startswith("def ")
-                or ".py" in line
-                or "self = " in line
-            ):
-                traceback_lines.append(line)
+            if re.search(PATTERNS[0], lines[i]):
+                # Once we hit the file:line:error line, we stop
+                return ("\n".join(traceback_lines), i)
 
             i += 1
 
-        # If we found a traceback, include the last line with file:line info
-        if traceback_lines and i < len(lines):
-            next_line = lines[i].strip()
-            if ".py:" in next_line and ":" in next_line:
-                traceback_lines.append(next_line)
-                i += 1
-
-        return "\n".join(traceback_lines), i - 1 if traceback_lines else start_idx
+        return ("\n".join(traceback_lines), i)
