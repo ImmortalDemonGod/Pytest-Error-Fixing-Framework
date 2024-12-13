@@ -19,10 +19,6 @@ class TestErrorDomainModel(unittest.TestCase):
         # When
         from branch_fixer.domain.models import TestError, ErrorDetails
         
-        # Add debugging
-        print(f"\nTestError is defined in: {TestError.__module__}")
-        print(f"ErrorDetails is defined in: {ErrorDetails.__module__}")
-        
         error = TestError(
             test_file=test_file,
             test_function=test_function,
