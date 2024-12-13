@@ -1,13 +1,12 @@
-from setuptools import setup, find_packages
+# setup.py
+from setuptools import setup, find_namespace_packages
 
 setup(
-    name='pytest_fixer',
-    version='0.1.0',
-    description='A framework for fixing Pytest errors',
-    author='openhands',
-    author_email='openhands@all-hands.dev',
-    packages=find_packages(),
+    name="pytest_fixer",
+    version="0.1.0",
+    package_dir={"": "src"},
+    packages=find_namespace_packages(where="src"),
     install_requires=[
-        'mkdocs',
-    ],
+        "mkdocs",  # keeping your existing dependencies
+    ]
 )

@@ -3,3 +3,97 @@
 venv/*
 migrations/*
 .DS_Store
+# Byte-compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+env/
+venv/
+ENV/
+.venv/
+.ENV/
+
+# Editor and IDE files
+.vscode/
+.idea/
+*.sublime-workspace
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+*.out
+*.err
+
+# Python-specific files
+*.env
+*.venv
+*.virtualenv
+Pipfile
+Pipfile.lock
+poetry.lock
+*.pyup
+*.egg-info/
+.eggs/
+
+# Cache files
+.cache/
+.pytest_cache/
+.tox/
+dist/
+build/
+*.egg
+*.egg-info/
+.installed.cfg
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Test outputs
+coverage.xml
+*.cover
+*.pyc
+*.pyo
+.hypothesis/
+
+# Python package distribution
+*.manifest
+*.spec
+wheels/
+*.egg-info/
+*.eggs/
+
+# YAML configurations (if sensitive)
+#*.yaml
+#*.yml
+
+# Logs and other outputs
+*.log
+*.pid
+*.gz
+
+# MyPy cache
+.mypy_cache/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+.cache
+.aider*
+.env
+1file/*
+VectorDB_Module_PRODUCTION/*
+DoclingDOCS/*
+examples_vector_storage/*
+demo_vector_storage/*
+dev/*
+tools/llm/onefilellm/uncompressed_output.txt
+.secrets
+.ruff_cache/
+data/*
+vector_db_storage/*
