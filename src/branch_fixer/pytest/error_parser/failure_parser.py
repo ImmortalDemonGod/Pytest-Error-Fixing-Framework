@@ -19,22 +19,15 @@ class FailureParser:
         return PATTERNS
 
     def _get_test_name_from_header(self, line: str) -> Optional[str]:
-        """Extract test name from a header line with underscores.
-        
-        Header examples:
-        ___________________ TestFailureParser.test_extract_traceback ___________________
-        _________________________ test_param[1-2-expected] __________________________
-        _______________________________ test_complex ________________________________
-        """
-        if line.startswith("_") and line.endswith("_"):
-            content = line.strip("_ ").strip()
-            if content:
-                # If there's a '.' it's likely ClassName.test_method,
-                # otherwise just return the whole content.
-                if "." in content:
-                    return content.split(".")[-1]
-                return content
-        return None
+        """Extract test name from a header line with underscores."""
+        if not (line.startswith("_") and line.endswith("_")):
+            return None
+
+        content = line.strip("_ ").strip()
+        if not content:
+            return None
+
+        return content.split(".")[-1] if "." in content else content
 
     def parse_test_failures(self, output: str) -> List[ErrorInfo]:
         """Parse pytest output and extract test failures."""
@@ -45,66 +38,82 @@ class FailureParser:
         current_function: Optional[str] = None
         traceback_lines = []
         error_details_lines = []
-        current_error = None
 
-        i = 0
-        while i < len(lines):
-            line = lines[i]
+        for line in lines:
             stripped = line.strip()
 
-            # Begin capturing after we see "FAILURES"
             if "FAILURES" in line:
                 capture_traceback = True
-                i += 1
                 continue
 
-            if capture_traceback:
-                # Detect test headers (underscore lines)
-                if stripped.startswith("_") and stripped.endswith("_"):
-                    test_name = self._get_test_name_from_header(stripped)
-                    if test_name:
-                        current_function = test_name
-                        traceback_lines = [line]
-                        error_details_lines = []
-                        current_error = None
-                    else:
-                        # If this underscore line doesn't represent a test name,
-                        # just treat it as part of the traceback.
-                        traceback_lines.append(line)
+            if not capture_traceback:
+                continue
+
+            if self._is_test_header(stripped):
+                test_name = self._get_test_name_from_header(stripped)
+                if test_name:
+                    current_function = test_name
+                    traceback_lines = [line]
+                    error_details_lines = []
+                    # current_error = None  # if needed
                 else:
-                    if stripped.startswith("E "):
-                        # An error detail line
-                        error_line = stripped[2:].strip()
-                        traceback_lines.append(line)
-                        error_details_lines.append(error_line)
-                    elif stripped.startswith(">"):
-                        # Line indicator for the failing line
-                        traceback_lines.append(line)
-                    else:
-                        # Check if it's a file:line:error pattern
-                        match = re.search(PATTERNS[0], line)
-                        if match:
-                            test_file = match.group(1)
-                            line_number = match.group(2)
-                            error_type = match.group(3)
+                    # Underscore line isn't a test name, treat as traceback line
+                    traceback_lines.append(line)
+                continue
 
-                            current_error = ErrorInfo(
-                                test_file=test_file,
-                                function=current_function or "unknown",
-                                error_type=error_type,
-                                error_details="\n".join(error_details_lines),
-                                line_number=line_number,
-                                code_snippet="\n".join(traceback_lines)
-                            )
-                            errors.append(current_error)
-                        else:
-                            # Just another traceback line
-                            if stripped and not stripped.startswith("_"):
-                                traceback_lines.append(line)
+            if self._is_error_detail(stripped):
+                error_line = stripped[2:].strip()
+                traceback_lines.append(line)
+                error_details_lines.append(error_line)
+                continue
 
-            i += 1
+            if self._is_failing_line_indicator(stripped):
+                traceback_lines.append(line)
+                continue
+
+            error_info = self._process_line_for_error(
+                line, current_function, traceback_lines, error_details_lines
+            )
+            if error_info:
+                errors.append(error_info)
 
         return errors
+
+    def _is_test_header(self, stripped_line: str) -> bool:
+        """Check if the line is a test header."""
+        return stripped_line.startswith("_") and stripped_line.endswith("_")
+
+    def _is_error_detail(self, stripped_line: str) -> bool:
+        """Check if the line contains error details."""
+        return stripped_line.startswith("E ")
+
+    def _is_failing_line_indicator(self, stripped_line: str) -> bool:
+        """Check if the line indicates a failing line."""
+        return stripped_line.startswith(">")
+
+    def _process_line_for_error(
+        self,
+        line: str,
+        current_function: Optional[str],
+        traceback_lines: List[str],
+        error_details_lines: List[str],
+    ) -> Optional[ErrorInfo]:
+        """Process a line to extract error information."""
+        match = re.search(PATTERNS[0], line)
+        if not match:
+            if line.strip() and not line.strip().startswith("_"):
+                traceback_lines.append(line)
+            return None
+
+        test_file, line_number, error_type = match.groups()
+        return ErrorInfo(
+            test_file=test_file,
+            function=current_function or "unknown",
+            error_type=error_type,
+            error_details="\n".join(error_details_lines),
+            line_number=line_number,
+            code_snippet="\n".join(traceback_lines),
+        )
 
     def process_failure_line(self, line: str) -> Optional[ErrorInfo]:
         """Process a single line to extract error information."""
@@ -118,15 +127,15 @@ class FailureParser:
                 function="unknown",
                 error_type=match.group(3),
                 error_details="",
-                line_number=match.group(2)
+                line_number=match.group(2),
             )
         return None
 
-    def extract_traceback(self, lines: List[str], start_idx: int, end_idx: Optional[int] = None) -> Tuple[str, int]:
+    def extract_traceback(
+        self, lines: List[str], start_idx: int, end_idx: Optional[int] = None
+    ) -> Tuple[str, int]:
         """Extract traceback information from pytest output lines."""
-        if end_idx is None:
-            end_idx = len(lines)
-
+        end_idx = end_idx or len(lines)
         traceback_lines = []
         i = start_idx
 
@@ -136,8 +145,7 @@ class FailureParser:
                 traceback_lines.append(lines[i])
 
             if re.search(PATTERNS[0], lines[i]):
-                # Once we find file:line:error, stop
-                return ("\n".join(traceback_lines), i)
+                break
 
             i += 1
 
