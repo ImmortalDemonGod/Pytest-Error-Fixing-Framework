@@ -10,6 +10,9 @@ from branch_fixer.ai.manager import AIManager
 from branch_fixer.pytest.runner import TestRunner
 from branch_fixer.code.change_applier import ChangeApplier
 from branch_fixer.git.repository import GitRepository
+from config.settings import DEBUG, SECRET_KEY
+from config.logging_config import setup_logging
+from config.defaults import DEFAULT_RETRIES, DEFAULT_TIMEOUT
 from branch_fixer.application.fix_service import FixService
 
 logger = logging.getLogger(__name__)
