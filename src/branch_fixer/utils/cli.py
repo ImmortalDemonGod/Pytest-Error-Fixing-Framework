@@ -4,11 +4,13 @@ import click
 import logging
 import asyncio
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 from branch_fixer.ai.manager import AIManager
 from branch_fixer.pytest.runner import TestRunner
 from branch_fixer.code.change_applier import ChangeApplier
+from branch_fixer.domain.models import TestError
+from branch_fixer.utils.error_parser import parse_pytest_errors
 from branch_fixer.git.repository import GitRepository
 from config.settings import DEBUG, SECRET_KEY
 from config.logging_config import setup_logging
