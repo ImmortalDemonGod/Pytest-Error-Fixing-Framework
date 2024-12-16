@@ -107,28 +107,3 @@ class TestRepositoryState:
             repo.run_command(["git", "--invalid-flag"])
         assert "unknown option" in str(exc.value).lower()
 
-@pytest.fixture
-def temporary_directory():
-    """Creates an empty temporary directory for testing"""
-    test_dir = Path("/tmp") / f"test-{datetime.now().timestamp()}"
-    test_dir.mkdir(parents=True)
-    try:
-        yield test_dir
-    finally:
-        import shutil
-        shutil.rmtree(test_dir)
-
-@pytest.fixture
-def temporary_repository(temporary_directory):
-    """Creates a temporary git repository for testing"""
-    # Initialize git repository structure
-    git_dir = temporary_directory / ".git"
-    git_dir.mkdir()
-    
-    # Create basic git structure
-    (git_dir / "HEAD").write_text("ref: refs/heads/main")
-    (git_dir / "refs" / "heads").mkdir(parents=True)
-    (git_dir / "refs" / "heads" / "main").touch()
-    (git_dir / "config").touch()
-    
-    return temporary_directory

@@ -7,27 +7,6 @@ from dataclasses import dataclass
 from branch_fixer.git.branch_manager import BranchManager, BranchStatus
 from branch_fixer.git.exceptions import GitError, BranchCreationError, MergeConflictError
 
-@pytest.fixture
-def clean_repo():
-    """Repository fixture in a clean state"""
-    repo = MagicMock()
-    repo.get_current_branch.return_value = "main"
-    repo.has_uncommitted_changes.return_value = False
-    repo.get_uncommitted_changes.return_value = []
-    return repo
-
-@pytest.fixture
-def dirty_repo():
-    mock = MagicMock()
-    mock.has_uncommitted_changes.return_value = True
-    mock.get_current_branch.return_value = "feature"
-    mock.get_uncommitted_changes.return_value = ["file1.txt"]
-    return mock
-
-@pytest.fixture
-def branch_manager(clean_repo):
-    """Default branch manager with clean repo"""
-    return BranchManager(clean_repo)
 
 class TestBranchStatus:
     """Test branch status reporting behavior"""
