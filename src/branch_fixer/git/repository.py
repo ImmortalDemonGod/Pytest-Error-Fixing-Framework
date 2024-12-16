@@ -27,6 +27,7 @@ class GitRepository:
             GitError: If an error occurs while determining the main branch.
         """
         self.root = self._find_git_root(root)
+        self.repo = Repo(self.root)  # Add this line to store the Repo instance
         self.main_branch = self._get_main_branch()
 
     def _find_git_root(self, root: Optional[Path]) -> Path:
@@ -100,7 +101,30 @@ class GitRepository:
         Raises:
             GitError: If the command execution fails.
         """
-        raise NotImplementedError("run_command method is not implemented yet.")
+        try:
+            # Ensure cmd is not empty
+            if not cmd:
+                raise ValueError("Git command list cannot be empty.")
+
+            # First element should be 'git', remove it if present
+            if cmd[0].lower() == 'git':
+                cmd = cmd[1:]
+            
+            # Execute the command using GitPython
+            exit_code, stdout, stderr = self.repo.git.execute(cmd, with_extended_output=True)
+            
+            # Create CompletedProcess object to match subprocess interface
+            return subprocess.CompletedProcess(
+                args=cmd,
+                returncode=exit_code,
+                stdout=stdout,
+                stderr=stderr
+            )
+            
+        except GitCommandError as e:
+            raise GitError(f"Git command failed: {e.stderr}") from e
+        except ValueError as ve:
+            raise GitError(str(ve)) from ve
 
     def clone(self, url: str, destination: Optional[Path] = None) -> bool:
         """
@@ -171,7 +195,7 @@ class GitRepository:
         Returns:
             bool: True if the repository is under Git version control, False otherwise.
         """
-        raise NotImplementedError("has_version_control method is not implemented yet.")
+        return hasattr(self, 'repo') and self.repo is not None
 
     def is_clean(self) -> bool:
         """
@@ -183,7 +207,10 @@ class GitRepository:
         Raises:
             GitError: If unable to determine the repository state.
         """
-        raise NotImplementedError("is_clean method is not implemented yet.")
+        try:
+            return not self.repo.is_dirty(untracked_files=True)
+        except Exception as e:
+            raise GitError(f"Unable to determine repository state: {str(e)}") from e
 
     def get_current_branch(self) -> str:
         """
@@ -195,7 +222,13 @@ class GitRepository:
         Raises:
             GitError: If unable to determine the current branch.
         """
-        raise NotImplementedError("get_current_branch method is not implemented yet.")
+        try:
+            return self.repo.active_branch.name
+        except TypeError:
+            # Detached HEAD state
+            return None
+        except GitCommandError as e:
+            raise GitError(f"Unable to determine current branch: {str(e)}") from e
 
     def branch_exists(self, branch_name: str) -> bool:
         """
@@ -210,4 +243,7 @@ class GitRepository:
         Raises:
             GitError: If unable to determine branch existence.
         """
-        raise NotImplementedError("branch_exists method is not implemented yet.")
+        try:
+            return any(branch.name == branch_name for branch in self.repo.heads)
+        except Exception as e:
+            raise GitError(f"Unable to check branch existence: {str(e)}") from e
