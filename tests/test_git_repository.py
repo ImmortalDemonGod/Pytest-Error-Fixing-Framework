@@ -2,42 +2,116 @@
 from pathlib import Path
 import pytest
 from datetime import datetime
+from branch_fixer.git.exceptions import NotAGitRepositoryError
+from branch_fixer.git import GitRepository
 
 class TestRepositoryInitialization:
-    def test_repository_detects_valid_git_directory(self):
-        """Should recognize a directory with version control"""
-        with temporary_repository() as repo_path:
-            repo = GitRepository(repo_path)
-            assert repo.has_version_control()
+    """Test suite for git repository initialization behaviors"""
+    
+    def test_repository_detects_valid_git_directory(self, temporary_repository):
+        """
+        Repository should recognize a valid git directory.
+        
+        Given: A directory containing .git metadata
+        When: Initializing a GitRepository
+        Then: It should validate successfully
+        """
+        repo = GitRepository(temporary_repository)
+        assert repo.has_version_control()
 
-    def test_repository_rejects_non_git_directory(self):
-        """Should reject directories without version control"""
-        with temporary_directory() as non_git_dir:
-            with pytest.raises(NotAGitRepositoryError) as exc:
-                GitRepository(non_git_dir)
-            assert "not a git repository" in str(exc.value).lower()
+    def test_repository_rejects_non_git_directory(self, temporary_directory):
+        """
+        Repository should reject directories without git metadata.
+        
+        Given: A directory without .git metadata
+        When: Initializing a GitRepository
+        Then: It should raise NotAGitRepositoryError
+        """
+        with pytest.raises(NotAGitRepositoryError) as exc:
+            GitRepository(temporary_directory)
+        assert "not a git repository" in str(exc.value).lower()
 
-    def test_repository_finds_root_from_subdirectory(self):
-        """Should find repository root from any subdirectory"""
-        with temporary_repository() as repo_path:
-            # Create nested directory structure
-            subdir = repo_path / "src" / "nested" / "deep"
-            subdir.mkdir(parents=True)
-            
-            repo = GitRepository(subdir)
-            assert repo.root == repo_path
+    def test_repository_finds_root_from_subdirectory(self, temporary_repository):
+        """
+        Repository should locate git root from any subdirectory.
+        
+        Given: A git repository with nested directories
+        When: Initializing from a subdirectory
+        Then: It should find the repository root
+        """
+        subdir = temporary_repository / "src" / "nested" / "deep"
+        subdir.mkdir(parents=True)
+        
+        repo = GitRepository(subdir)
+        assert repo.root == temporary_repository
 
 class TestMainBranchIdentification:
-    def test_repository_identifies_default_branch(self):
-        """Should identify the default development branch"""
-        with temporary_repository() as repo_path:
-            repo = GitRepository(repo_path)
-            assert repo.main_branch in ("main", "master")
+    """Test suite for main branch detection behaviors"""
+    
+    def test_repository_identifies_default_branch(self, temporary_repository):
+        """
+        Repository should identify the default development branch.
+        
+        Given: A git repository
+        When: Checking the main branch
+        Then: It should identify either 'main' or 'master'
+        """
+        repo = GitRepository(temporary_repository)
+        assert repo.main_branch in ("main", "master")
 
-# Test fixtures and helpers
+class TestRepositoryState:
+    """Test suite for repository state behaviors"""
+    
+    def test_detects_clean_state(self, temporary_repository):
+        """
+        Repository should detect whether working directory is clean.
+        
+        Given: A git repository
+        When: Checking repository state
+        Then: Should accurately report clean/dirty state
+        """
+        repo = GitRepository(temporary_repository)
+        assert repo.is_clean() is True
+        
+        # Create an untracked file
+        (temporary_repository / "test.txt").write_text("change")
+        assert repo.is_clean() is False
+
+    def test_reports_current_branch(self, temporary_repository):
+        """
+        Repository should report currently checked out branch.
+        
+        Given: A git repository
+        When: Requesting current branch
+        Then: Should return current branch name
+        """
+        repo = GitRepository(temporary_repository)
+        assert repo.get_current_branch() == "main"
+
+    def test_validates_branch_existence(self, temporary_repository):
+        """
+        Repository should validate branch existence.
+        
+        Given: A git repository
+        When: Checking if branches exist
+        Then: Should correctly identify existing and non-existing branches
+        """
+        repo = GitRepository(temporary_repository)
+        assert repo.branch_exists("main") is True
+        assert repo.branch_exists("nonexistent") is False
+
 @pytest.fixture
 def temporary_directory():
-    """Creates a temporary directory for testing"""
+    """
+    Creates an empty temporary directory for testing.
+    
+    Yields:
+        Path: Path to temporary directory
+    
+    Notes:
+        - Directory is automatically cleaned up after test
+        - Creates unique directory based on timestamp
+    """
     test_dir = Path("/tmp") / f"test-{datetime.now().timestamp()}"
     test_dir.mkdir(parents=True)
     try:
@@ -47,14 +121,25 @@ def temporary_directory():
         shutil.rmtree(test_dir)
 
 @pytest.fixture
-def temporary_repository():
-    """Creates a temporary git repository for testing"""
-    with temporary_directory() as test_dir:
-        # Initialize git repository structure
-        (test_dir / ".git").mkdir()
-        (test_dir / ".git" / "HEAD").write_text("ref: refs/heads/main")
-        yield test_dir
-
-# Custom exceptions
-class NotAGitRepositoryError(Exception):
-    """Raised when a directory is not a git repository"""
+def temporary_repository(temporary_directory):
+    """
+    Creates a temporary git repository for testing.
+    
+    Args:
+        temporary_directory: Base directory fixture
+    
+    Yields:
+        Path: Path to repository root
+    
+    Notes:
+        - Creates minimal .git structure
+        - Sets up main branch as default
+        - Clean up handled by temporary_directory fixture
+    """
+    # Initialize git repository structure
+    (temporary_directory / ".git").mkdir()
+    (temporary_directory / ".git" / "HEAD").write_text("ref: refs/heads/main")
+    (temporary_directory / ".git" / "refs" / "heads").mkdir(parents=True)
+    (temporary_directory / ".git" / "refs" / "heads" / "main").touch()
+    
+    yield temporary_directory
