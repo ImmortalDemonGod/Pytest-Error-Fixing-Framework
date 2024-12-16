@@ -54,7 +54,9 @@ class BranchManager:
                 - Uncommitted changes present
         """
         # Stub implementation to make tests fail for behavioral reasons
-        if not branch_name:
+        if self.repository.branch_exists(branch_name):
+            raise BranchCreationError("branch already exists")
+            
             raise BranchCreationError("empty branch name")
             
         if "//" in branch_name:
@@ -62,6 +64,7 @@ class BranchManager:
             
         if self.repository.has_uncommitted_changes():
             raise BranchCreationError("cannot create branch with uncommitted changes")
+            
             
         return self.repository.create_branch(branch_name)
 
