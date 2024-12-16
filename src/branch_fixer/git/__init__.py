@@ -1,2 +1,2 @@
 from .repository import GitRepository
-from .exceptions import GitError
+from .exceptions import GitError, BranchCreationError, MergeConflictError
