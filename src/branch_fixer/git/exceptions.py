@@ -1,4 +1,8 @@
-class NotAGitRepositoryError(Exception):
+class GitError(Exception):
+    """Base class for exceptions in this module."""
+    pass
+
+class NotAGitRepositoryError(GitError):
     """Exception raised when a directory is not a valid git repository."""
     pass
 
