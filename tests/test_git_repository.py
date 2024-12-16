@@ -120,9 +120,7 @@ def temporary_directory():
     """
     test_dir = Path("/tmp") / f"test-{datetime.now().timestamp()}"
     test_dir.mkdir(parents=True)
-    try:
-        yield test_dir
-    finally:
+    return test_dir
         import shutil
         shutil.rmtree(test_dir)
 
