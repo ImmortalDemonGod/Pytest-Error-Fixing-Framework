@@ -2,6 +2,8 @@
 import subprocess
 from pathlib import Path
 from typing import List, Optional
+from git import Repo
+from git.exc import InvalidGitRepositoryError, NoSuchPathError
 from branch_fixer.git.exceptions import GitError, NotAGitRepositoryError
 
 class GitRepository:
@@ -32,15 +34,32 @@ class GitRepository:
         Locate the Git root directory starting from the given root path.
 
         Args:
-            root (Optional[Path]): The starting path to search for the Git root.
+            root: The starting path to search for the Git root. If None, uses current directory.
 
         Returns:
-            Path: The path to the Git root directory.
+            Path to the Git root directory
 
         Raises:
-            NotAGitRepositoryError: If no Git repository is found from the starting path upwards.
+            NotAGitRepositoryError: If no Git repository found from starting path upwards
         """
-        raise NotImplementedError("_find_git_root method is not implemented yet.")
+        try:
+            # Handle None input - default to current directory
+            if root is None:
+                root = Path.cwd()
+
+            # Convert to Path if needed
+            root = Path(root)
+
+            # Let GitPython find the repository root
+            # search_parent_directories=True makes it search up directory tree
+            repo = Repo(root, search_parent_directories=True)
+
+            # Return the repository working directory (root)
+            # This will be the directory containing .git/
+            return Path(repo.working_dir)
+
+        except (InvalidGitRepositoryError, NoSuchPathError) as e:
+            raise NotAGitRepositoryError(f"No git repository found at or above {root}") from e
 
     def _get_main_branch(self) -> str:
         """
