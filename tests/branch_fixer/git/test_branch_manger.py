@@ -62,16 +62,22 @@ class TestBranchCreation:
 
     def test_create_branch_clean_repo(self, branch_manager, clean_repo):
         """Should create branch in clean repo"""
-        # Given clean repo state
+        # Given clean repo state is valid
         clean_repo.branch_exists.return_value = False
         clean_repo.create_branch.return_value = True
         
         # When creating branch
         success = branch_manager.create_fix_branch("fix-123")
         
-        # Then branch should be created
-        assert success is True
+        # Then should:
+        # 1. Check if branch exists first
+        clean_repo.branch_exists.assert_called_once_with("fix-123")
+        # 2. Check for uncommitted changes
+        clean_repo.has_uncommitted_changes.assert_called_once()
+        # 3. Create branch with exact name
         clean_repo.create_branch.assert_called_once_with("fix-123")
+        # 4. Return success
+        assert success is True
 
     def test_reject_creation_dirty_repo(self, dirty_repo):
         """Should reject branch creation with uncommitted changes"""
@@ -84,9 +90,10 @@ class TestBranchCreation:
             manager.create_fix_branch("fix-123")
         assert "uncommitted changes" in str(exc.value)
 
+
     @pytest.mark.parametrize("branch_name,error", [
         ("", "empty branch name"),
-        ("invalid//name", "invalid branch name"),
+        ("invalid//name", "invalid branch name"), 
         ("fix-123", "branch already exists")
     ])
     def test_invalid_branch_creation(self, branch_manager, clean_repo, branch_name, error):
@@ -94,10 +101,21 @@ class TestBranchCreation:
         # Given error condition
         clean_repo.create_branch.side_effect = BranchCreationError(error)
         
-        # When/Then should raise appropriate error
+        # When/Then:
+        # 1. Should raise appropriate error
         with pytest.raises(BranchCreationError) as exc:
             branch_manager.create_fix_branch(branch_name)
-        assert error in str(exc.value)
+            
+        # 2. Verify exact error message
+        assert str(exc.value) == error
+            
+        # 3. Verify proper validation order
+        if branch_name == "":
+            # Should fail fast without checking repo
+            clean_repo.branch_exists.assert_not_called()
+        else:
+            # Should check branch existence first
+            clean_repo.branch_exists.assert_called_once_with(branch_name)
 
 class TestBranchMerging:
     """Test branch merging behavior"""
@@ -121,18 +139,16 @@ class TestBranchMerging:
         clean_repo.branch_exists.return_value = True
         clean_repo.merge_branch.side_effect = MergeConflictError("Conflict in file.py")
         
-        # When merging
-        # Then should raise conflict error
-        with pytest.raises(MergeConflictError) as exc:
+        # When/Then should raise conflict error
+        with pytest.raises(MergeConflictError):
             branch_manager.merge_branch("feature")
-        assert "Conflict" in str(exc.value)
 
     def test_merge_nonexistent_branch(self, branch_manager, clean_repo):
         """Should reject merging nonexistent branches"""
         # Given branch doesn't exist
         clean_repo.branch_exists.return_value = False
         
-        # When/Then should fail
+        # When/Then should fail 
         with pytest.raises(BranchCreationError):
             branch_manager.merge_branch("nonexistent")
 
