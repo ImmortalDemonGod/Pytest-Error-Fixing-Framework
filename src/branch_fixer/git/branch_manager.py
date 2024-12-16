@@ -54,18 +54,14 @@ class BranchManager:
                 - Uncommitted changes present
         """
         # Stub implementation to make tests fail for behavioral reasons
-        if self.repository.branch_exists(branch_name):
-            raise BranchCreationError("branch already exists")
-            
+        if not branch_name:
             raise BranchCreationError("empty branch name")
-            
         if "//" in branch_name:
             raise BranchCreationError("invalid branch name")
-            
+        if self.repository.branch_exists(branch_name):
+            raise BranchCreationError("branch already exists")
         if self.repository.has_uncommitted_changes():
             raise BranchCreationError("cannot create branch with uncommitted changes")
-            
-            
         return self.repository.create_branch(branch_name)
 
     def merge_branch(self, branch_name: str, fast_forward: bool = False) -> bool:
