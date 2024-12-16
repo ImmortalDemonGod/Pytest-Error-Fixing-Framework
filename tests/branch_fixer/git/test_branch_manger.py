@@ -1,272 +1,150 @@
+# tests/branch_fixer/git/test_branch_manager.py
+from pathlib import Path
 import pytest
-from unittest.mock import MagicMock, patch
-from branch_fixer.git.branch_manager import BranchManager, BranchStatus
-from branch_fixer.git.exceptions import NotAGitRepositoryError, BranchCreationError, MergeConflictError
+from unittest.mock import Mock, MagicMock
+from dataclasses import dataclass
 
-# Assuming that the exceptions are defined in git/exceptions.py
-# If not, adjust the import accordingly or define them as needed.
+from branch_fixer.git.branch_manager import BranchManager, BranchStatus
+from branch_fixer.git.exceptions import GitError, BranchCreationError, MergeConflictError
 
 @pytest.fixture
-def mock_repo():
-    """
-    Fixture to provide a mocked GitRepository instance.
-    Mocks all necessary methods used by BranchManager.
-    """
+def clean_repo():
+    """Repository fixture in a clean state"""
     repo = MagicMock()
-    # Setup default return values for repository methods
     repo.get_current_branch.return_value = "main"
     repo.has_uncommitted_changes.return_value = False
     repo.get_uncommitted_changes.return_value = []
-    repo.create_branch.return_value = True
-    repo.checkout_branch.return_value = True
-    repo.merge_branch.return_value = True
-    repo.branch_exists.return_value = True
     return repo
 
 @pytest.fixture
-def branch_manager(mock_repo):
-    """
-    Fixture to initialize BranchManager with a mocked GitRepository.
-    """
-    return BranchManager(repo=mock_repo)
+def dirty_repo():
+    """Repository fixture with uncommitted changes"""
+    repo = MagicMock()
+    repo.get_current_branch.return_value = "feature"
+    repo.has_uncommitted_changes.return_value = True
+    repo.get_uncommitted_changes.return_value = ["modified: file1.py"]
+    return repo
 
-class TestBranchManager:
-    """Test suite for the BranchManager class."""
+@pytest.fixture
+def branch_manager(clean_repo):
+    """Default branch manager with clean repo"""
+    return BranchManager(clean_repo)
 
-    def test_get_status_no_changes(self, branch_manager, mock_repo):
-        """
-        Test get_status method when there are no uncommitted changes.
-        """
-        # Arrange
-        mock_repo.get_current_branch.return_value = "main"
-        mock_repo.has_uncommitted_changes.return_value = False
-        mock_repo.get_uncommitted_changes.return_value = []
-
-        # Act
+class TestBranchStatus:
+    """Test branch status reporting behavior"""
+    
+    def test_clean_status(self, branch_manager):
+        """Should report clean state accurately"""
+        # When getting status
         status = branch_manager.get_status()
-
-        # Assert
+        
+        # Then should show clean state
         assert isinstance(status, BranchStatus)
         assert status.current_branch == "main"
         assert not status.has_changes
-        assert status.changes == []
-        mock_repo.get_current_branch.assert_called_once()
-        mock_repo.has_uncommitted_changes.assert_called_once()
-        mock_repo.get_uncommitted_changes.assert_called_once()
+        assert len(status.changes) == 0
 
-    def test_get_status_with_changes(self, branch_manager, mock_repo):
-        """
-        Test get_status method when there are uncommitted changes.
-        """
-        # Arrange
-        mock_repo.get_current_branch.return_value = "develop"
-        mock_repo.has_uncommitted_changes.return_value = True
-        mock_repo.get_uncommitted_changes.return_value = ["file1.py", "file2.py"]
+    def test_dirty_status(self, dirty_repo):
+        """Should detect uncommitted changes"""
+        # Given manager with dirty repo
+        manager = BranchManager(dirty_repo)
+        
+        # When getting status
+        status = manager.get_status()
+        
+        # Then should show changes
+        assert status.current_branch == "feature"
+        assert status.has_changes
+        assert "modified: file1.py" in status.changes
 
-        # Act
-        status = branch_manager.get_status()
+class TestBranchCreation:
+    """Test branch creation behavior"""
 
-        # Assert
-        assert isinstance(status, BranchStatus)
-        assert status.current_branch == "develop"
-        assert status.has_changes is True
-        assert status.changes == ["file1.py", "file2.py"]
-        mock_repo.get_current_branch.assert_called_once()
-        mock_repo.has_uncommitted_changes.assert_called_once()
-        mock_repo.get_uncommitted_changes.assert_called_once()
+    def test_create_branch_clean_repo(self, branch_manager, clean_repo):
+        """Should create branch in clean repo"""
+        # Given clean repo state
+        clean_repo.branch_exists.return_value = False
+        clean_repo.create_branch.return_value = True
+        
+        # When creating branch
+        success = branch_manager.create_fix_branch("fix-123")
+        
+        # Then branch should be created
+        assert success is True
+        clean_repo.create_branch.assert_called_once_with("fix-123")
 
-    def test_get_status_repository_inaccessible(self, branch_manager, mock_repo):
-        """
-        Test get_status method when the repository is inaccessible.
-        """
-        # Arrange
-        mock_repo.get_current_branch.side_effect = NotAGitRepositoryError("Repository not found")
+    def test_reject_creation_dirty_repo(self, dirty_repo):
+        """Should reject branch creation with uncommitted changes"""
+        # Given repo with changes
+        manager = BranchManager(dirty_repo)
+        
+        # When attempting creation
+        # Then should fail
+        with pytest.raises(BranchCreationError) as exc:
+            manager.create_fix_branch("fix-123")
+        assert "uncommitted changes" in str(exc.value)
 
-        # Act & Assert
-        with pytest.raises(NotAGitRepositoryError, match="Repository not found"):
-            branch_manager.get_status()
-        mock_repo.get_current_branch.assert_called_once()
-
-    def test_create_fix_branch_success(self, branch_manager, mock_repo):
-        """
-        Test create_fix_branch method for successful branch creation and checkout.
-        """
-        # Arrange
-        branch_name = "fix/bug-123"
-        mock_repo.create_branch.return_value = True
-        mock_repo.checkout_branch.return_value = True
-
-        # Act
-        result = branch_manager.create_fix_branch(branch_name)
-
-        # Assert
-        assert result is True
-        mock_repo.create_branch.assert_called_once_with(branch_name)
-        mock_repo.checkout_branch.assert_called_once_with(branch_name)
-
-    def test_create_fix_branch_failure(self, branch_manager, mock_repo):
-        """
-        Test create_fix_branch method when branch creation fails.
-        """
-        # Arrange
-        branch_name = "fix/bug-123"
-        mock_repo.create_branch.return_value = False
-
-        # Act
-        result = branch_manager.create_fix_branch(branch_name)
-
-        # Assert
-        assert result is False
-        mock_repo.create_branch.assert_called_once_with(branch_name)
-        mock_repo.checkout_branch.assert_not_called()
-
-    def test_create_fix_branch_invalid_name(self, branch_manager, mock_repo):
-        """
-        Test create_fix_branch method with an invalid branch name.
-        """
-        # Arrange
-        branch_name = "invalid/branch name!"
-        mock_repo.create_branch.side_effect = BranchCreationError("Invalid branch name")
-
-        # Act & Assert
-        with pytest.raises(BranchCreationError, match="Invalid branch name"):
+    @pytest.mark.parametrize("branch_name,error", [
+        ("", "empty branch name"),
+        ("invalid//name", "invalid branch name"),
+        ("fix-123", "branch already exists")
+    ])
+    def test_invalid_branch_creation(self, branch_manager, clean_repo, branch_name, error):
+        """Should handle invalid branch creation scenarios"""
+        # Given error condition
+        clean_repo.create_branch.side_effect = BranchCreationError(error)
+        
+        # When/Then should raise appropriate error
+        with pytest.raises(BranchCreationError) as exc:
             branch_manager.create_fix_branch(branch_name)
-        mock_repo.create_branch.assert_called_once_with(branch_name)
-        mock_repo.checkout_branch.assert_not_called()
+        assert error in str(exc.value)
 
-    def test_merge_branch_fast_forward_success(self, branch_manager, mock_repo):
-        """
-        Test merge_branch method for a successful fast-forward merge.
-        """
-        # Arrange
-        branch_name = "feature/new-feature"
-        mock_repo.merge_branch.return_value = True
+class TestBranchMerging:
+    """Test branch merging behavior"""
 
-        # Act
-        result = branch_manager.merge_branch(branch_name, no_ff=False)
+    def test_successful_merge(self, branch_manager, clean_repo):
+        """Should merge branches successfully"""
+        # Given branches exist
+        clean_repo.branch_exists.return_value = True
+        clean_repo.merge_branch.return_value = True
+        
+        # When merging
+        success = branch_manager.merge_branch("feature")
+        
+        # Then should succeed
+        assert success is True
+        clean_repo.merge_branch.assert_called_once_with("feature", fast_forward=True)
 
-        # Assert
-        assert result is True
-        mock_repo.merge_branch.assert_called_once_with(branch_name, fast_forward=True)
+    def test_merge_with_conflicts(self, branch_manager, clean_repo):
+        """Should handle merge conflicts appropriately"""
+        # Given merge will conflict
+        clean_repo.branch_exists.return_value = True
+        clean_repo.merge_branch.side_effect = MergeConflictError("Conflict in file.py")
+        
+        # When merging
+        # Then should raise conflict error
+        with pytest.raises(MergeConflictError) as exc:
+            branch_manager.merge_branch("feature")
+        assert "Conflict" in str(exc.value)
 
-    def test_merge_branch_no_fast_forward_success(self, branch_manager, mock_repo):
-        """
-        Test merge_branch method for a successful no-fast-forward merge.
-        """
-        # Arrange
-        branch_name = "feature/new-feature"
-        mock_repo.merge_branch.return_value = True
+    def test_merge_nonexistent_branch(self, branch_manager, clean_repo):
+        """Should reject merging nonexistent branches"""
+        # Given branch doesn't exist
+        clean_repo.branch_exists.return_value = False
+        
+        # When/Then should fail
+        with pytest.raises(BranchCreationError):
+            branch_manager.merge_branch("nonexistent")
 
-        # Act
-        result = branch_manager.merge_branch(branch_name, no_ff=True)
-
-        # Assert
-        assert result is True
-        mock_repo.merge_branch.assert_called_once_with(branch_name, fast_forward=False)
-
-    def test_merge_branch_nonexistent_branch(self, branch_manager, mock_repo):
-        """
-        Test merge_branch method when attempting to merge a nonexistent branch.
-        """
-        # Arrange
-        branch_name = "nonexistent-branch"
-        mock_repo.merge_branch.side_effect = BranchCreationError("Branch does not exist")
-
-        # Act & Assert
-        with pytest.raises(BranchCreationError, match="Branch does not exist"):
-            branch_manager.merge_branch(branch_name)
-        mock_repo.merge_branch.assert_called_once_with(branch_name, fast_forward=False)
-
-    def test_merge_branch_merge_conflict(self, branch_manager, mock_repo):
-        """
-        Test merge_branch method when a merge conflict occurs.
-        """
-        # Arrange
-        branch_name = "feature/conflict-feature"
-        mock_repo.merge_branch.side_effect = MergeConflictError("Merge conflict detected")
-
-        # Act & Assert
-        with pytest.raises(MergeConflictError, match="Merge conflict detected"):
-            branch_manager.merge_branch(branch_name, no_ff=True)
-        mock_repo.merge_branch.assert_called_once_with(branch_name, fast_forward=False)
-
-    def test_merge_branch_invalid_parameters(self, branch_manager, mock_repo):
-        """
-        Test merge_branch method with invalid parameters.
-        """
-        # Arrange
-        branch_name = ""
-        mock_repo.merge_branch.side_effect = ValueError("Branch name cannot be empty")
-
-        # Act & Assert
-        with pytest.raises(ValueError, match="Branch name cannot be empty"):
-            branch_manager.merge_branch(branch_name)
-        mock_repo.merge_branch.assert_called_once_with(branch_name, fast_forward=False)
-
-    def test_create_fix_branch_already_exists(self, branch_manager, mock_repo):
-        """
-        Test create_fix_branch method when the branch already exists.
-        """
-        # Arrange
-        branch_name = "fix/bug-123"
-        mock_repo.create_branch.side_effect = BranchCreationError("Branch already exists")
-
-        # Act & Assert
-        with pytest.raises(BranchCreationError, match="Branch already exists"):
-            branch_manager.create_fix_branch(branch_name)
-        mock_repo.create_branch.assert_called_once_with(branch_name)
-        mock_repo.checkout_branch.assert_not_called()
-
-    def test_get_status_with_unexpected_changes(self, branch_manager, mock_repo):
-        """
-        Test get_status method with unexpected change types.
-        """
-        # Arrange
-        mock_repo.get_current_branch.return_value = "develop"
-        mock_repo.has_uncommitted_changes.return_value = True
-        mock_repo.get_uncommitted_changes.return_value = ["binaryfile.bin", "script.sh", "README.md"]
-
-        # Act
-        status = branch_manager.get_status()
-
-        # Assert
-        assert isinstance(status, BranchStatus)
-        assert status.current_branch == "develop"
-        assert status.has_changes is True
-        assert status.changes == ["binaryfile.bin", "script.sh", "README.md"]
-        mock_repo.get_current_branch.assert_called_once()
-        mock_repo.has_uncommitted_changes.assert_called_once()
-        mock_repo.get_uncommitted_changes.assert_called_once()
-
-    def test_create_fix_branch_with_special_characters(self, branch_manager, mock_repo):
-        """
-        Test create_fix_branch method with a branch name containing special characters.
-        """
-        # Arrange
-        branch_name = "fix/bug-#123"
-        mock_repo.create_branch.return_value = True
-        mock_repo.checkout_branch.return_value = True
-
-        # Act
-        result = branch_manager.create_fix_branch(branch_name)
-
-        # Assert
-        assert result is True
-        mock_repo.create_branch.assert_called_once_with(branch_name)
-        mock_repo.checkout_branch.assert_called_once_with(branch_name)
-
-    def test_merge_branch_with_large_number_of_changes(self, branch_manager, mock_repo):
-        """
-        Test merge_branch method when merging branches with a large number of changes.
-        """
-        # Arrange
-        branch_name = "feature/large-changes"
-        mock_repo.merge_branch.return_value = True
-        mock_repo.get_uncommitted_changes.return_value = [f"file_{i}.py" for i in range(100)]
-
-        # Act
-        result = branch_manager.merge_branch(branch_name, no_ff=False)
-
-        # Assert
-        assert result is True
-        mock_repo.merge_branch.assert_called_once_with(branch_name, fast_forward=True)
+    @pytest.mark.parametrize("ff_option", [True, False])
+    def test_merge_fast_forward_option(self, branch_manager, clean_repo, ff_option):
+        """Should respect fast-forward option"""
+        # Given branch exists
+        clean_repo.branch_exists.return_value = True
+        clean_repo.merge_branch.return_value = True
+        
+        # When merging with ff option
+        branch_manager.merge_branch("feature", fast_forward=ff_option)
+        
+        # Then should pass correct option
+        clean_repo.merge_branch.assert_called_once_with("feature", fast_forward=ff_option)
