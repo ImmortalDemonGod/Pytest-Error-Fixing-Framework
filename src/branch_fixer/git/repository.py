@@ -102,29 +102,40 @@ class GitRepository:
             GitError: If the command execution fails.
         """
         try:
-            # Ensure cmd is not empty
-            if not cmd:
-                raise ValueError("Git command list cannot be empty.")
-
+            # Create Repo instance for the current repository
+            repo = Repo(self.root)
+            
             # First element should be 'git', remove it if present
-            if cmd[0].lower() == 'git':
+            if cmd[0] == 'git':
                 cmd = cmd[1:]
             
-            # Execute the command using GitPython
-            exit_code, stdout, stderr = self.repo.git.execute(cmd, with_extended_output=True)
+            # Get the git command name (first element after removing 'git')
+            git_cmd = cmd[0]
+            # Get the arguments (everything after the command)
+            args = cmd[1:]
+            
+            # Use GitPython's git object to execute the command
+            # getattr gets the command method dynamically from the git object
+            cmd_method = getattr(repo.git, git_cmd)
+            
+            # Execute the command and capture output
+            output = cmd_method(*args, with_extended_output=True)
+            
+            # Parse the output - GitPython returns (status, stdout, stderr)
+            status, stdout, stderr = output
             
             # Create CompletedProcess object to match subprocess interface
             return subprocess.CompletedProcess(
                 args=cmd,
-                returncode=exit_code,
+                returncode=status,
                 stdout=stdout,
                 stderr=stderr
             )
             
         except GitCommandError as e:
-            raise GitError(f"Git command failed: {e.stderr}") from e
-        except ValueError as ve:
-            raise GitError(str(ve)) from ve
+            raise GitError(f"Git command failed: {e.stderr}")
+        except AttributeError:
+            raise GitError(f"Unknown git command: {cmd[0] if cmd else 'No command provided'}")
 
     def clone(self, url: str, destination: Optional[Path] = None) -> bool:
         """
