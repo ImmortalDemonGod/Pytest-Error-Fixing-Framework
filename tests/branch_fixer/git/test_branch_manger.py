@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from git.branch_manager import BranchManager, BranchStatus
+from branch_fixer.git.branch_manager import BranchManager, BranchStatus
 from git.exceptions import NotAGitRepositoryError, BranchCreationError, MergeConflictError
 
 # Assuming that the exceptions are defined in git/exceptions.py
