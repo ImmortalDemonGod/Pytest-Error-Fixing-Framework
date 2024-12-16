@@ -16,13 +16,16 @@ class BranchManager:
     def __init__(self, repository):
         """Initialize with a Git repository instance.
         
-        Args:
-            repository: GitRepository instance to perform operations on
+            Args:
+                repository: GitRepository instance to perform operations on
         """
         self.repository = repository
 
     def get_status(self) -> BranchStatus:
         """Get current branch status including uncommitted changes.
+        
+        **Note:** This method currently contains a stub implementation and may not
+        fully reflect the actual repository state.
         
         Returns:
             BranchStatus with current branch and change information
@@ -30,16 +33,13 @@ class BranchManager:
         Raises:
             GitError: If unable to get repository status
         """
-        # Stub implementation to make tests fail for behavioral reasons
-        return BranchStatus(
-            current_branch=self.repository.get_current_branch(),
-            # FIX: Query actual repository state
-            has_changes=self.repository.has_uncommitted_changes(),
-            changes=self.repository.get_uncommitted_changes()
-        )
+        raise NotImplementedError("get_status method is not implemented yet.")
 
     def create_fix_branch(self, branch_name: str) -> bool:
         """Create a new branch for fixing an issue.
+        
+        **Note:** This method currently contains a stub implementation and may not
+        perform all necessary validations or operations.
         
         Args:
             branch_name: Name of branch to create
@@ -54,56 +54,32 @@ class BranchManager:
                 - Branch already exists
                 - Uncommitted changes present
         """
-        # Stub implementation to make tests fail for behavioral reasons
-        if not branch_name:
-            raise BranchCreationError("empty branch name")
-        if "//" in branch_name:
-            raise BranchCreationError("invalid branch name")
-            
-        # Check for uncommitted changes before checking branch existence
-        if self.repository.has_uncommitted_changes():
-            raise BranchCreationError("uncommitted changes")
-            
-        # Now check existence
-        if self.repository.branch_exists(branch_name):
-            raise BranchCreationError("branch already exists")
-            
-        return self.repository.create_branch(branch_name)
+        raise NotImplementedError("create_fix_branch method is not implemented yet.")
     
     def merge_branch(self, branch_name: str, fast_forward: bool = False) -> bool:
         """Merge specified branch into current branch.
         
         Args:
             branch_name: Name of branch to merge
-            fast_forward: Whether to allow fast-forward merge
+            fast_forward: Whether to allow fast-forward merge (default: False)
             
         Returns:
             bool: True if merge completed successfully
             
         Raises:
-            BranchCreationError: If branch doesn't exist
-            MergeConflictError: If merge has conflicts
+            BranchCreationError: If the specified branch does not exist
+            MergeConflictError: If the merge results in conflicts
             GitError: For other merge failures
         """
-        # Stub implementation to make tests fail for behavioral reasons
-        # FIX: Default fast_forward to True
-        if not self.repository.branch_exists(branch_name):
-            raise BranchCreationError("branch does not exist")
-                
-        try:
-            return self.repository.merge_branch(branch_name, fast_forward=fast_forward)
-        except GitError as e:
-            if "conflict" in str(e).lower():
-                raise MergeConflictError(str(e))
-            raise
+        raise NotImplementedError("merge_branch method is not implemented yet.")
 
     def is_clean(self) -> bool:
-        """Check if repository is in a clean state.
+        """Check if the repository is in a clean state.
         
         Returns:
-            bool: True if no uncommitted changes
+            bool: True if there are no uncommitted changes
         """
-        return not self.repository.has_uncommitted_changes()
+        raise NotImplementedError("is_clean method is not implemented yet.")
 
     def branch_exists(self, branch_name: str) -> bool:
         """Check if a branch exists.
@@ -112,17 +88,17 @@ class BranchManager:
             branch_name: Name of branch to check
             
         Returns:
-            bool: True if branch exists
+            bool: True if the branch exists
         """
-        return self.repository.branch_exists(branch_name)
+        raise NotImplementedError("branch_exists method is not implemented yet.")
 
     def get_current_branch(self) -> str:
-        """Get name of currently checked out branch.
+        """Get the name of the currently checked-out branch.
         
         Returns:
-            str: Name of current branch
+            str: Name of the current branch
             
         Raises:
-            GitError: If unable to determine current branch
+            GitError: If unable to determine the current branch
         """
-        return self.repository.get_current_branch()
+        raise NotImplementedError("get_current_branch method is not implemented yet.")
