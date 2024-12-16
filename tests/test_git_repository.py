@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from datetime import datetime
 from branch_fixer.git.exceptions import NotAGitRepositoryError
-from branch_fixer.git import GitRepository
+from branch_fixer.git import GitRepository, GitError
 
 class TestRepositoryInitialization:
     """Test suite for git repository initialization behaviors"""
