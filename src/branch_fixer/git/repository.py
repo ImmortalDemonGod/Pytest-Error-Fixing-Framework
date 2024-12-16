@@ -2,7 +2,7 @@
 import subprocess
 from pathlib import Path
 from typing import List, Optional
-from git import Repo
+from git import Repo, GitCommandError
 from git.exc import InvalidGitRepositoryError, NoSuchPathError
 from branch_fixer.git.exceptions import GitError, NotAGitRepositoryError
 
