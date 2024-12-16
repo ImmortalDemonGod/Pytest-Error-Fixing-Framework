@@ -71,7 +71,21 @@ class GitRepository:
         Raises:
             GitError: If unable to determine the main branch.
         """
-        raise NotImplementedError("_get_main_branch method is not implemented yet.")
+        try:
+            # Read HEAD file content
+            head_file = self.root / ".git" / "HEAD"
+            head_content = head_file.read_text().strip()
+            
+            # Check for ref format (e.g. "ref: refs/heads/main")
+            if head_content.startswith("ref: refs/heads/"):
+                # Extract branch name after refs/heads/
+                return head_content.replace("ref: refs/heads/", "").strip()
+                
+            # Invalid format
+            raise GitError("Invalid HEAD file format")
+                
+        except (OSError, IOError) as e:
+            raise GitError(f"Unable to read HEAD file: {e}")
 
     def run_command(self, cmd: List[str]) -> subprocess.CompletedProcess:
         """
