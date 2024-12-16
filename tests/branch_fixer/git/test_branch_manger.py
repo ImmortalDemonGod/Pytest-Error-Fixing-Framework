@@ -18,12 +18,11 @@ def clean_repo():
 
 @pytest.fixture
 def dirty_repo():
-    """Repository fixture with uncommitted changes"""
-    repo = MagicMock()
-    repo.get_current_branch.return_value = "feature"
-    repo.has_uncommitted_changes.return_value = True
-    repo.get_uncommitted_changes.return_value = ["modified: file1.py"]
-    return repo
+    mock = MagicMock()
+    mock.has_uncommitted_changes.return_value = True
+    mock.get_current_branch.return_value = "feature"
+    mock.get_uncommitted_changes.return_value = ["file1.txt"]
+    return mock
 
 @pytest.fixture
 def branch_manager(clean_repo):
