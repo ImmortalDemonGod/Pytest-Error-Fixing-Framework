@@ -39,11 +39,17 @@ class TestRepositoryInitialization:
         When: Initializing from a subdirectory
         Then: It should find the repository root
         """
+        # Create nested directory
         subdir = temporary_repository / "src" / "nested" / "deep"
         subdir.mkdir(parents=True)
         
+        # When initializing from subdirectory
         repo = GitRepository(subdir)
-        assert repo.root == temporary_repository
+        
+        # Then should find actual root
+        assert repo.root.samefile(temporary_repository)
+        assert (repo.root / ".git").exists()
+        assert (repo.root / ".git" / "HEAD").exists()
 
 class TestMainBranchIdentification:
     """Test suite for main branch detection behaviors"""
@@ -105,7 +111,7 @@ def temporary_directory():
     """
     Creates an empty temporary directory for testing.
     
-    Yields:
+    Returns:
         Path: Path to temporary directory
     
     Notes:
@@ -128,7 +134,7 @@ def temporary_repository(temporary_directory):
     Args:
         temporary_directory: Base directory fixture
     
-    Yields:
+    Returns:
         Path: Path to repository root
     
     Notes:
@@ -142,4 +148,54 @@ def temporary_repository(temporary_directory):
     (temporary_directory / ".git" / "refs" / "heads").mkdir(parents=True)
     (temporary_directory / ".git" / "refs" / "heads" / "main").touch()
     
-    yield temporary_directory
+    return temporary_directory
+    def test_identifies_main_branch_correctly(self, temporary_repository):
+        """Should correctly identify the main branch from HEAD"""
+        # Given
+        head_file = temporary_repository / ".git" / "HEAD"
+        
+        # When HEAD points to main
+        head_file.write_text("ref: refs/heads/main")
+        repo = GitRepository(temporary_repository)
+        assert repo.main_branch == "main"
+        
+        # When HEAD points to master
+        head_file.write_text("ref: refs/heads/master")
+        repo = GitRepository(temporary_repository)
+        assert repo.main_branch == "master"
+        
+        # When HEAD is invalid
+        head_file.write_text("invalid content")
+        with pytest.raises(GitError):
+            GitRepository(temporary_repository)
+
+    def test_repository_initialization_errors(self, temporary_directory):
+        """Should handle various initialization errors appropriately"""
+        # Missing .git directory
+        with pytest.raises(NotAGitRepositoryError):
+            GitRepository(temporary_directory)
+        
+        # Invalid .git directory structure
+        bad_git = temporary_directory / ".git"
+        bad_git.mkdir()
+        with pytest.raises(NotAGitRepositoryError):
+            GitRepository(temporary_directory)
+        
+        # No read permissions
+        bad_git.chmod(0o000)
+        with pytest.raises(PermissionError):
+            GitRepository(temporary_directory)
+
+    def test_command_execution_errors(self, temporary_repository):
+        """Should handle command execution errors appropriately"""
+        repo = GitRepository(temporary_repository)
+        
+        # Non-existent command
+        with pytest.raises(GitError) as exc:
+            repo.run_command(["git", "nonexistent"])
+        assert "unknown git command" in str(exc.value).lower()
+        
+        # Invalid arguments
+        with pytest.raises(GitError) as exc:
+            repo.run_command(["git", "--invalid-flag"])
+        assert "unknown option" in str(exc.value).lower()
