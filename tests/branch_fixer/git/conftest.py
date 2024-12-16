@@ -11,8 +11,8 @@ def empty_directory(tmp_path):
 
 @pytest.fixture
 def temporary_repository(tmp_path):
-    """Create a temporary Git repository with proper initialization."""
-    # Initialize Git repository
+    """Create a temporary git repository with proper initialization"""
+    # Initialize git repo
     repo = Repo.init(tmp_path)
     
     # Configure test identity for commits
@@ -20,10 +20,15 @@ def temporary_repository(tmp_path):
         config.set_value("user", "name", "Test User")
         config.set_value("user", "email", "test@example.com")
     
-    # Create initial commit to set up HEAD
-    (tmp_path / "README.md").write_text("# Test Repository")
+    # Create initial commit so we have a HEAD 
+    readme = tmp_path / "README.md"
+    readme.write_text("# Test Repository")
     repo.index.add(["README.md"])
     repo.index.commit("Initial commit")
+    
+    # Set HEAD to point to main by default
+    head_path = tmp_path / ".git" / "HEAD" 
+    head_path.write_text("ref: refs/heads/main")
     
     return tmp_path
 
