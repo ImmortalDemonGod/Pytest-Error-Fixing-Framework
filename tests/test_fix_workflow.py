@@ -2,7 +2,7 @@
 import pytest
 import asyncio
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 from unittest.mock import Mock, AsyncMock
 
 from branch_fixer.domain.models import TestError, ErrorDetails, FixAttempt
@@ -32,63 +32,16 @@ Infrastructure Needs:
 - Temporary file handling
 """
 
-# 2. Test Infrastructure
-@pytest.fixture
-def error_factory():
-    """Creates test errors with different configurations"""
-    def _create_error(file: str = "test_example.py",
-                     func: str = "test_something",
-                     error_type: str = "AssertionError",
-                     msg: str = "Test failed") -> TestError:
-        return TestError(
-            test_file=Path(f"tests/{file}"),
-            test_function=func,
-            error_details=ErrorDetails(
-                error_type=error_type,
-                message=msg
-            )
-        )
-    return _create_error
-
-@pytest.fixture
-async def fix_service_factory():
-    """Creates configured fix service with mocked components"""
-    def _create_service(*, 
-                       branch_success: bool = True,
-                       ai_responses: List[dict] = None,
-                       test_results: List[bool] = None,
-                       max_retries: int = 3) -> FixService:
-        
-        ai_manager = AsyncMock()
-        ai_manager.generate_fix.side_effect = ai_responses or [{"modified": "fix"}]
-        
-        test_runner = Mock()
-        test_runner.run_test.side_effect = test_results or [True]
-        
-        change_applier = Mock()
-        change_applier.apply_changes.return_value = True
-        
-        git_repo = Mock()
-        git_repo.create_branch.return_value = branch_success
-        
-        return FixService(
-            ai_manager=ai_manager,
-            test_runner=test_runner,
-            change_applier=change_applier,
-            git_repo=git_repo,
-            max_retries=max_retries
-        )
-    return _create_service
 
 # 3. Basic Path Verification
 class TestFixWorkflowPaths:
     """Verify each code path works correctly"""
     
     @pytest.mark.asyncio
-    async def test_verify_happy_path(self, fix_service_factory, error_factory):
+    async def test_verify_happy_path(self, service_factory, error_factory):
         """Verify basic successful fix flow"""
         # Given
-        service = fix_service_factory()
+        service = service_factory()
         error = error_factory()
         
         # When 
@@ -103,10 +56,10 @@ class TestFixWorkflowPaths:
         service.test_runner.run_test.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_verify_branch_failure_path(self, fix_service_factory, error_factory):
+    async def test_verify_branch_failure_path(self, service_factory, error_factory):
         """Verify early return on branch creation failure"""
         # Given
-        service = fix_service_factory(branch_success=False)
+        service = service_factory(branch_success=False)
         error = error_factory()
         
         # When
@@ -125,10 +78,10 @@ class TestFixWorkflowErrors:
     """Verify error handling behavior"""
     
     @pytest.mark.asyncio 
-    async def test_handles_ai_errors(self, fix_service_factory, error_factory):
+    async def test_handles_ai_errors(self, service_factory, error_factory):
         """Verify AI error handling"""
         # Given
-        service = fix_service_factory()
+        service = service_factory()
         service.ai_manager.generate_fix.side_effect = Exception("AI Failed")
         error = error_factory()
         
