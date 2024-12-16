@@ -10,27 +10,24 @@ def empty_directory(tmp_path):
     return tmp_path
 
 @pytest.fixture
-def temporary_repository(tmp_path):
-    """Create a temporary git repository with proper initialization"""
-    # Initialize git repo
-    repo = Repo.init(tmp_path)
-    
-    # Configure test identity for commits
-    with repo.config_writer() as config:
-        config.set_value("user", "name", "Test User")
-        config.set_value("user", "email", "test@example.com")
-    
-    # Create initial commit so we have a HEAD 
-    readme = tmp_path / "README.md"
-    readme.write_text("# Test Repository")
-    repo.index.add(["README.md"])
-    repo.index.commit("Initial commit")
-    
-    # Set HEAD to point to main by default
-    head_path = tmp_path / ".git" / "HEAD" 
-    head_path.write_text("ref: refs/heads/main")
-    
+def temporary_directory(tmp_path):
+    """Provides a temporary directory for testing."""
     return tmp_path
+
+# We can also add a helper method to create git repositories
+def init_repository(path: Path) -> None:
+    """Initialize a git repository with some basic setup."""
+    from git import Repo
+    repo = Repo.init(path)
+    
+    # Create an initial commit so we have a master/main branch
+    repo.index.commit("Initial commit")
+
+@pytest.fixture 
+def temporary_repository(temporary_directory):
+    """Provides a temporary git repository for testing."""
+    init_repository(temporary_directory)
+    return temporary_directory
 
 @pytest.fixture
 def nested_repository(temporary_repository):
