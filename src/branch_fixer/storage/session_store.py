@@ -1,14 +1,41 @@
 class SessionStore:
-    """Handles persistent storage of fix sessions."""
+    """Handles persistent storage of fix sessions"""
     
-    def __init__(self):
-        """Initialize the session store."""
-        pass
+    def __init__(self, storage_dir: Path):
+        """Initialize session store
+        
+        Args:
+            storage_dir: Directory to store session data
+            
+        Raises:
+            PermissionError: If directory not writable
+            ValueError: If path invalid
+        """
+        raise NotImplementedError()
 
-    def save_session(self, session_data):
-        """Save session data."""
-        pass
+    async def save_session(self, session: FixSession) -> None:
+        """Save session state to storage
+        
+        Args:
+            session: Session to save
+            
+        Raises:
+            IOError: If save fails
+            ValueError: If session invalid
+        """
+        raise NotImplementedError()
 
-    def load_session(self, session_id):
-        """Load session data."""
-        pass
+    async def load_session(self, session_id: UUID) -> Optional[FixSession]:
+        """Load session from storage
+        
+        Args:
+            session_id: ID of session to load
+            
+        Returns:
+            Loaded FixSession or None if not found
+            
+        Raises:
+            IOError: If load fails
+            ValueError: If data corrupt
+        """ 
+        raise NotImplementedError()
