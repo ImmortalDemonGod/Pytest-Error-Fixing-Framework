@@ -1,5 +1,6 @@
 from typing import Optional
 from branch_fixer.domain.models import TestError, FixAttempt
+from branch_fixer.workspace.validator import WorkspaceValidator
 import asyncio
 
 class FixServiceError(Exception):
@@ -31,7 +32,15 @@ class FixService:
         Raises:
             ValueError: If invalid parameters provided
         """
-        raise NotImplementedError()
+        self.validator = WorkspaceValidator()
+        self.ai_manager = ai_manager
+        self.test_runner = test_runner
+        self.change_applier = change_applier
+        self.git_repo = git_repo
+        self.max_retries = max_retries
+        self.initial_temp = initial_temp
+        self.temp_increment = temp_increment
+    
     async def attempt_fix(self, error: TestError) -> bool:
         """Attempt to fix failing test.
         
@@ -45,7 +54,11 @@ class FixService:
             FixServiceError: If fix process fails
             ValueError: If error is already fixed
         """
+        # Validate workspace before attempting fix
+        await self.validator.validate_workspace(error.test_file.parent)
+        await self.validator.check_dependencies()
         raise NotImplementedError()
+    
     def _handle_failed_attempt(self, 
                              error: TestError,
                              attempt: FixAttempt) -> None:
