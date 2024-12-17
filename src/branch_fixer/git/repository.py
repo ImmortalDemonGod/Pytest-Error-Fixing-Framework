@@ -5,6 +5,14 @@ from typing import List, Optional
 from git import Repo, GitCommandError
 from git.exc import InvalidGitRepositoryError, NoSuchPathError
 from branch_fixer.git.exceptions import GitError, NotAGitRepositoryError
+from pathlib import Path
+from typing import List, Optional
+from git import Repo, GitCommandError
+from git.exc import InvalidGitRepositoryError, NoSuchPathError
+from branch_fixer.git.exceptions import GitError, NotAGitRepositoryError
+from branch_fixer.git.pr_manager import PRManager
+from branch_fixer.git.branch_manager import BranchManager
+from branch_fixer.git.safety_manager import SafetyManager
 
 class GitRepository:
     """
@@ -29,6 +37,11 @@ class GitRepository:
         self.root = self._find_git_root(root)
         self.repo = Repo(self.root)  # Add this line to store the Repo instance
         self.main_branch = self._get_main_branch()
+        
+        # Initialize managers
+        self.pr_manager = PRManager(self)
+        self.branch_manager = BranchManager(self)
+        self.safety_manager = SafetyManager(self)
 
     def _find_git_root(self, root: Optional[Path]) -> Path:
         """
@@ -257,3 +270,19 @@ class GitRepository:
             return any(branch.name == branch_name for branch in self.repo.heads)
         except Exception as e:
             raise GitError(f"Unable to check branch existence: {str(e)}") from e
+    
+    def create_pull_request(self, title: str, description: str) -> bool:
+        """
+        Create a pull request for the current changes.
+
+        Args:
+            title: Title for the pull request
+            description: Description of changes
+
+        Returns:
+            bool indicating if PR creation succeeded
+
+        Raises:
+            GitError: If PR creation fails
+        """
+        return self.pr_manager.create_pr(title, description)
