@@ -32,6 +32,22 @@ class TestableEntity:
     entity_type: str  # 'class', 'method', or 'function'
     parent_class: Optional[str] = None
 
+def fix_pythonpath(file_path: Path) -> None:
+    """Ensure the module being tested is in Python's path"""
+    # Add parent directory to path if it's a single file
+    parent_dir = str(file_path.parent.absolute())
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
+        logger.debug(f"Added parent directory to sys.path: {parent_dir}")
+        
+    # Add src directory to path if it exists
+    if 'src' in file_path.parts:
+        src_index = file_path.parts.index('src')
+        src_path = str(Path(*file_path.parts[:src_index+1]).absolute())
+        if src_path not in sys.path:
+            sys.path.insert(0, src_path)
+            logger.debug(f"Added src directory to sys.path: {src_path}")
+
 class ModuleParser(ast.NodeVisitor):
     """AST-based parser for Python modules"""
     
@@ -119,13 +135,20 @@ class TestGenerator:
         logger.debug(f"Executing hypothesis command: {full_cmd}")
         
         try:
+            # Log Python path
+            logger.debug(f"PYTHONPATH before modification: {os.getenv('PYTHONPATH')}")
+            logger.debug(f"sys.path: {sys.path}")
+            
             logger.debug(f"Current working directory: {os.getcwd()}")
             result = subprocess.run(
                 full_cmd,
                 shell=True,
                 capture_output=True,
                 text=True,
-                env=os.environ.copy()  # Explicitly copy environment
+                env={
+                    **os.environ.copy(),
+                    'PYTHONPATH': ':'.join(sys.path)
+                }
             )
             
             debug_command_output(full_cmd, result.stdout, result.stderr, result.returncode)
@@ -292,6 +315,9 @@ class TestGenerator:
         logger.info(f"Generating tests for file: {file_path}")
         
         try:
+            # Fix Python path before generating tests
+            fix_pythonpath(file_path)
+            
             module_path, entities = self.get_module_contents(file_path)
             
             print(f"\nProcessing module: {module_path}")
