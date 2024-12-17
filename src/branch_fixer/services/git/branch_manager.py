@@ -1,4 +1,4 @@
-# src/branch_fixer/git/branch_manager.py
+# branch_fixer/services/git/branch_manager.py
 from dataclasses import dataclass
 from typing import List, Optional, Set
 from pathlib import Path

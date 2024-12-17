@@ -1,3 +1,4 @@
+# branch_fixer/config/logging_config.py
 import logging
 
 def setup_logging():

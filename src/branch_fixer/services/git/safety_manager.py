@@ -1,5 +1,4 @@
-# File: git/safety_manager.py
-
+# branch_fixer/services/git/safety_manager.py
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Set, Optional, List, Any

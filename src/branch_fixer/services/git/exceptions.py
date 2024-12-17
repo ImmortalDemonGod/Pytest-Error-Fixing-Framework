@@ -1,4 +1,4 @@
-# src/branch_fixer/git/exceptions.py
+# branch_fixer/services/git/exceptions.py
 class GitError(Exception):
     """Base class for exceptions in this module."""
     pass

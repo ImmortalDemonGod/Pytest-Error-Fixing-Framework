@@ -1,4 +1,4 @@
-# src/branch_fixer/storage/recovery.py
+# branch_fixer/storage/recovery.py
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Dict, Any, TYPE_CHECKING

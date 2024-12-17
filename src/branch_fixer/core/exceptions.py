@@ -1,3 +1,4 @@
+# branch_fixer/core/exceptions.py
 class FixError(Exception):
     """Base exception for fix operations"""
     pass

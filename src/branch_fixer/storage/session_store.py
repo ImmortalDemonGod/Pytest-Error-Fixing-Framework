@@ -1,4 +1,4 @@
-# src/branch_fixer/storage/session_store.py
+# branch_fixer/storage/session_store.py
 from pathlib import Path
 from typing import Optional, Dict, List, Any
 from uuid import UUID

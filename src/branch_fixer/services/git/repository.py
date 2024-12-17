@@ -1,4 +1,4 @@
-# src/branch_fixer/git/repository.py
+# branch_fixer/services/git/repository.py
 import subprocess
 from pathlib import Path
 from typing import List, Optional

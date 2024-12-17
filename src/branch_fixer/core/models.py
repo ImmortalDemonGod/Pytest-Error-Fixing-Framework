@@ -1,4 +1,4 @@
-# src/branch_fixer/domain/models.py
+# branch_fixer/core/models.py
 from dataclasses import dataclass, field
 from uuid import UUID, uuid4
 from pathlib import Path

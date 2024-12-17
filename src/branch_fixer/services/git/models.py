@@ -1,5 +1,4 @@
-# File: git/models.py
-
+# branch_fixer/services/git/models.py
 from enum import Enum
 from dataclasses import dataclass, field
 from datetime import datetime

@@ -1,4 +1,4 @@
-# src/branch_fixer/pytest/error_info.py
+# branch_fixer/services/pytest/error_info.py
 from dataclasses import dataclass
 from pathlib import Path
 

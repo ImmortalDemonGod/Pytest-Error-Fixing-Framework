@@ -1,5 +1,4 @@
-
-# src/branch_fixer/utils/cli.py
+# branch_fixer/utils/cli.py
 import click
 import logging
 import asyncio
