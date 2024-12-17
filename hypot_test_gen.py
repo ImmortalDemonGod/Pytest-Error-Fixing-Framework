@@ -6,10 +6,11 @@ import subprocess
 import ast
 from typing import List, Tuple, Dict, Optional, Set
 from dataclasses import dataclass
+import snoop
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,  # Changed to DEBUG for more detail
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -85,6 +86,67 @@ class TestGenerator:
         self.output_dir = output_dir
         self.output_dir.mkdir(exist_ok=True)
         
+    @snoop
+    def run_hypothesis_write(self, command: str) -> Optional[str]:
+        """Execute hypothesis write command and return output if successful"""
+        full_cmd = f"hypothesis write {command}"
+        logger.debug(f"Executing: {full_cmd}")
+        
+        try:
+            result = subprocess.run(full_cmd, shell=True, capture_output=True, text=True)
+            
+            logger.debug(f"Command stdout: {result.stdout[:500]}")
+            logger.debug(f"Command stderr: {result.stderr[:500]}")
+            logger.debug(f"Return code: {result.returncode}")
+            
+            if result.returncode == 0 and result.stdout:
+                logger.info("Successfully generated test")
+                return result.stdout.strip()  # Add strip() to remove whitespace
+            
+            if result.stderr:
+                if not any(msg in result.stderr for msg in [
+                    "InvalidArgument: Got non-callable",
+                    "Could not resolve",
+                    "but it doesn't have a"
+                ]):
+                    logger.warning(f"Command failed: {result.stderr}")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error running hypothesis: {e}", exc_info=True)
+            return None
+
+    @snoop
+    def try_generate_test(self, entity: TestableEntity, variant: Dict[str, str]) -> bool:
+        """Attempt to generate a specific test variant"""
+        logger.debug(f"Attempting {variant['type']} test for {entity.name}")
+        
+        output = self.run_hypothesis_write(variant['cmd'])
+        if output:
+            name_prefix = f"{entity.parent_class}_{entity.name}" if entity.parent_class else entity.name
+            output_file = self.output_dir / f"test_{name_prefix}_{variant['type']}.py"
+            
+            try:
+                # Log the output content and length
+                logger.debug(f"Output content length: {len(output)}")
+                logger.debug(f"First 500 chars of output: {output[:500]}")
+                
+                output_file.write_text(output)
+                logger.info(f"Generated {variant['type']} test for {entity.name}")
+                logger.debug(f"Wrote {len(output)} chars to {output_file}")
+                
+                # Verify file contents after writing
+                written_content = output_file.read_text()
+                logger.debug(f"File content length after write: {len(written_content)}")
+                
+                print(f"Generated {variant['type']} test: {output_file}")
+                return True
+            except Exception as e:
+                logger.error(f"Error writing test file: {e}", exc_info=True)
+                return False
+                
+        return False
+
     def get_module_contents(self, file_path: Path) -> Tuple[str, List[TestableEntity]]:
         """Extract module path and testable entities using AST parsing"""
         logger.debug(f"Reading file: {file_path}")
@@ -129,32 +191,6 @@ class TestGenerator:
             logger.error(f"Error parsing module contents: {e}", exc_info=True)
             raise
 
-    def run_hypothesis_write(self, command: str) -> Optional[str]:
-        """Execute hypothesis write command and return output if successful"""
-        full_cmd = f"hypothesis write {command}"
-        logger.debug(f"Executing: {full_cmd}")
-        
-        try:
-            result = subprocess.run(full_cmd, shell=True, capture_output=True, text=True)
-            
-            if result.returncode == 0 and result.stdout:
-                logger.info("Successfully generated test")
-                return result.stdout
-            
-            if result.stderr:
-                # Skip logging for common expected errors
-                if not any(msg in result.stderr for msg in [
-                    "InvalidArgument: Got non-callable",
-                    "Could not resolve",
-                    "but it doesn't have a"
-                ]):
-                    logger.warning(f"Command failed: {result.stderr}")
-            return None
-            
-        except Exception as e:
-            logger.error(f"Error running hypothesis: {e}", exc_info=True)
-            return None
-    
     def generate_test_variants(self, entity: TestableEntity) -> List[Dict[str, str]]:
         """Generate all applicable test variants for an entity"""
         variants = []
@@ -207,27 +243,6 @@ class TestGenerator:
                 
         return variants
 
-    def try_generate_test(self, entity: TestableEntity, variant: Dict[str, str]) -> bool:
-        """Attempt to generate a specific test variant"""
-        logger.debug(f"Attempting {variant['type']} test for {entity.name}")
-        
-        output = self.run_hypothesis_write(variant['cmd'])
-        if output:
-            # For methods, include the class name in the filename
-            name_prefix = f"{entity.parent_class}_{entity.name}" if entity.parent_class else entity.name
-            output_file = self.output_dir / f"test_{name_prefix}_{variant['type']}.py"
-            
-            try:
-                output_file.write_text(output)
-                logger.info(f"Generated {variant['type']} test for {entity.name}")
-                print(f"Generated {variant['type']} test: {output_file}")
-                return True
-            except Exception as e:
-                logger.error(f"Error writing test file: {e}")
-                return False
-                
-        return False
-
     def generate_all_tests(self, file_path: Path) -> None:
         """Generate all possible test variants for a Python file"""
         logger.info(f"Generating tests for file: {file_path}")
@@ -251,6 +266,7 @@ class TestGenerator:
             logger.error("Test generation failed", exc_info=True)
             raise
 
+@snoop
 def main():
     """Entry point for the test generator script"""
     if len(sys.argv) != 2:
