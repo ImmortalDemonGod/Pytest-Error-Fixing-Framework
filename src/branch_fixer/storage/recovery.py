@@ -1,9 +1,14 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, TYPE_CHECKING
 from uuid import UUID
 import hashlib
 import time
+
+if TYPE_CHECKING:
+    from src.branch_fixer.storage.session_store import SessionStore
+    from src.branch_fixer.git.repository import GitRepository
+    from src.branch_fixer.orchestrator import FixSession
 
 @dataclass
 class RecoveryPoint:

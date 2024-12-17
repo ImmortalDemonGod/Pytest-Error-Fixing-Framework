@@ -1,8 +1,13 @@
 from enum import Enum
-from typing import Dict, Optional, Set, List
+from typing import Dict, Optional, Set, List, Any, TYPE_CHECKING
 from uuid import UUID
 from dataclasses import dataclass, field
 import time
+from uuid import uuid4
+
+if TYPE_CHECKING:
+    from src.branch_fixer.storage.session_store import SessionStore
+    from src.branch_fixer.orchestrator import FixSession, FixSessionState
 
 class StateTransitionError(Exception):
     """Invalid state transition errors"""
