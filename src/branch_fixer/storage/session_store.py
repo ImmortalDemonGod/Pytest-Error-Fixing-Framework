@@ -42,7 +42,7 @@ class SessionStore:
 
     async def load_session(self, session_id: UUID) -> Optional[FixSession]:
         """
-        Load session from storage.
+        Load session from branch_fixer.storage.
         
         Args:
             session_id: ID of session to load
@@ -74,7 +74,7 @@ class SessionStore:
 
     async def delete_session(self, session_id: UUID) -> bool:
         """
-        Delete a session from storage.
+        Delete a session from branch_fixer.storage.
         
         Args:
             session_id: ID of session to delete

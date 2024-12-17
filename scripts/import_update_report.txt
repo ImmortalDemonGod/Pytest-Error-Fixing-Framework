@@ -1,0 +1,19 @@
+Import Update Report
+===================
+
+
+File: main.py
+-------------
+  from config. → from branch_fixer.config.
+
+File: services/git/repository.py
+--------------------------------
+  from git. → from branch_fixer.services.git.
+
+File: storage/session_store.py
+------------------------------
+  from storage. → from branch_fixer.storage.
+
+File: utils/cli.py
+------------------
+  from config. → from branch_fixer.config.
