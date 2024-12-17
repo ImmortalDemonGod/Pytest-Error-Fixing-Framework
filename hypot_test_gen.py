@@ -7,13 +7,22 @@ import ast
 from typing import List, Tuple, Dict, Optional, Set
 from dataclasses import dataclass
 import snoop
+import os
 
-# Set up logging
+# Set up logging with file and console output
+log_file = "test_generator_debug.log"
 logging.basicConfig(
-    level=logging.DEBUG,  # Changed to DEBUG for more detail
-    format='%(asctime)s - %(levelname)s - %(message)s'
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file),
+        logging.StreamHandler()
+    ]
 )
 logger = logging.getLogger(__name__)
+
+# Configure snoop to write to a separate debug log
+snoop.install(out=Path("snoop_debug.log"))
 
 @dataclass
 class TestableEntity:
@@ -22,7 +31,7 @@ class TestableEntity:
     module_path: str
     entity_type: str  # 'class', 'method', or 'function'
     parent_class: Optional[str] = None
-    
+
 class ModuleParser(ast.NodeVisitor):
     """AST-based parser for Python modules"""
     
@@ -78,30 +87,56 @@ class ModuleParser(ast.NodeVisitor):
                     ))
             else:
                 self.entities.append(TestableEntity(node.name, '', 'function'))
-                
+
+@snoop
+def debug_command_output(cmd: str, stdout: str, stderr: str, returncode: int) -> None:
+    """Helper function to debug command execution"""
+    logger.debug("Command execution details:")
+    logger.debug(f"Command: {cmd}")
+    logger.debug(f"Return code: {returncode}")
+    logger.debug(f"stdout length: {len(stdout)}")
+    logger.debug(f"stderr length: {len(stderr)}")
+    logger.debug("First 1000 chars of stdout:")
+    logger.debug(stdout[:1000])
+    logger.debug("First 1000 chars of stderr:")
+    logger.debug(stderr[:1000])
+
 class TestGenerator:
     """Manages generation of Hypothesis tests for Python modules"""
     
+    @snoop
     def __init__(self, output_dir: Path = Path("generated_tests")):
         self.output_dir = output_dir
         self.output_dir.mkdir(exist_ok=True)
+        logger.debug(f"Test generator initialized with output dir: {output_dir}")
+        logger.debug(f"Output dir exists: {output_dir.exists()}")
+        logger.debug(f"Output dir is writable: {os.access(output_dir, os.W_OK)}")
         
     @snoop
     def run_hypothesis_write(self, command: str) -> Optional[str]:
         """Execute hypothesis write command and return output if successful"""
         full_cmd = f"hypothesis write {command}"
-        logger.debug(f"Executing: {full_cmd}")
+        logger.debug(f"Executing hypothesis command: {full_cmd}")
         
         try:
-            result = subprocess.run(full_cmd, shell=True, capture_output=True, text=True)
+            logger.debug(f"Current working directory: {os.getcwd()}")
+            result = subprocess.run(
+                full_cmd,
+                shell=True,
+                capture_output=True,
+                text=True,
+                env=os.environ.copy()  # Explicitly copy environment
+            )
             
-            logger.debug(f"Command stdout: {result.stdout[:500]}")
-            logger.debug(f"Command stderr: {result.stderr[:500]}")
-            logger.debug(f"Return code: {result.returncode}")
+            debug_command_output(full_cmd, result.stdout, result.stderr, result.returncode)
             
             if result.returncode == 0 and result.stdout:
-                logger.info("Successfully generated test")
-                return result.stdout.strip()  # Add strip() to remove whitespace
+                content = result.stdout.strip()
+                if not content:
+                    logger.warning("Hypothesis generated empty content despite success return code")
+                    return None
+                logger.info("Successfully generated test content")
+                return content
             
             if result.stderr:
                 if not any(msg in result.stderr for msg in [
@@ -120,6 +155,8 @@ class TestGenerator:
     def try_generate_test(self, entity: TestableEntity, variant: Dict[str, str]) -> bool:
         """Attempt to generate a specific test variant"""
         logger.debug(f"Attempting {variant['type']} test for {entity.name}")
+        logger.debug(f"Entity details: {entity}")
+        logger.debug(f"Variant details: {variant}")
         
         output = self.run_hypothesis_write(variant['cmd'])
         if output:
@@ -127,24 +164,39 @@ class TestGenerator:
             output_file = self.output_dir / f"test_{name_prefix}_{variant['type']}.py"
             
             try:
-                # Log the output content and length
-                logger.debug(f"Output content length: {len(output)}")
-                logger.debug(f"First 500 chars of output: {output[:500]}")
+                # Log detailed output information
+                logger.debug("Test content details:")
+                logger.debug(f"Content length: {len(output)}")
+                logger.debug(f"Content preview:\n{output[:1000]}")
+                logger.debug(f"Writing to file: {output_file}")
                 
+                # Write content
                 output_file.write_text(output)
-                logger.info(f"Generated {variant['type']} test for {entity.name}")
-                logger.debug(f"Wrote {len(output)} chars to {output_file}")
                 
-                # Verify file contents after writing
+                # Verify written content
                 written_content = output_file.read_text()
-                logger.debug(f"File content length after write: {len(written_content)}")
+                if not written_content:
+                    logger.error(f"File {output_file} is empty after writing!")
+                    return False
                 
+                if written_content != output:
+                    logger.error("Written content doesn't match original content!")
+                    logger.debug(f"Original length: {len(output)}")
+                    logger.debug(f"Written length: {len(written_content)}")
+                    return False
+                
+                logger.info(f"Successfully generated test at {output_file}")
+                logger.debug(f"Final file size: {output_file.stat().st_size} bytes")
                 print(f"Generated {variant['type']} test: {output_file}")
                 return True
+                
             except Exception as e:
                 logger.error(f"Error writing test file: {e}", exc_info=True)
+                logger.debug(f"Output file path: {output_file}")
+                logger.debug(f"Output content length: {len(output) if output else 0}")
                 return False
-                
+        
+        logger.warning("No output generated from hypothesis")
         return False
 
     def get_module_contents(self, file_path: Path) -> Tuple[str, List[TestableEntity]]:
@@ -172,7 +224,7 @@ class TestGenerator:
             # Update module paths
             entities = []
             for entity in parser.entities:
-                if entity.entity_type == 'method':
+                if entity.entity_type == 'method' or entity.entity_type == 'instance_method':
                     # For methods, we need to generate tests through their class
                     entity.module_path = f"{module_path}.{entity.parent_class}"
                 else:
@@ -181,7 +233,7 @@ class TestGenerator:
             
             # Log what we found
             classes = sum(1 for e in entities if e.entity_type == 'class')
-            methods = sum(1 for e in entities if e.entity_type == 'method')
+            methods = sum(1 for e in entities if e.entity_type in {'method', 'instance_method'})
             functions = sum(1 for e in entities if e.entity_type == 'function')
             
             logger.info(f"Found {classes} classes, {methods} methods, and {functions} functions")
@@ -202,35 +254,27 @@ class TestGenerator:
                 "cmd": f"--style=unittest --annotate {entity.module_path}.{entity.name}"
             })
             
-        elif entity.entity_type == 'method':
-            # For regular methods (not instance methods)
+        elif entity.entity_type in {'method', 'instance_method'}:
+            # For regular and instance methods
             method_path = f"{entity.module_path}.{entity.name}"
             variants.extend([
                 {"type": "basic", "cmd": f"--style=unittest --annotate {method_path}"},
                 {"type": "errors", "cmd": f"--style=unittest --annotate --except ValueError,TypeError {method_path}"}
             ])
             
-        elif entity.entity_type == 'instance_method':
-            # For instance methods, we need to test through class instances
-            # These need special handling in the generated test file
-            method_path = f"{entity.module_path}.{entity.name}"
-            variants.append({
-                "type": "basic",
-                "cmd": f"--style=unittest --annotate {method_path}"
-            })
-            
-            # Add specific test types based on method name
-            name = entity.name.lower()
-            if any(x in name for x in ['validate', 'verify', 'check']):
-                variants.append({
-                    "type": "validation",
-                    "cmd": f"--style=unittest --annotate --errors-equivalent {method_path}"
-                })
-            elif any(x in name for x in ['transform', 'convert', 'process']):
-                variants.append({
-                    "type": "idempotent",
-                    "cmd": f"--style=unittest --annotate --idempotent {method_path}"
-                })
+            if entity.entity_type == 'instance_method':
+                # Add specific test types based on method name
+                name = entity.name.lower()
+                if any(x in name for x in ['validate', 'verify', 'check']):
+                    variants.append({
+                        "type": "validation",
+                        "cmd": f"--style=unittest --annotate --errors-equivalent {method_path}"
+                    })
+                elif any(x in name for x in ['transform', 'convert', 'process']):
+                    variants.append({
+                        "type": "idempotent",
+                        "cmd": f"--style=unittest --annotate --idempotent {method_path}"
+                    })
             
         else:  # functions
             base_cmd = f"--style=unittest --annotate {entity.module_path}.{entity.name}"
@@ -252,7 +296,7 @@ class TestGenerator:
             
             print(f"\nProcessing module: {module_path}")
             print(f"Found {len([e for e in entities if e.entity_type == 'class'])} classes, "
-                  f"{len([e for e in entities if e.entity_type == 'method'])} methods, and "
+                  f"{len([e for e in entities if e.entity_type in {'method', 'instance_method'}])} methods, and "
                   f"{len([e for e in entities if e.entity_type == 'function'])} functions")
             
             for entity in entities:
@@ -269,13 +313,16 @@ class TestGenerator:
 @snoop
 def main():
     """Entry point for the test generator script"""
+    logger.info("Starting test generator")
     if len(sys.argv) != 2:
         print("Usage: python test_generator.py <path_to_python_file>")
+        logger.error("Incorrect number of arguments provided")
         sys.exit(1)
         
     file_path = Path(sys.argv[1])
     if not file_path.exists() or not file_path.is_file():
         print(f"Error: {file_path} does not exist or is not a file")
+        logger.error(f"File does not exist or is not a file: {file_path}")
         sys.exit(1)
         
     generator = TestGenerator()
