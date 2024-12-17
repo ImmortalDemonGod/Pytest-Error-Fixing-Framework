@@ -29,6 +29,7 @@ class ChangeApplier:
             FileNotFoundError: If test file doesn't exist
         """
         raise NotImplementedError()
+    
     def _backup_file(self, file_path: Path) -> Path:
         """Create backup copy of file.
         
@@ -43,6 +44,7 @@ class ChangeApplier:
             FileNotFoundError: If source file missing
         """
         raise NotImplementedError()
+    
     def _restore_backup(self, file_path: Path) -> bool:
         """Restore file from backup.
         
