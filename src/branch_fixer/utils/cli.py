@@ -53,7 +53,13 @@ class CLI:
                 initial_temp=initial_temp,
                 temp_increment=temp_increment
             )
+            
+            # Validate workspace
+            asyncio.run(self.service.validator.validate_workspace(Path.cwd()))
+            asyncio.run(self.service.validator.check_dependencies())
+            
             return True
+            
         except Exception as e:
             logger.error(f"Failed to initialize components: {e}")
             return False
