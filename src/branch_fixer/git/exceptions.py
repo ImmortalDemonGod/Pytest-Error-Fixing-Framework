@@ -1,3 +1,4 @@
+# src/branch_fixer/git/exceptions.py
 class GitError(Exception):
     """Base class for exceptions in this module."""
     pass
@@ -12,4 +13,37 @@ class BranchCreationError(GitError):
 
 class MergeConflictError(GitError):
     """Exception raised when a merge conflict occurs."""
+    pass
+
+
+class PRError(Exception):
+    """Base exception for PR operations"""
+    pass
+
+class PRCreationError(PRError):
+    """Raised when PR creation fails"""
+    pass
+
+class PRUpdateError(PRError):
+    """Raised when PR update fails"""
+    pass
+
+class PRValidationError(PRError):
+    """Raised when PR validation fails"""
+    pass
+
+class SafetyError(Exception):
+    """Base exception for safety operations"""
+    pass
+
+class BackupError(SafetyError):
+    """Raised when backup operations fail"""
+    pass
+
+class RestoreError(SafetyError):
+    """Raised when restore operations fail"""
+    pass
+
+class ProtectedPathError(SafetyError):
+    """Raised when attempting to modify protected paths"""
     pass
