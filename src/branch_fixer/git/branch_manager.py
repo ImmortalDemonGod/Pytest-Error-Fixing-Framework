@@ -1,104 +1,162 @@
 # src/branch_fixer/git/branch_manager.py
 from dataclasses import dataclass
-from typing import List, Optional
-from branch_fixer.git.exceptions import BranchCreationError, MergeConflictError, GitError
+from typing import List, Optional, Set
+from pathlib import Path
+from branch_fixer.git.exceptions import (
+    BranchCreationError, 
+    MergeConflictError, 
+    GitError
+)
 
 @dataclass
-class BranchStatus:
-    """Represents the current state of a Git branch."""
-    current_branch: str          # Name of current branch
-    has_changes: bool           # Whether there are uncommitted changes
-    changes: List[str]          # List of paths with changes
+class BranchMetadata:
+    """
+    Metadata about a Git branch.
+    
+    Attributes:
+        name: Branch name
+        current: Whether this is the current branch
+        upstream: Remote tracking branch if any
+        last_commit: SHA of last commit
+        modified_files: Files with uncommitted changes
+    """
+    name: str
+    current: bool 
+    upstream: Optional[str]
+    last_commit: str
+    modified_files: List[Path]
+
+class BranchNameError(GitError):
+    """Raised when branch name is invalid."""
+    pass
 
 class BranchManager:
-    """Manages Git branch operations with safety checks and error handling."""
+    """
+    Manages Git branch operations with safety checks and error handling.
     
-    def __init__(self, repository):
-        """Initialize with a Git repository instance.
-        
-            Args:
-                repository: GitRepository instance to perform operations on
+    Handles branch creation, merging, and cleanup with proper
+    validation and error recovery.
+    """
+    
+    def __init__(self, repository: GitRepository):
+        """
+        Initialize with repository reference.
+
+        Args:
+            repository: GitRepository instance
+
+        Raises:
+            ValueError: If repository is invalid
         """
         self.repository = repository
+        # Branch name validation patterns
+        self.name_pattern = r'^[a-zA-Z0-9\-_\/]+$'
+        self.forbidden_names: Set[str] = {'master', 'main', 'develop'}
+        raise NotImplementedError()
 
-    def get_status(self) -> BranchStatus:
-        """Get current branch status including uncommitted changes.
-        
-        **Note:** This method currently contains a stub implementation and may not
-        fully reflect the actual repository state.
-        
-        Returns:
-            BranchStatus with current branch and change information
-        
-        Raises:
-            GitError: If unable to get repository status
+    async def create_fix_branch(self, 
+                              branch_name: str,
+                              from_branch: Optional[str] = None) -> bool:
         """
-        raise NotImplementedError("get_status method is not implemented yet.")
+        Create and switch to a fix branch.
 
-    def create_fix_branch(self, branch_name: str) -> bool:
-        """Create a new branch for fixing an issue.
-        
-        **Note:** This method currently contains a stub implementation and may not
-        perform all necessary validations or operations.
-        
         Args:
-            branch_name: Name of branch to create
-            
+            branch_name: Name for new branch
+            from_branch: Optional base branch
+
         Returns:
-            bool: True if branch created successfully
-            
+            True if created successfully
+
         Raises:
-            BranchCreationError: If branch creation fails due to:
-                - Empty branch name
-                - Invalid branch name format
-                - Branch already exists
-                - Uncommitted changes present
+            BranchNameError: If name is invalid
+            BranchCreationError: If creation fails
+            GitError: For other Git errors
         """
-        raise NotImplementedError("create_fix_branch method is not implemented yet.")
-    
-    def merge_branch(self, branch_name: str, fast_forward: bool = False) -> bool:
-        """Merge specified branch into current branch.
-        
+        raise NotImplementedError()
+
+    async def merge_fix_branch(self,
+                             branch_name: str,
+                             target_branch: Optional[str] = None,
+                             squash: bool = True) -> bool:
+        """
+        Merge a fix branch.
+
         Args:
-            branch_name: Name of branch to merge
-            fast_forward: Whether to allow fast-forward merge (default: False)
-            
+            branch_name: Branch to merge
+            target_branch: Branch to merge into
+            squash: Whether to squash commits
+
         Returns:
-            bool: True if merge completed successfully
-            
+            True if merged successfully
+
         Raises:
-            BranchCreationError: If the specified branch does not exist
-            MergeConflictError: If the merge results in conflicts
+            MergeConflictError: If conflicts occur
             GitError: For other merge failures
         """
-        raise NotImplementedError("merge_branch method is not implemented yet.")
+        raise NotImplementedError()
 
-    def is_clean(self) -> bool:
-        """Check if the repository is in a clean state.
-        
-        Returns:
-            bool: True if there are no uncommitted changes
+    async def cleanup_fix_branch(self,
+                               branch_name: str,
+                               force: bool = False) -> bool:
         """
-        raise NotImplementedError("is_clean method is not implemented yet.")
+        Clean up a fix branch after merging.
 
-    def branch_exists(self, branch_name: str) -> bool:
-        """Check if a branch exists.
-        
         Args:
-            branch_name: Name of branch to check
-            
-        Returns:
-            bool: True if the branch exists
-        """
-        raise NotImplementedError("branch_exists method is not implemented yet.")
+            branch_name: Branch to clean up
+            force: Whether to force deletion
 
-    def get_current_branch(self) -> str:
-        """Get the name of the currently checked-out branch.
-        
         Returns:
-            str: Name of the current branch
-            
+            True if cleaned up successfully
+
         Raises:
-            GitError: If unable to determine the current branch
+            GitError: If cleanup fails
         """
-        raise NotImplementedError("get_current_branch method is not implemented yet.")
+        raise NotImplementedError()
+
+    async def get_branch_metadata(self, branch_name: str) -> BranchMetadata:
+        """
+        Get detailed metadata about a branch.
+
+        Args:
+            branch_name: Branch to check
+
+        Returns:
+            BranchMetadata for the branch
+
+        Raises:
+            GitError: If status check fails
+        """
+        raise NotImplementedError()
+
+    async def validate_branch_name(self, branch_name: str) -> bool:
+        """
+        Validate branch name follows conventions.
+
+        Args:
+            branch_name: Name to validate
+
+        Returns:
+            True if valid
+
+        Raises:
+            BranchNameError: If name invalid
+        """
+        raise NotImplementedError()
+
+    async def is_branch_merged(self, 
+                             branch_name: str,
+                             target_branch: Optional[str] = None) -> bool:
+        """
+        Check if a branch is fully merged.
+
+        Args:
+            branch_name: Branch to check
+            target_branch: Branch to check against
+
+        Returns:
+            True if branch is merged
+
+        Raises:
+            GitError: If check fails
+        """
+        raise NotImplementedError()
