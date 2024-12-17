@@ -286,3 +286,62 @@ class GitRepository:
             GitError: If PR creation fails
         """
         return self.pr_manager.create_pr(title, description)
+
+    def backup_state(self) -> str:
+        """
+        Create backup of current repository state.
+
+        Returns:
+            str: Backup identifier
+
+        Raises:
+            GitError: If backup creation fails
+        """
+        return self.safety_manager.create_backup()
+
+    def restore_state(self, backup_id: str) -> bool:
+        """
+        Restore repository state from backup.
+
+        Args:
+            backup_id: Identifier of backup to restore
+
+        Returns:
+            bool indicating if restore succeeded
+
+        Raises:
+            GitError: If restore fails
+        """
+        return self.safety_manager.restore_backup(backup_id)
+
+    def create_fix_branch(self, branch_name: str) -> bool:
+        """
+        Create and switch to a new branch for fixes.
+
+        Args:
+            branch_name: Name for the new branch
+
+        Returns:
+            bool indicating if branch creation succeeded
+
+        Raises:
+            GitError: If branch creation fails
+        """
+        return self.branch_manager.create_fix_branch(branch_name)
+
+    def sync_with_remote(self) -> bool:
+        """
+        Synchronize with remote repository.
+
+        Returns:
+            bool indicating if sync succeeded
+
+        Raises:
+            GitError: If sync fails
+        """
+        try:
+            self.pull()
+            self.push()
+            return True
+        except GitError:
+            return False
