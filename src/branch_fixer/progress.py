@@ -1,3 +1,5 @@
+from branch_fixer.orchestrator import FixSession
+
 class ProgressReporter:
     """Reports progress of fix operations"""
     

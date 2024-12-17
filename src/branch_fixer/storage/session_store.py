@@ -1,3 +1,8 @@
+from pathlib import Path
+from typing import Optional
+from uuid import UUID
+from branch_fixer.orchestrator import FixSession
+
 class SessionStore:
     """Handles persistent storage of fix sessions"""
     
