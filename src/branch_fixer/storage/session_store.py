@@ -1,7 +1,16 @@
+# src/branch_fixer/storage/session_store.py
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, List, Any
 from uuid import UUID
-from branch_fixer.orchestrator import FixSession
+import json
+from datetime import datetime
+from branch_fixer.orchestrator import FixSession, FixSessionState
+from branch_fixer.errors import StorageError
+
+
+class SessionPersistenceError(StorageError):
+    """Raised when session persistence operations fail"""
+    pass
 
 class SessionStore:
     """Handles persistent storage of fix sessions"""
@@ -19,19 +28,21 @@ class SessionStore:
         raise NotImplementedError()
 
     async def save_session(self, session: FixSession) -> None:
-        """Save session state to storage
+        """
+        Persist session state to storage.
         
         Args:
             session: Session to save
             
         Raises:
-            IOError: If save fails
+            SessionPersistenceError: If save fails
             ValueError: If session invalid
         """
         raise NotImplementedError()
 
     async def load_session(self, session_id: UUID) -> Optional[FixSession]:
-        """Load session from storage
+        """
+        Load session from storage.
         
         Args:
             session_id: ID of session to load
@@ -40,7 +51,38 @@ class SessionStore:
             Loaded FixSession or None if not found
             
         Raises:
-            IOError: If load fails
-            ValueError: If data corrupt
-        """ 
+            SessionPersistenceError: If load fails
+            ValueError: If data corrupted
+        """
+        raise NotImplementedError()
+
+    async def list_sessions(self, 
+                          status: Optional[FixSessionState] = None) -> List[FixSession]:
+        """
+        List all stored sessions, optionally filtered by status.
+        
+        Args:
+            status: Optional status to filter by
+            
+        Returns:
+            List of matching sessions
+            
+        Raises:
+            SessionPersistenceError: If listing fails
+        """
+        raise NotImplementedError()
+
+    async def delete_session(self, session_id: UUID) -> bool:
+        """
+        Delete a session from storage.
+        
+        Args:
+            session_id: ID of session to delete
+            
+        Returns:
+            True if deleted, False if not found
+            
+        Raises:
+            SessionPersistenceError: If deletion fails
+        """
         raise NotImplementedError()
