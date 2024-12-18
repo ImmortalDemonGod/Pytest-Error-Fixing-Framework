@@ -4,7 +4,7 @@ import importlib.util
 import sys
 import subprocess
 import ast
-from typing import List, Tuple, Dict, Optional, Set
+from typing import List, Tuple, Dict, Optional, Set, Union
 from dataclasses import dataclass
 import snoop
 import os
@@ -353,23 +353,82 @@ class TestGenerator:
             logger.error("Test generation failed", exc_info=True)
             raise
 
-@snoop
-def main():
-    """Entry point for the test generator script"""
-    logger.info("Starting test generator")
-    if len(sys.argv) != 2:
-        print("Usage: python test_generator.py <path_to_python_file>")
-        logger.error("Incorrect number of arguments provided")
-        sys.exit(1)
+def parse_args(args: Optional[list] = None) -> Path:
+    """
+    Parse command line arguments and validate file path.
+    
+    Args:
+        args: Optional list of command line arguments. If None, uses sys.argv[1:]
         
-    file_path = Path(sys.argv[1])
+    Returns:
+        Path object for the input file
+        
+    Raises:
+        ValueError: If arguments are invalid or file doesn't exist
+    """
+    if args is None:
+        args = sys.argv[1:]
+        
+    if len(args) != 1:
+        raise ValueError("Exactly one argument (path to Python file) required")
+        
+    file_path = Path(args[0])
     if not file_path.exists() or not file_path.is_file():
-        print(f"Error: {file_path} does not exist or is not a file")
-        logger.error(f"File does not exist or is not a file: {file_path}")
-        sys.exit(1)
+        raise ValueError(f"File does not exist or is not a file: {file_path}")
         
-    generator = TestGenerator()
-    generator.generate_all_tests(file_path)
+    return file_path
+
+def run_test_generation(file_path: Union[str, Path]) -> bool:
+    """
+    Run the test generation process for a given file.
+    
+    Args:
+        file_path: Path to the Python file to generate tests for
+        
+    Returns:
+        bool: True if test generation was successful, False otherwise
+        
+    Raises:
+        Exception: If test generation fails
+    """
+    try:
+        if isinstance(file_path, str):
+            file_path = Path(file_path)
+            
+        logger.info(f"Starting test generator for {file_path}")
+        generator = TestGenerator()
+        generator.generate_all_tests(file_path)
+        return True
+        
+    except Exception as e:
+        logger.error(f"Test generation failed: {e}", exc_info=True)
+        return False
+
+def main(args: Optional[list] = None) -> int:
+    """
+    Main entry point for the test generator script.
+    
+    Args:
+        args: Optional list of command line arguments. If None, uses sys.argv[1:]
+        
+    Returns:
+        int: Exit code (0 for success, 1 for failure)
+    """
+    try:
+        file_path = parse_args(args)
+        success = run_test_generation(file_path)
+        return 0 if success else 1
+        
+    except ValueError as e:
+        print(f"Error: {e}")
+        logger.error(f"Invalid arguments: {e}")
+        print("Usage: python test_generator.py <path_to_python_file>")
+        return 1
+        
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        logger.error("Unexpected error during execution", exc_info=True)
+        return 1
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
