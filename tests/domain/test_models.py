@@ -12,7 +12,7 @@ class TestErrorDomainModel(unittest.TestCase):
         self.error_type = "AssertionError"
         self.error_message = "Expected 5 but got 4"
         
-        from branch_fixer.domain.models import TestError, ErrorDetails
+        from src.branch_fixer.core.models import TestError, ErrorDetails
         self.error = TestError(
             test_file=self.test_file,
             test_function=self.test_function,
@@ -71,7 +71,7 @@ class TestErrorDomainModel(unittest.TestCase):
 
     def test_error_details_immutability(self):
         """Test that ErrorDetails is immutable."""
-        from branch_fixer.domain.models import ErrorDetails
+        from src.branch_fixer.core.models import ErrorDetails
         details = ErrorDetails(error_type="TypeError", message="Some error")
         
         with self.assertRaises(Exception):
@@ -79,7 +79,7 @@ class TestErrorDomainModel(unittest.TestCase):
 
     def test_mark_fixed_with_foreign_attempt(self):
         """Test that marking fixed with an attempt from another error raises ValueError."""
-        from branch_fixer.domain.models import TestError, ErrorDetails, FixAttempt
+        from src.branch_fixer.core.models import TestError, ErrorDetails, FixAttempt
         
         # Create another error instance
         other_error = TestError(
@@ -101,7 +101,7 @@ class TestErrorDomainModel(unittest.TestCase):
 
     def test_mark_failed_with_foreign_attempt(self):
         """Test that marking failed with an attempt from another error raises ValueError."""
-        from branch_fixer.domain.models import TestError, ErrorDetails, FixAttempt
+        from src.branch_fixer.core.models import TestError, ErrorDetails, FixAttempt
         
         # Create another error instance
         other_error = TestError(

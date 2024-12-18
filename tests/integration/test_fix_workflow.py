@@ -4,9 +4,10 @@ import asyncio
 from pathlib import Path
 from typing import List
 from unittest.mock import Mock, AsyncMock
+from src.branch_fixer.services.git.repository import GitRepository
 
-from branch_fixer.domain.models import TestError, ErrorDetails, FixAttempt
-from branch_fixer.application.fix_service import FixService
+from src.branch_fixer.core.models import TestError, ErrorDetails, FixAttempt
+from src.branch_fixer.orchestration.fix_service import FixService
 
 # 1. Pre-Analysis Documentation
 """
