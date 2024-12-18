@@ -6,9 +6,11 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union, Literal
+from typing import Dict, List, Optional, Tuple, Union, Literal, Any, get_type_hints
 
 import snoop  # type: ignore
+# Removed unused: from hypothesis import strategies as st
+import importlib.util  # For dynamic imports
 
 # Set up logging with file and console output
 log_file = "test_generator_debug.log"
@@ -115,13 +117,13 @@ class ModuleParser(ast.NodeVisitor):
         """Process a method within a class"""
         if self.should_skip_method(node):
             return
-            
+
         is_instance_method = self.determine_instance_method(node)
         entity_type = "instance_method" if is_instance_method else "method"
-        
+
         # The method path should include the class
         method_name = f"{self.current_class}.{node.name}" if self.current_class else node.name
-        
+
         self.entities.append(
             TestableEntity(
                 name=node.name,
@@ -159,7 +161,6 @@ class ModuleParser(ast.NodeVisitor):
         logger.debug(f"Added function entity: {node.name}")
 
 
-@snoop
 def debug_command_output(cmd: str, stdout: str, stderr: str, returncode: int) -> None:
     """Helper function to debug command execution"""
     logger.debug("Command execution details:")
@@ -173,85 +174,55 @@ def debug_command_output(cmd: str, stdout: str, stderr: str, returncode: int) ->
     logger.debug(stderr[:1000])
 
 
-# ===== CHANGE: Add TestFixer and related functions =====
 class TestFixer(ast.NodeTransformer):
     """AST transformer to fix duplicate self parameters"""
-    
+
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.FunctionDef:
-        """Remove duplicate self parameters in function definitions"""
-        # Keep track of seen 'self' parameters
         seen_self = False
         new_args = []
-        
+
         for arg in node.args.args:
             if arg.arg == 'self':
                 if not seen_self:
                     seen_self = True
                     new_args.append(arg)
-                # Skip duplicate self parameters
             else:
                 new_args.append(arg)
-        
-        # Create new arguments with deduplicated parameters
+
         node.args.args = new_args
         return node
+
 
 def fix_duplicate_self(test_content: str) -> Optional[str]:
     """
     Fix duplicate self parameters in test content.
-    
+
     Args:
         test_content: String containing the test code
-        
+
     Returns:
         Fixed test code string, or None if parsing fails
     """
     try:
-        # Parse the test content into an AST
         tree = ast.parse(test_content)
-        
-        # Apply the fixer
+
         fixer = TestFixer()
         fixed_tree = fixer.visit(tree)
-        
-        # Use ast.unparse for Python 3.9+
+
         try:
             return ast.unparse(fixed_tree)
         except AttributeError:
-            # Fallback for older Python versions
             import astunparse
             return astunparse.unparse(fixed_tree)
-            
+
     except Exception as e:
         print(f"Error fixing test content: {e}")
         return None
-
-def process_hypothesis_output(output: str) -> Optional[str]:
-    """
-    Process the output from hypothesis write command.
-    
-    Args:
-        output: Raw output from hypothesis write
-        
-    Returns:
-        Processed test content with fixes applied
-    """
-    if not output:
-        return None
-        
-    # Fix duplicate self parameters
-    fixed_output = fix_duplicate_self(output)
-    if fixed_output is None:
-        return None
-        
-    return fixed_output
-# ===== END CHANGE =====
 
 
 class TestGenerator:
     """Manages generation of Hypothesis tests for Python modules"""
 
-    @snoop
     def __init__(self, output_dir: Path = Path("generated_tests")):
         self.output_dir = output_dir
         self.output_dir.mkdir(exist_ok=True)
@@ -263,7 +234,6 @@ class TestGenerator:
         logger.debug(f"Output dir exists: {self.output_dir.exists()}")
         logger.debug(f"Output dir is writable: {os.access(self.output_dir, os.W_OK)}")
 
-    @snoop
     def run_hypothesis_write(self, command: str) -> Optional[str]:
         """Execute hypothesis write command and return output if successful"""
         full_cmd = f"hypothesis write {command}"
@@ -300,7 +270,6 @@ class TestGenerator:
         env.setdefault("PYTHONIOENCODING", "utf-8")
         return env
 
-    # ===== CHANGE: Modified process_hypothesis_result to post-process output =====
     def process_hypothesis_result(self, result: subprocess.CompletedProcess) -> Optional[str]:
         """Process the result of the hypothesis command"""
         if result.returncode == 0 and result.stdout:
@@ -309,19 +278,27 @@ class TestGenerator:
                 logger.warning("Hypothesis generated insufficient content")
                 return None
 
-            # Process and fix the test content
-            fixed_content = process_hypothesis_output(content)
+            # Process and fix the test content using post_process_test_content
+            fixed_content = self.post_process_test_content(content)
             if fixed_content is None:
-                logger.warning("Failed to fix test content")
+                logger.warning("Failed to process test content")
                 return None
 
-            logger.info("Successfully generated and fixed test content")
+            logger.info("Successfully generated and processed test content")
             return fixed_content
 
         if result.stderr and not self.is_known_error(result.stderr):
             logger.warning(f"Command failed: {result.stderr}")
         return None
-    # ===== END CHANGE =====
+
+    def post_process_test_content(self, content: str) -> Optional[str]:
+        """Post-process generated test content"""
+        try:
+            # Only fix the self parameter duplication issue
+            return fix_duplicate_self(content)
+        except Exception as e:
+            logger.error(f"Error processing test content: {e}", exc_info=True)
+            return None
 
     def is_known_error(self, stderr: str) -> bool:
         """Check if the stderr contains known non-critical errors"""
@@ -332,7 +309,6 @@ class TestGenerator:
         ]
         return any(msg in stderr for msg in known_errors)
 
-    @snoop
     def try_generate_test(
         self, entity: TestableEntity, variant: Dict[str, str], max_retries: int = 3
     ) -> bool:
@@ -463,7 +439,6 @@ class TestGenerator:
         """Populate entities with correct module paths"""
         entities = []
         for entity in parser.entities:
-            # All entities just get the base module path
             entity.module_path = module_path
             entities.append(entity)
         return entities
@@ -478,116 +453,6 @@ class TestGenerator:
         logger.info(
             f"Found {classes} classes, {methods} methods, and {functions} functions"
         )
-
-    def generate_test_variants(self, entity: TestableEntity) -> List[Dict[str, str]]:
-        """Generate all applicable test variants for an entity"""
-        variants = []
-        if entity.entity_type == "class":
-            variants.append(self.create_variant("basic", f"--style=unittest --annotate {entity.module_path}.{entity.name}"))
-        elif entity.entity_type in {"method", "instance_method"}:
-            variants.extend(self.generate_method_variants(entity))
-        else:
-            variants.extend(self.generate_function_variants(entity))
-        logger.debug(f"Generated variants for {entity.name}: {[v['type'] for v in variants]}")
-        return variants
-
-    def create_variant(self, variant_type: str, cmd: str) -> Dict[str, str]:
-        """Create a test variant dictionary with properly formatted command"""
-        return {
-            "type": variant_type,
-            "cmd": cmd.strip()  # Ensure no extra whitespace in command
-        }
-
-
-    def generate_method_variants(self, entity: TestableEntity) -> List[Dict[str, str]]:
-        """Generate test variants for methods and instance methods"""
-        # Construct the full method path including module and class
-        if entity.entity_type in {"method", "instance_method"}:
-            method_path = f"{entity.module_path}.{entity.parent_class}.{entity.name}"
-        else:
-            method_path = f"{entity.module_path}.{entity.name}"
-            
-        # Base variants that apply to all methods/functions
-        variants = [
-            self.create_variant(
-                "basic",
-                f"--style=unittest --annotate {method_path}"
-            )
-        ]
-        
-        variants.append(
-            self.create_variant(
-                "errors",
-                f"--style=unittest --annotate --except ValueError --except TypeError {method_path}"
-            )
-        )
-        
-        # Add special variants based on method name and type
-        name = entity.name.lower()
-        
-        if any(x in name for x in ["transform", "convert", "process", "format"]):
-            variants.append(
-                self.create_variant(
-                    "idempotent",
-                    f"--style=unittest --annotate --idempotent {method_path}"
-                )
-            )
-        
-        if any(x in name for x in ["validate", "verify", "check", "assert"]):
-            variants.append(
-                self.create_variant(
-                    "validation",
-                    f"--style=unittest --annotate --errors-equivalent {method_path}"
-                )
-            )
-            
-        # For encoding/decoding methods, test roundtrip
-        if ("encode" in name and "decode" in entity.parent_class.lower()) or \
-        ("decode" in name and "encode" in entity.parent_class.lower()):
-            variants.append(
-                self.create_variant(
-                    "roundtrip",
-                    f"--style=unittest --annotate --roundtrip {method_path}"
-                )
-            )
-        
-        if any(x in name for x in ["add", "multiply", "subtract", "combine", "merge"]):
-            variants.append(
-                self.create_variant(
-                    "binary-op",
-                    f"--style=unittest --annotate --binary-op {method_path}"
-                )
-            )
-        
-        return variants
-
-
-    def generate_instance_method_variants(self, entity: TestableEntity, method_path: str) -> List[Dict[str, str]]:
-        """Generate additional variants specifically for instance methods"""
-        variants = []
-        name = entity.name.lower()
-        
-        # For equivalency testing between implementations
-        if any(x in name for x in ["alternative", "optimized", "fast"]):
-            variants.append(
-                self.create_variant(
-                    "equivalent",
-                    f"--style=unittest --annotate --equivalent {method_path}"
-                )
-            )
-        
-        return variants
-    
-    def generate_function_variants(self, entity: TestableEntity) -> List[Dict[str, str]]:
-        """Generate test variants for standalone functions"""
-        base_cmd = f"--style=unittest --annotate {entity.module_path}.{entity.name}"
-        variants = [self.create_variant("basic", base_cmd)]
-
-        if any(x in entity.name.lower() for x in ["encode", "decode", "serialize", "deserialize"]):
-            variants.append(self.create_variant("roundtrip", f"{base_cmd} --roundtrip"))
-        elif any(x in entity.name.lower() for x in ["add", "sub", "mul", "combine", "merge"]):
-            variants.append(self.create_variant("binary-op", f"{base_cmd} --binary-op"))
-        return variants
 
     def generate_all_tests(self, file_path: Path) -> None:
         """Generate all possible test variants for a Python file"""
@@ -623,6 +488,122 @@ class TestGenerator:
                 print(f"\rGenerating tests: [{current}/{total_variants}]", end="")
                 self.try_generate_test(entity, variant)
         print()
+
+    def _get_object(self, path: str) -> Optional[Any]:
+        """Get the actual object from its module path"""
+        try:
+            module_parts = path.split('.')
+            module_path = '.'.join(module_parts[:-1])
+            obj_name = module_parts[-1]
+
+            spec = importlib.util.find_spec(module_path)
+            if spec and spec.loader:
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                return getattr(module, obj_name, None)
+        except Exception:
+            return None
+
+    def generate_method_variants(self, entity: TestableEntity) -> List[Dict[str, str]]:
+        """Generate test variants for methods and instance methods"""
+        if entity.entity_type in {"method", "instance_method"}:
+            method_path = f"{entity.module_path}.{entity.parent_class}.{entity.name}"
+        else:
+            method_path = f"{entity.module_path}.{entity.name}"
+
+        # Start with basic test with type inference
+        variants = [
+            self.create_variant(
+                "basic",
+                f"--style=unittest --annotate {method_path}"
+            )
+        ]
+
+        # Add error variant
+        variants.append(
+            self.create_variant(
+                "errors",
+                f"--style=unittest --annotate --except ValueError --except TypeError {method_path}"
+            )
+        )
+
+        # Add special variants based on method name
+        name = entity.name.lower()
+        variants.extend(self._generate_special_variants(name, method_path))
+
+        return variants
+
+    def _generate_special_variants(self, name: str, method_path: str) -> List[Dict[str, str]]:
+        """Generate special variants based on method name"""
+        special_variants = []
+
+        if any(x in name for x in ["transform", "convert", "process", "format"]):
+            special_variants.append(
+                self.create_variant(
+                    "idempotent",
+                    f"--style=unittest --annotate --idempotent {method_path}"
+                )
+            )
+
+        if any(x in name for x in ["validate", "verify", "check", "assert"]):
+            special_variants.append(
+                self.create_variant(
+                    "validation",
+                    f"--style=unittest --annotate --errors-equivalent {method_path}"
+                )
+            )
+
+        if "encode" in name or "decode" in name:
+            special_variants.append(
+                self.create_variant(
+                    "roundtrip",
+                    f"--style=unittest --annotate --roundtrip {method_path}"
+                )
+            )
+
+        if any(x in name for x in ["add", "multiply", "subtract", "combine", "merge"]):
+            special_variants.append(
+                self.create_variant(
+                    "binary-op",
+                    f"--style=unittest --annotate --binary-op {method_path}"
+                )
+            )
+
+        return special_variants
+
+    def generate_function_variants(self, entity: TestableEntity) -> List[Dict[str, str]]:
+        """Generate test variants for standalone functions"""
+        base_cmd = f"--style=unittest --annotate {entity.module_path}.{entity.name}"
+        variants = [self.create_variant("basic", base_cmd)]
+
+        # Add special variants for functions if needed
+        name = entity.name.lower()
+        if "encode" in name or "decode" in name or "serialize" in name or "deserialize" in name:
+            variants.append(self.create_variant("roundtrip", f"{base_cmd} --roundtrip"))
+        elif any(x in name for x in ["add", "sub", "mul", "combine", "merge"]):
+            variants.append(self.create_variant("binary-op", f"{base_cmd} --binary-op"))
+
+        return variants
+
+    def generate_test_variants(self, entity: TestableEntity) -> List[Dict[str, str]]:
+        """Generate all applicable test variants for an entity"""
+        variants = []
+        if entity.entity_type == "class":
+            # For classes, just a basic annotated variant
+            variants.append(self.create_variant("basic", f"--style=unittest --annotate {entity.module_path}.{entity.name}"))
+        elif entity.entity_type in {"method", "instance_method"}:
+            variants.extend(self.generate_method_variants(entity))
+        else:
+            variants.extend(self.generate_function_variants(entity))
+        logger.debug(f"Generated variants for {entity.name}: {[v['type'] for v in variants]}")
+        return variants
+
+    def create_variant(self, variant_type: str, cmd: str) -> Dict[str, str]:
+        """Create a test variant dictionary with properly formatted command"""
+        return {
+            "type": variant_type,
+            "cmd": cmd.strip()  # Ensure no extra whitespace in command
+        }
 
 
 def parse_args(args: Optional[list] = None) -> Path:
