@@ -41,7 +41,9 @@ class TestError:
         """Mark the given attempt as successful and the error as fixed"""
         if attempt not in self.fix_attempts:
             raise ValueError("Attempt does not belong to this error")
-            
+        if self.status == "fixed":
+            raise ValueError("Error is already fixed")
+        
         attempt.status = "success"
         self.status = "fixed"
 
@@ -49,5 +51,7 @@ class TestError:
         """Mark the given attempt as failed"""
         if attempt not in self.fix_attempts:
             raise ValueError("Attempt does not belong to this error")
-            
+        if self.status == "fixed":
+            raise ValueError("Cannot fail an attempt on a fixed error")
+        
         attempt.status = "failed"
