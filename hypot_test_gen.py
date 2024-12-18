@@ -6,7 +6,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union, Literal
 
 import snoop  # type: ignore
 
@@ -26,10 +26,9 @@ snoop.install(out=Path("snoop_debug.log"))
 @dataclass
 class TestableEntity:
     """Represents a class, method, or function that can be tested"""
-
     name: str
     module_path: str
-    entity_type: str  # 'class', 'method', or 'function'
+    entity_type: Literal['class', 'method', 'function', 'instance_method']  # More restrictive type
     parent_class: Optional[str] = None
 
 
@@ -114,20 +113,25 @@ class ModuleParser(ast.NodeVisitor):
 
     def process_method(self, node: ast.FunctionDef) -> None:
         """Process a method within a class"""
-        is_instance_method = self.determine_instance_method(node)
         if self.should_skip_method(node):
             return
+            
+        is_instance_method = self.determine_instance_method(node)
         entity_type = "instance_method" if is_instance_method else "method"
+        
+        # The method path should include the class
+        method_name = f"{self.current_class}.{node.name}" if self.current_class else node.name
+        
         self.entities.append(
             TestableEntity(
-                node.name,
-                "",
-                entity_type,
-                self.current_class,
+                name=node.name,
+                module_path="",
+                entity_type=entity_type,
+                parent_class=self.current_class,
             )
         )
         logger.debug(
-            f"Added {'instance_method' if is_instance_method else 'method'} entity: {node.name} in class {self.current_class}"
+            f"Added {'instance_method' if is_instance_method else 'method'} entity: {method_name}"
         )
 
     def determine_instance_method(self, node: ast.FunctionDef) -> bool:
@@ -375,10 +379,8 @@ class TestGenerator:
         """Populate entities with correct module paths"""
         entities = []
         for entity in parser.entities:
-            if entity.entity_type in {"method", "instance_method"}:
-                entity.module_path = f"{module_path}.{entity.parent_class}"
-            else:
-                entity.module_path = module_path
+            # All entities just get the base module path
+            entity.module_path = module_path
             entities.append(entity)
         return entities
 
@@ -406,44 +408,96 @@ class TestGenerator:
         return variants
 
     def create_variant(self, variant_type: str, cmd: str) -> Dict[str, str]:
-        """Create a test variant dictionary"""
-        return {"type": variant_type, "cmd": cmd}
+        """Create a test variant dictionary with properly formatted command"""
+        return {
+            "type": variant_type,
+            "cmd": cmd.strip()  # Ensure no extra whitespace in command
+        }
+
 
     def generate_method_variants(self, entity: TestableEntity) -> List[Dict[str, str]]:
         """Generate test variants for methods and instance methods"""
-        method_path = f"{entity.module_path}.{entity.name}"
+        # Construct the full method path including module and class
+        if entity.entity_type in {"method", "instance_method"}:
+            method_path = f"{entity.module_path}.{entity.parent_class}.{entity.name}"
+        else:
+            method_path = f"{entity.module_path}.{entity.name}"
+            
+        # Base variants that apply to all methods/functions
         variants = [
-            self.create_variant("basic", f"--style=unittest --annotate {method_path}"),
+            self.create_variant(
+                "basic",
+                f"--style=unittest --annotate {method_path}"
+            )
+        ]
+        
+        # Add error testing variant
+        variants.append(
             self.create_variant(
                 "errors",
-                f"--style=unittest --annotate --except ValueError --except TypeError {method_path}",
-            ),
-        ]
-
-        if entity.entity_type == "instance_method":
-            variants.extend(self.generate_instance_method_variants(entity, method_path))
-        return variants
-
-    def generate_instance_method_variants(self, entity: TestableEntity, method_path: str) -> List[Dict[str, str]]:
-        """Generate additional variants for instance methods based on naming"""
-        variants = []
-        name = entity.name.lower()
-        if any(x in name for x in ["validate", "verify", "check"]):
-            variants.append(
-                self.create_variant(
-                    "validation",
-                    f"--style=unittest --annotate --errors-equivalent {method_path}",
-                )
+                f"--style=unittest --annotate --except ValueError --except TypeError {method_path}"
             )
-        elif any(x in name for x in ["transform", "convert", "process"]):
+        )
+        
+        # Add special variants based on method name and type
+        name = entity.name.lower()
+        
+        # For transform/convert type methods, test idempotence
+        if any(x in name for x in ["transform", "convert", "process", "format"]):
             variants.append(
                 self.create_variant(
                     "idempotent",
-                    f"--style=unittest --annotate --idempotent {method_path}",
+                    f"--style=unittest --annotate --idempotent {method_path}"
                 )
             )
+        
+        # For validation methods, test error equivalence
+        if any(x in name for x in ["validate", "verify", "check", "assert"]):
+            variants.append(
+                self.create_variant(
+                    "validation",
+                    f"--style=unittest --annotate --errors-equivalent {method_path}"
+                )
+            )
+            
+        # For encoding/decoding methods, test roundtrip
+        if ("encode" in name and "decode" in entity.parent_class.lower()) or \
+        ("decode" in name and "encode" in entity.parent_class.lower()):
+            variants.append(
+                self.create_variant(
+                    "roundtrip",
+                    f"--style=unittest --annotate --roundtrip {method_path}"
+                )
+            )
+        
+        # For mathematical operations, test binary operation properties
+        if any(x in name for x in ["add", "multiply", "subtract", "combine", "merge"]):
+            variants.append(
+                self.create_variant(
+                    "binary-op",
+                    f"--style=unittest --annotate --binary-op {method_path}"
+                )
+            )
+        
         return variants
 
+
+    def generate_instance_method_variants(self, entity: TestableEntity, method_path: str) -> List[Dict[str, str]]:
+        """Generate additional variants specifically for instance methods"""
+        variants = []
+        name = entity.name.lower()
+        
+        # For equivalency testing between implementations
+        if any(x in name for x in ["alternative", "optimized", "fast"]):
+            variants.append(
+                self.create_variant(
+                    "equivalent",
+                    f"--style=unittest --annotate --equivalent {method_path}"
+                )
+            )
+        
+        return variants
+    
     def generate_function_variants(self, entity: TestableEntity) -> List[Dict[str, str]]:
         """Generate test variants for standalone functions"""
         base_cmd = f"--style=unittest --annotate {entity.module_path}.{entity.name}"
