@@ -173,6 +173,81 @@ def debug_command_output(cmd: str, stdout: str, stderr: str, returncode: int) ->
     logger.debug(stderr[:1000])
 
 
+# ===== CHANGE: Add TestFixer and related functions =====
+class TestFixer(ast.NodeTransformer):
+    """AST transformer to fix duplicate self parameters"""
+    
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.FunctionDef:
+        """Remove duplicate self parameters in function definitions"""
+        # Keep track of seen 'self' parameters
+        seen_self = False
+        new_args = []
+        
+        for arg in node.args.args:
+            if arg.arg == 'self':
+                if not seen_self:
+                    seen_self = True
+                    new_args.append(arg)
+                # Skip duplicate self parameters
+            else:
+                new_args.append(arg)
+        
+        # Create new arguments with deduplicated parameters
+        node.args.args = new_args
+        return node
+
+def fix_duplicate_self(test_content: str) -> Optional[str]:
+    """
+    Fix duplicate self parameters in test content.
+    
+    Args:
+        test_content: String containing the test code
+        
+    Returns:
+        Fixed test code string, or None if parsing fails
+    """
+    try:
+        # Parse the test content into an AST
+        tree = ast.parse(test_content)
+        
+        # Apply the fixer
+        fixer = TestFixer()
+        fixed_tree = fixer.visit(tree)
+        
+        # Use ast.unparse for Python 3.9+
+        try:
+            return ast.unparse(fixed_tree)
+        except AttributeError:
+            # Fallback for older Python versions
+            import astunparse
+            return astunparse.unparse(fixed_tree)
+            
+    except Exception as e:
+        print(f"Error fixing test content: {e}")
+        return None
+
+def process_hypothesis_output(output: str) -> Optional[str]:
+    """
+    Process the output from hypothesis write command.
+    
+    Args:
+        output: Raw output from hypothesis write
+        
+    Returns:
+        Processed test content with fixes applied
+    """
+    if not output:
+        return None
+        
+    # Fix duplicate self parameters
+    fixed_output = fix_duplicate_self(output)
+    if fixed_output is None:
+        return None
+        
+    return fixed_output
+# ===== END CHANGE =====
+
+
 class TestGenerator:
     """Manages generation of Hypothesis tests for Python modules"""
 
@@ -225,6 +300,7 @@ class TestGenerator:
         env.setdefault("PYTHONIOENCODING", "utf-8")
         return env
 
+    # ===== CHANGE: Modified process_hypothesis_result to post-process output =====
     def process_hypothesis_result(self, result: subprocess.CompletedProcess) -> Optional[str]:
         """Process the result of the hypothesis command"""
         if result.returncode == 0 and result.stdout:
@@ -232,12 +308,20 @@ class TestGenerator:
             if not content or len(content) < 50:
                 logger.warning("Hypothesis generated insufficient content")
                 return None
-            logger.info("Successfully generated test content")
-            return content
+
+            # Process and fix the test content
+            fixed_content = process_hypothesis_output(content)
+            if fixed_content is None:
+                logger.warning("Failed to fix test content")
+                return None
+
+            logger.info("Successfully generated and fixed test content")
+            return fixed_content
 
         if result.stderr and not self.is_known_error(result.stderr):
             logger.warning(f"Command failed: {result.stderr}")
         return None
+    # ===== END CHANGE =====
 
     def is_known_error(self, stderr: str) -> bool:
         """Check if the stderr contains known non-critical errors"""
@@ -431,7 +515,6 @@ class TestGenerator:
             )
         ]
         
-        # Add error testing variant
         variants.append(
             self.create_variant(
                 "errors",
@@ -442,7 +525,6 @@ class TestGenerator:
         # Add special variants based on method name and type
         name = entity.name.lower()
         
-        # For transform/convert type methods, test idempotence
         if any(x in name for x in ["transform", "convert", "process", "format"]):
             variants.append(
                 self.create_variant(
@@ -451,7 +533,6 @@ class TestGenerator:
                 )
             )
         
-        # For validation methods, test error equivalence
         if any(x in name for x in ["validate", "verify", "check", "assert"]):
             variants.append(
                 self.create_variant(
@@ -470,7 +551,6 @@ class TestGenerator:
                 )
             )
         
-        # For mathematical operations, test binary operation properties
         if any(x in name for x in ["add", "multiply", "subtract", "combine", "merge"]):
             variants.append(
                 self.create_variant(
