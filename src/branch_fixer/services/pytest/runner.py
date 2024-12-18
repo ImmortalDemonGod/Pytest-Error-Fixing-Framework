@@ -13,37 +13,39 @@ from _pytest.nodes import Item
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class TestResult:
-    """Detailed test execution result"""
+    """Detailed test execution result."""
+
     # Test identification
     nodeid: str
     test_file: Optional[Path] = None
     test_function: Optional[str] = None
-    
+
     # Execution info
     timestamp: datetime = field(default_factory=datetime.now)
     duration: float = 0.0
-    
+
     # Outcomes for each phase
     setup_outcome: Optional[str] = None
     call_outcome: Optional[str] = None
     teardown_outcome: Optional[str] = None
-    
+
     # Outputs
     stdout: Optional[str] = None
     stderr: Optional[str] = None
     log_output: Optional[str] = None
-    
+
     # Error details
     error_message: Optional[str] = None
     longrepr: Optional[str] = None
     traceback: Optional[str] = None
-    
+
     # Test metadata
     markers: List[str] = field(default_factory=list)
     parameters: Dict[str, Any] = field(default_factory=dict)
-    
+
     # Summary flags
     passed: bool = False
     failed: bool = False
@@ -51,15 +53,17 @@ class TestResult:
     xfailed: bool = False
     xpassed: bool = False
 
+
 @dataclass
 class SessionResult:
-    """Complete test session results"""
+    """Complete test session results."""
+
     # Session info
     start_time: datetime
     end_time: datetime
     duration: float
     exit_code: ExitCode
-    
+
     # Result counts
     total_collected: int = 0
     passed: int = 0
@@ -68,22 +72,39 @@ class SessionResult:
     xfailed: int = 0
     xpassed: int = 0
     errors: int = 0
-    
+
     # Detailed results
     test_results: Dict[str, TestResult] = field(default_factory=dict)
     collection_errors: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
 
+
 class PytestRunner:
-    """Pytest execution manager with comprehensive result capture"""
+    """Pytest execution manager with comprehensive result capture."""
 
     def __init__(self, working_dir: Optional[Path] = None):
-        """Initialize runner with optional working directory"""
+        """
+        Initialize the PytestRunner with an optional working directory.
+
+        Args:
+            working_dir (Optional[Path]): The directory to set as the root for pytest execution.
+
+        Attributes:
+            working_dir (Optional[Path]): The working directory for pytest.
+            _current_session (Optional[SessionResult]): The current test session being executed.
+        """
         self.working_dir = working_dir
         self._current_session: Optional[SessionResult] = None
 
     def pytest_runtest_logreport(self, report: TestReport):
-        """Hook to capture comprehensive test information"""
+        """
+        Hook to capture comprehensive test information during test execution.
+
+        This method is called by pytest after each test phase (setup, call, teardown).
+
+        Args:
+            report (TestReport): The report object containing test execution details.
+        """
         if not self._current_session:
             return
 
@@ -126,9 +147,9 @@ class PytestRunner:
         result.passed = report.passed
         result.failed = report.failed
         result.skipped = report.skipped
-        if hasattr(report, 'wasxfail'):
+        if hasattr(report, 'wasxfail') and report.wasxfail:
             result.xfailed = True
-        if hasattr(report, 'wasxpassed'):
+        if hasattr(report, 'wasxpassed') and report.wasxpassed:
             result.xpassed = True
 
         # Capture test metadata
@@ -139,7 +160,14 @@ class PytestRunner:
             ]
 
     def pytest_collectreport(self, report: CollectReport):
-        """Hook to capture collection information"""
+        """
+        Hook to capture collection information during test discovery.
+
+        This method is called by pytest after attempting to collect tests.
+
+        Args:
+            report (CollectReport): The report object containing collection details.
+        """
         if not self._current_session:
             return
 
@@ -147,16 +175,35 @@ class PytestRunner:
             self._current_session.collection_errors.append(str(report.longrepr))
 
     def pytest_warning_recorded(self, warning_message: Warning):
-        """Hook to capture test warnings"""
+        """
+        Hook to capture test warnings during test execution.
+
+        This method is called by pytest when a warning is recorded.
+
+        Args:
+            warning_message (Warning): The warning message object.
+        """
         if self._current_session:
             self._current_session.warnings.append(str(warning_message))
 
     async def run_test(self,
-                      test_path: Optional[Path] = None,
-                      test_function: Optional[str] = None) -> SessionResult:
-        """Run pytest with detailed result capture"""
+                       test_path: Optional[Path] = None,
+                       test_function: Optional[str] = None) -> SessionResult:
+        """
+        Run pytest with detailed result capture.
+
+        This method executes pytest with the specified test path and function,
+        capturing comprehensive test execution details.
+
+        Args:
+            test_path (Optional[Path]): The path to the test file or directory.
+            test_function (Optional[str]): The specific test function to run.
+
+        Returns:
+            SessionResult: The result of the test session, including all captured data.
+        """
         start_time = datetime.now()
-        
+
         # Initialize session
         self._current_session = SessionResult(
             start_time=start_time,
@@ -183,7 +230,7 @@ class PytestRunner:
 
             # Run pytest
             exit_code = pytest.main(args)
-            
+
             # Update session info
             end_time = datetime.now()
             self._current_session.end_time = end_time
@@ -217,12 +264,33 @@ class PytestRunner:
     async def verify_fix(self,
                         test_file: Path,
                         test_function: str) -> bool:
-        """Verify if a specific test passes"""
+        """
+        Verify if a specific test passes after a fix.
+
+        This method runs the specified test and checks if it passes successfully.
+
+        Args:
+            test_file (Path): The path to the test file.
+            test_function (str): The name of the test function.
+
+        Returns:
+            bool: True if the test passes, False otherwise.
+        """
         session = await self.run_test(test_file, test_function)
         return session.passed == session.total_collected
 
     def format_report(self, session: SessionResult) -> str:
-        """Format session results into detailed report"""
+        """
+        Format session results into a detailed report.
+
+        This method generates a human-readable report summarizing the test session.
+
+        Args:
+            session (SessionResult): The test session results to format.
+
+        Returns:
+            str: The formatted report as a string.
+        """
         lines = [
             "Test Execution Report",
             "====================",
