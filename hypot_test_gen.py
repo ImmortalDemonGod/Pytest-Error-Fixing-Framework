@@ -35,19 +35,26 @@ class TestableEntity:
 
 def fix_pythonpath(file_path: Path) -> None:
     """Ensure the module being tested is in Python's path"""
-    # Add parent directory to path if it's a single file
     parent_dir = str(file_path.parent.absolute())
-    if parent_dir not in sys.path:
-        sys.path.insert(0, parent_dir)
-        logger.debug(f"Added parent directory to sys.path: {parent_dir}")
+    add_to_sys_path(parent_dir, "parent directory")
 
-    # Add src directory to path if it exists
     if "src" in file_path.parts:
-        src_index = file_path.parts.index("src")
-        src_path = str(Path(*file_path.parts[: src_index + 1]).absolute())
-        if src_path not in sys.path:
-            sys.path.insert(0, src_path)
-            logger.debug(f"Added src directory to sys.path: {src_path}")
+        src_path = construct_src_path(file_path)
+        add_to_sys_path(src_path, "src directory")
+
+
+def add_to_sys_path(path: str, description: str) -> None:
+    """Helper function to add a path to sys.path if not already present"""
+    if path not in sys.path:
+        sys.path.insert(0, path)
+        logger.debug(f"Added {description} to sys.path: {path}")
+
+
+def construct_src_path(file_path: Path) -> str:
+    """Construct the src path from the file path"""
+    src_index = file_path.parts.index("src")
+    src_path = str(Path(*file_path.parts[: src_index + 1]).absolute())
+    return src_path
 
 
 class ModuleParser(ast.NodeVisitor):
@@ -59,62 +66,93 @@ class ModuleParser(ast.NodeVisitor):
         self.class_bases: Dict[str, List[str]] = {}
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
-        if not node.name.startswith("_"):
-            # Store base classes for inheritance checking
-            bases = []
-            for base in node.bases:
-                if isinstance(base, ast.Name):
-                    bases.append(base.id)
-                elif isinstance(base, ast.Attribute):
-                    # base.value may not always be an ast.Name with an .id attribute
-                    if isinstance(base.value, ast.Name):
-                        bases.append(f"{base.value.id}.{base.attr}")  # type: ignore
-                    # If it's not ast.Name, we skip adding it since we can't reliably get .id
-            self.class_bases[node.name] = bases
+        if node.name.startswith("_"):
+            return
+        self.store_class_bases(node)
+        self.add_class_entity(node)
+        self.process_class_contents(node)
 
-            # Add the class itself
-            self.entities.append(TestableEntity(node.name, "", "class"))
+    def store_class_bases(self, node: ast.ClassDef) -> None:
+        """Store base classes for inheritance checking"""
+        bases = []
+        for base in node.bases:
+            base_name = self.get_base_name(base)
+            if base_name:
+                bases.append(base_name)
+        self.class_bases[node.name] = bases
+        logger.debug(f"Stored bases for class {node.name}: {bases}")
 
-            # Process class contents
-            old_class = self.current_class
-            self.current_class = node.name
-            self.generic_visit(node)
-            self.current_class = old_class
+    def get_base_name(self, base: ast.AST) -> Optional[str]:
+        """Retrieve the base class name from the AST node"""
+        if isinstance(base, ast.Name):
+            return base.id
+        elif isinstance(base, ast.Attribute):
+            if isinstance(base.value, ast.Name):
+                return f"{base.value.id}.{base.attr}"
+        return None
+
+    def add_class_entity(self, node: ast.ClassDef) -> None:
+        """Add the class itself to entities"""
+        self.entities.append(TestableEntity(node.name, "", "class"))
+        logger.debug(f"Added class entity: {node.name}")
+
+    def process_class_contents(self, node: ast.ClassDef) -> None:
+        """Process the contents of the class"""
+        old_class = self.current_class
+        self.current_class = node.name
+        self.generic_visit(node)
+        self.current_class = old_class
+        logger.debug(f"Processed contents of class {node.name}")
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-        if not node.name.startswith("_"):
-            if self.current_class:
-                # Check if this is an instance method that needs an instance
-                is_instance_method = False
-                for decorator in node.decorator_list:
-                    if isinstance(decorator, ast.Name) and decorator.id in {
-                        "classmethod",
-                        "staticmethod",
-                    }:
-                        is_instance_method = False
-                        break
-                    is_instance_method = True
+        if node.name.startswith("_"):
+            return
+        if self.current_class:
+            self.process_method(node)
+        else:
+            self.add_function_entity(node)
 
-                # Skip methods that are likely inherited/bound
-                current_bases = self.class_bases.get(self.current_class, [])
-                if any(
-                    base in {"NodeVisitor", "ast.NodeVisitor"} for base in current_bases
-                ):
-                    if node.name.startswith("visit_"):
-                        return
+    def process_method(self, node: ast.FunctionDef) -> None:
+        """Process a method within a class"""
+        is_instance_method = self.determine_instance_method(node)
+        if self.should_skip_method(node):
+            return
+        entity_type = "instance_method" if is_instance_method else "method"
+        self.entities.append(
+            TestableEntity(
+                node.name,
+                "",
+                entity_type,
+                self.current_class,
+            )
+        )
+        logger.debug(
+            f"Added {'instance_method' if is_instance_method else 'method'} entity: {node.name} in class {self.current_class}"
+        )
 
-                # Skip common magic methods and property methods
-                if node.name not in {"__init__", "__str__", "__repr__", "property"}:
-                    self.entities.append(
-                        TestableEntity(
-                            node.name,
-                            "",
-                            "instance_method" if is_instance_method else "method",
-                            self.current_class,
-                        )
-                    )
-            else:
-                self.entities.append(TestableEntity(node.name, "", "function"))
+    def determine_instance_method(self, node: ast.FunctionDef) -> bool:
+        """Determine if the method is an instance method"""
+        for decorator in node.decorator_list:
+            if isinstance(decorator, ast.Name) and decorator.id in {"classmethod", "staticmethod"}:
+                return False
+        return True
+
+    def should_skip_method(self, node: ast.FunctionDef) -> bool:
+        """Determine if the method should be skipped based on inheritance or naming"""
+        current_bases = self.class_bases.get(self.current_class, [])
+        if any(base in {"NodeVisitor", "ast.NodeVisitor"} for base in current_bases):
+            if node.name.startswith("visit_"):
+                logger.debug(f"Skipping inherited visit method: {node.name}")
+                return True
+        if node.name in {"__init__", "__str__", "__repr__", "property"}:
+            logger.debug(f"Skipping magic or property method: {node.name}")
+            return True
+        return False
+
+    def add_function_entity(self, node: ast.FunctionDef) -> None:
+        """Add a standalone function to entities"""
+        self.entities.append(TestableEntity(node.name, "", "function"))
+        logger.debug(f"Added function entity: {node.name}")
 
 
 @snoop
@@ -138,9 +176,13 @@ class TestGenerator:
     def __init__(self, output_dir: Path = Path("generated_tests")):
         self.output_dir = output_dir
         self.output_dir.mkdir(exist_ok=True)
-        logger.debug(f"Test generator initialized with output dir: {output_dir}")
-        logger.debug(f"Output dir exists: {output_dir.exists()}")
-        logger.debug(f"Output dir is writable: {os.access(output_dir, os.W_OK)}")
+        self.verify_output_dir()
+
+    def verify_output_dir(self) -> None:
+        """Verify that the output directory exists and is writable"""
+        logger.debug(f"Test generator initialized with output dir: {self.output_dir}")
+        logger.debug(f"Output dir exists: {self.output_dir.exists()}")
+        logger.debug(f"Output dir is writable: {os.access(self.output_dir, os.W_OK)}")
 
     @snoop
     def run_hypothesis_write(self, command: str) -> Optional[str]:
@@ -149,14 +191,8 @@ class TestGenerator:
         logger.debug(f"Executing hypothesis command: {full_cmd}")
 
         try:
-            logger.debug(f"PYTHONPATH before modification: {os.getenv('PYTHONPATH')}")
-            logger.debug(f"sys.path: {sys.path}")
-
-            logger.debug(f"Current working directory: {os.getcwd()}")
-            env = os.environ.copy()
-            env["PYTHONPATH"] = ":".join(sys.path)
-            if "PYTHONIOENCODING" not in env:
-                env["PYTHONIOENCODING"] = "utf-8"
+            self.log_environment()
+            env = self.prepare_environment()
 
             result = subprocess.run(
                 full_cmd, shell=True, capture_output=True, text=True, env=env
@@ -166,251 +202,293 @@ class TestGenerator:
                 full_cmd, result.stdout, result.stderr, result.returncode
             )
 
-            if result.returncode == 0 and result.stdout:
-                content = result.stdout.strip()
-                if not content or len(content) < 50:
-                    logger.warning("Hypothesis generated insufficient content")
-                    return None
-                logger.info("Successfully generated test content")
-                return content
-
-            if result.stderr:
-                if not any(
-                    msg in result.stderr
-                    for msg in [
-                        "InvalidArgument: Got non-callable",
-                        "Could not resolve",
-                        "but it doesn't have a",
-                    ]
-                ):
-                    logger.warning(f"Command failed: {result.stderr}")
-            return None
+            return self.process_hypothesis_result(result)
 
         except Exception as e:
             logger.error(f"Error running hypothesis: {e}", exc_info=True)
             return None
+
+    def log_environment(self) -> None:
+        """Log the current environment settings"""
+        logger.debug(f"PYTHONPATH before modification: {os.getenv('PYTHONPATH')}")
+        logger.debug(f"sys.path: {sys.path}")
+        logger.debug(f"Current working directory: {os.getcwd()}")
+
+    def prepare_environment(self) -> Dict[str, str]:
+        """Prepare the environment variables for subprocess"""
+        env = os.environ.copy()
+        env["PYTHONPATH"] = ":".join(sys.path)
+        env.setdefault("PYTHONIOENCODING", "utf-8")
+        return env
+
+    def process_hypothesis_result(self, result: subprocess.CompletedProcess) -> Optional[str]:
+        """Process the result of the hypothesis command"""
+        if result.returncode == 0 and result.stdout:
+            content = result.stdout.strip()
+            if not content or len(content) < 50:
+                logger.warning("Hypothesis generated insufficient content")
+                return None
+            logger.info("Successfully generated test content")
+            return content
+
+        if result.stderr and not self.is_known_error(result.stderr):
+            logger.warning(f"Command failed: {result.stderr}")
+        return None
+
+    def is_known_error(self, stderr: str) -> bool:
+        """Check if the stderr contains known non-critical errors"""
+        known_errors = [
+            "InvalidArgument: Got non-callable",
+            "Could not resolve",
+            "but it doesn't have a",
+        ]
+        return any(msg in stderr for msg in known_errors)
 
     @snoop
     def try_generate_test(
         self, entity: TestableEntity, variant: Dict[str, str], max_retries: int = 3
     ) -> bool:
         """Attempt to generate a specific test variant with retries"""
-        for attempt in range(max_retries):
+        for attempt in range(1, max_retries + 1):
             logger.debug(
-                f"Attempt {attempt+1} for {variant['type']} test on {entity.name}"
+                f"Attempt {attempt} for {variant['type']} test on {entity.name}"
             )
-            try:
-                output = self.run_hypothesis_write(variant["cmd"])
-                if output:
-                    name_prefix = (
-                        f"{entity.parent_class}_{entity.name}"
-                        if entity.parent_class
-                        else entity.name
-                    )
-                    output_file = (
-                        self.output_dir / f"test_{name_prefix}_{variant['type']}.py"
-                    )
-
-                    try:
-                        logger.debug("Test content details:")
-                        logger.debug(f"Content length: {len(output)}")
-                        logger.debug(f"Content preview:\n{output[:1000]}")
-                        logger.debug(f"Writing to file: {output_file}")
-
-                        output_file.write_text(output)
-
-                        # Verify written content
-                        written_content = output_file.read_text()
-                        if not written_content:
-                            logger.error(f"File {output_file} is empty after writing!")
-                            return False
-
-                        if written_content != output:
-                            logger.error(
-                                "Written content doesn't match original content!"
-                            )
-                            logger.debug(f"Original length: {len(output)}")
-                            logger.debug(f"Written length: {len(written_content)}")
-                            return False
-
-                        logger.info(f"Successfully generated test at {output_file}")
-                        logger.debug(
-                            f"Final file size: {output_file.stat().st_size} bytes"
-                        )
-                        print(f"Generated {variant['type']} test: {output_file}")
-                        return True
-
-                    except Exception as e:
-                        logger.error(f"Error writing test file: {e}", exc_info=True)
-                        logger.debug(f"Output file path: {output_file}")
-                        logger.debug(
-                            f"Output content length: {len(output) if output else 0}"
-                        )
-                        return False
-                else:
-                    logger.warning("No output generated from hypothesis")
-                    if attempt < max_retries - 1:
-                        logger.warning(f"Attempt {attempt + 1} failed, retrying...")
-                        time.sleep(1)
-                    else:
-                        logger.error(f"All attempts failed for {entity.name}")
-            except Exception as e:
-                if attempt < max_retries - 1:
-                    logger.warning(
-                        f"Attempt {attempt + 1} failed with error: {e}, retrying..."
-                    )
-                    time.sleep(1)
-                else:
-                    logger.error(f"All attempts failed for {entity.name}: {e}")
+            output = self.attempt_test_generation(entity, variant, attempt)
+            if output:
+                return True
         return False
+
+    def attempt_test_generation(
+        self, entity: TestableEntity, variant: Dict[str, str], attempt: int
+    ) -> Optional[bool]:
+        """Attempt a single test generation"""
+        output = self.run_hypothesis_write(variant["cmd"])
+        if output:
+            return self.handle_generated_output(entity, variant, output)
+        else:
+            return self.handle_failed_attempt(entity, variant, attempt)
+
+    def handle_generated_output(
+        self, entity: TestableEntity, variant: Dict[str, str], output: str
+    ) -> bool:
+        """Handle the output from a successful hypothesis generation"""
+        name_prefix = (
+            f"{entity.parent_class}_{entity.name}"
+            if entity.parent_class
+            else entity.name
+        )
+        output_file = self.output_dir / f"test_{name_prefix}_{variant['type']}.py"
+
+        try:
+            self.write_and_verify_output(output_file, output)
+            logger.info(f"Successfully generated test at {output_file}")
+            print(f"Generated {variant['type']} test: {output_file}")
+            return True
+        except Exception as e:
+            logger.error(f"Error writing test file: {e}", exc_info=True)
+            return False
+
+    def write_and_verify_output(self, output_file: Path, content: str) -> None:
+        """Write the test content to a file and verify its integrity"""
+        logger.debug("Test content details:")
+        logger.debug(f"Content length: {len(content)}")
+        logger.debug(f"Content preview:\n{content[:1000]}")
+        logger.debug(f"Writing to file: {output_file}")
+
+        output_file.write_text(content)
+
+        written_content = output_file.read_text()
+        if not written_content:
+            logger.error(f"File {output_file} is empty after writing!")
+            raise ValueError(f"Empty file: {output_file}")
+
+        if written_content != content:
+            logger.error("Written content doesn't match original content!")
+            logger.debug(f"Original length: {len(content)}")
+            logger.debug(f"Written length: {len(written_content)}")
+            raise ValueError("Content mismatch after writing")
+
+        logger.debug(f"Final file size: {output_file.stat().st_size} bytes")
+
+    def handle_failed_attempt(
+        self, entity: TestableEntity, variant: Dict[str, str], attempt: int
+    ) -> Optional[bool]:
+        """Handle a failed test generation attempt"""
+        if attempt < 3:
+            logger.warning(f"Attempt {attempt} failed, retrying...")
+            time.sleep(1)
+        else:
+            logger.error(f"All attempts failed for {entity.name}")
+        return None
 
     def get_module_contents(self, file_path: Path) -> Tuple[str, List[TestableEntity]]:
         """Extract module path and testable entities using AST parsing"""
         logger.debug(f"Reading file: {file_path}")
-
         try:
-            parts = file_path.parts
-            if "src" in parts:
-                src_index = parts.index("src")
-                module_parts = list(parts[src_index + 1 :])  # Ensure list type
-            else:
-                module_parts = [file_path.stem]
-
-            module_path = ".".join([p.replace(".py", "") for p in module_parts])
-            logger.debug(f"Constructed module path: {module_path}")
-
+            module_path = self.construct_module_path(file_path)
             content = file_path.read_text()
-            tree = ast.parse(content)
-            parser = ModuleParser()
-            parser.visit(tree)
+            parser = self.parse_ast(content)
+            imports = self.extract_imports(content)
 
-            imports = set()
-            for node in ast.walk(tree):
-                if isinstance(node, ast.Import):
-                    for name in node.names:
-                        imports.add(name.name)
-                elif isinstance(node, ast.ImportFrom):
-                    if node.module is not None:  # Ensure node.module is not None
-                        imports.add(node.module)
-
-            logger.debug(f"Found imports: {imports}")
-
-            entities = []
-            for entity in parser.entities:
-                if entity.entity_type in {"method", "instance_method"}:
-                    entity.module_path = f"{module_path}.{entity.parent_class}"
-                else:
-                    entity.module_path = module_path
-                entities.append(entity)
-
-            classes = sum(1 for e in entities if e.entity_type == "class")
-            methods = sum(
-                1 for e in entities if e.entity_type in {"method", "instance_method"}
-            )
-            functions = sum(1 for e in entities if e.entity_type == "function")
-
-            logger.info(
-                f"Found {classes} classes, {methods} methods, and {functions} functions"
-            )
+            entities = self.populate_entities(parser, module_path)
+            self.log_entities_summary(entities)
             return module_path, entities
 
         except Exception as e:
             logger.error(f"Error parsing module contents: {e}", exc_info=True)
             raise
 
+    def construct_module_path(self, file_path: Path) -> str:
+        """Construct the module path from the file path"""
+        parts = file_path.parts
+        if "src" in parts:
+            src_index = parts.index("src")
+            module_parts = list(parts[src_index + 1 :])
+        else:
+            module_parts = [file_path.stem]
+        module_path = ".".join([p.replace(".py", "") for p in module_parts])
+        logger.debug(f"Constructed module path: {module_path}")
+        return module_path
+
+    def parse_ast(self, content: str) -> ModuleParser:
+        """Parse the AST of the given content"""
+        tree = ast.parse(content)
+        parser = ModuleParser()
+        parser.visit(tree)
+        return parser
+
+    def extract_imports(self, content: str) -> set:
+        """Extract import statements from the content"""
+        tree = ast.parse(content)
+        imports = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for name in node.names:
+                    imports.add(name.name)
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    imports.add(node.module)
+        logger.debug(f"Found imports: {imports}")
+        return imports
+
+    def populate_entities(self, parser: ModuleParser, module_path: str) -> List[TestableEntity]:
+        """Populate entities with correct module paths"""
+        entities = []
+        for entity in parser.entities:
+            if entity.entity_type in {"method", "instance_method"}:
+                entity.module_path = f"{module_path}.{entity.parent_class}"
+            else:
+                entity.module_path = module_path
+            entities.append(entity)
+        return entities
+
+    def log_entities_summary(self, entities: List[TestableEntity]) -> None:
+        """Log a summary of found entities"""
+        classes = sum(1 for e in entities if e.entity_type == "class")
+        methods = sum(
+            1 for e in entities if e.entity_type in {"method", "instance_method"}
+        )
+        functions = sum(1 for e in entities if e.entity_type == "function")
+        logger.info(
+            f"Found {classes} classes, {methods} methods, and {functions} functions"
+        )
+
     def generate_test_variants(self, entity: TestableEntity) -> List[Dict[str, str]]:
         """Generate all applicable test variants for an entity"""
         variants = []
-
         if entity.entity_type == "class":
-            variants.append(
-                {
-                    "type": "basic",
-                    "cmd": f"--style=unittest --annotate {entity.module_path}.{entity.name}",
-                }
-            )
-
+            variants.append(self.create_variant("basic", f"--style=unittest --annotate {entity.module_path}.{entity.name}"))
         elif entity.entity_type in {"method", "instance_method"}:
-            method_path = f"{entity.module_path}.{entity.name}"
-            variants.extend(
-                [
-                    {
-                        "type": "basic",
-                        "cmd": f"--style=unittest --annotate {method_path}",
-                    },
-                    {
-                        "type": "errors",
-                        "cmd": f"--style=unittest --annotate --except ValueError --except TypeError {method_path}",
-                    },
-                ]
+            variants.extend(self.generate_method_variants(entity))
+        else:
+            variants.extend(self.generate_function_variants(entity))
+        logger.debug(f"Generated variants for {entity.name}: {[v['type'] for v in variants]}")
+        return variants
+
+    def create_variant(self, variant_type: str, cmd: str) -> Dict[str, str]:
+        """Create a test variant dictionary"""
+        return {"type": variant_type, "cmd": cmd}
+
+    def generate_method_variants(self, entity: TestableEntity) -> List[Dict[str, str]]:
+        """Generate test variants for methods and instance methods"""
+        method_path = f"{entity.module_path}.{entity.name}"
+        variants = [
+            self.create_variant("basic", f"--style=unittest --annotate {method_path}"),
+            self.create_variant(
+                "errors",
+                f"--style=unittest --annotate --except ValueError --except TypeError {method_path}",
+            ),
+        ]
+
+        if entity.entity_type == "instance_method":
+            variants.extend(self.generate_instance_method_variants(entity, method_path))
+        return variants
+
+    def generate_instance_method_variants(self, entity: TestableEntity, method_path: str) -> List[Dict[str, str]]:
+        """Generate additional variants for instance methods based on naming"""
+        variants = []
+        name = entity.name.lower()
+        if any(x in name for x in ["validate", "verify", "check"]):
+            variants.append(
+                self.create_variant(
+                    "validation",
+                    f"--style=unittest --annotate --errors-equivalent {method_path}",
+                )
             )
+        elif any(x in name for x in ["transform", "convert", "process"]):
+            variants.append(
+                self.create_variant(
+                    "idempotent",
+                    f"--style=unittest --annotate --idempotent {method_path}",
+                )
+            )
+        return variants
 
-            if entity.entity_type == "instance_method":
-                name = entity.name.lower()
-                if any(x in name for x in ["validate", "verify", "check"]):
-                    variants.append(
-                        {
-                            "type": "validation",
-                            "cmd": f"--style=unittest --annotate --errors-equivalent {method_path}",
-                        }
-                    )
-                elif any(x in name for x in ["transform", "convert", "process"]):
-                    variants.append(
-                        {
-                            "type": "idempotent",
-                            "cmd": f"--style=unittest --annotate --idempotent {method_path}",
-                        }
-                    )
+    def generate_function_variants(self, entity: TestableEntity) -> List[Dict[str, str]]:
+        """Generate test variants for standalone functions"""
+        base_cmd = f"--style=unittest --annotate {entity.module_path}.{entity.name}"
+        variants = [self.create_variant("basic", base_cmd)]
 
-        else:  # functions
-            base_cmd = f"--style=unittest --annotate {entity.module_path}.{entity.name}"
-            variants.append({"type": "basic", "cmd": base_cmd})
-
-            if any(
-                x in entity.name.lower()
-                for x in ["encode", "decode", "serialize", "deserialize"]
-            ):
-                variants.append({"type": "roundtrip", "cmd": f"{base_cmd} --roundtrip"})
-            elif any(
-                x in entity.name.lower()
-                for x in ["add", "sub", "mul", "combine", "merge"]
-            ):
-                variants.append({"type": "binary-op", "cmd": f"{base_cmd} --binary-op"})
-
+        if any(x in entity.name.lower() for x in ["encode", "decode", "serialize", "deserialize"]):
+            variants.append(self.create_variant("roundtrip", f"{base_cmd} --roundtrip"))
+        elif any(x in entity.name.lower() for x in ["add", "sub", "mul", "combine", "merge"]):
+            variants.append(self.create_variant("binary-op", f"{base_cmd} --binary-op"))
         return variants
 
     def generate_all_tests(self, file_path: Path) -> None:
         """Generate all possible test variants for a Python file"""
         logger.info(f"Generating tests for file: {file_path}")
-
         try:
             fix_pythonpath(file_path)
-
             module_path, entities = self.get_module_contents(file_path)
-
-            print(f"\nProcessing module: {module_path}")
-            print(
-                f"Found {len([e for e in entities if e.entity_type == 'class'])} classes, "
-                f"{len([e for e in entities if e.entity_type in {'method', 'instance_method'}])} methods, and "
-                f"{len([e for e in entities if e.entity_type == 'function'])} functions"
-            )
-
+            self.display_module_info(module_path, entities)
             total_variants = sum(len(self.generate_test_variants(e)) for e in entities)
-            current = 0
-
-            for entity in entities:
-                print(f"\nGenerating tests for: {module_path}.{entity.name}")
-
-                variants = self.generate_test_variants(entity)
-                for variant in variants:
-                    current += 1
-                    print(f"\rGenerating tests: [{current}/{total_variants}]", end="")
-                    self.try_generate_test(entity, variant)
+            self.process_entities(entities, total_variants, module_path)
             print()
-
         except Exception:
             logger.error("Test generation failed", exc_info=True)
             raise
+
+    def display_module_info(self, module_path: str, entities: List[TestableEntity]) -> None:
+        """Display information about the module and its entities"""
+        print(f"\nProcessing module: {module_path}")
+        print(
+            f"Found {len([e for e in entities if e.entity_type == 'class'])} classes, "
+            f"{len([e for e in entities if e.entity_type in {'method', 'instance_method'}])} methods, and "
+            f"{len([e for e in entities if e.entity_type == 'function'])} functions"
+        )
+
+    def process_entities(self, entities: List[TestableEntity], total_variants: int, module_path: str) -> None:
+        """Process each entity and generate tests"""
+        current = 0
+        for entity in entities:
+            print(f"\nGenerating tests for: {module_path}.{entity.name}")
+            variants = self.generate_test_variants(entity)
+            for variant in variants:
+                current += 1
+                print(f"\rGenerating tests: [{current}/{total_variants}]", end="")
+                self.try_generate_test(entity, variant)
+        print()
 
 
 def parse_args(args: Optional[list] = None) -> Path:
