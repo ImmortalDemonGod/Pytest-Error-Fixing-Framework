@@ -1,8 +1,7 @@
-
-class GitError(Exception):
-    """Base exception for Git-related errors."""
+class BranchCreationError(GitError):
+    """Raised when branch creation fails."""
     pass
 
-class NotAGitRepositoryError(GitError):
-    """Raised when the target directory is not a Git repository."""
+class MergeConflictError(GitError):
+    """Raised when merging branches results in conflicts."""
     pass
