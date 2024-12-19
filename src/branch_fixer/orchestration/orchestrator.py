@@ -25,17 +25,7 @@ class FixSessionState(Enum):
     COMPLETED = "completed"
     ERROR = "error"
 
-class FixOrchestratorError(Exception):
-    """Base exception for orchestrator errors"""
-    pass
 
-class SessionError(FixOrchestratorError):
-    """Raised when session operations fail"""
-    pass
-
-class FixAttemptError(FixOrchestratorError):
-    """Raised when fix attempts fail"""
-    pass
 
 @dataclass
 class FixProgress:
