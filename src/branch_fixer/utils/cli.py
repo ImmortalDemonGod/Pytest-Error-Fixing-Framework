@@ -1,10 +1,11 @@
+# src/branch_fixer/utils/cli.py
 import click
 import logging
 import asyncio
 from pathlib import Path
 from typing import Optional, List
 import traceback
-import snoop
+import signal
 from branch_fixer.services.ai.manager import AIManager
 from branch_fixer.services.pytest.runner import TestRunner
 from branch_fixer.services.code.change_applier import ChangeApplier
@@ -27,12 +28,9 @@ class CLI:
         
     def setup_signal_handlers(self):
         """Setup handlers for graceful exit"""
-        import signal
-        
         def handle_exit(signum, frame):
             print("\nReceived exit signal. Starting cleanup...")
             self._exit_requested = True
-            # Let the main loop handle actual cleanup
             
         signal.signal(signal.SIGINT, handle_exit)
         signal.signal(signal.SIGTERM, handle_exit)
@@ -54,6 +52,7 @@ class CLI:
                 )
             except Exception as e:
                 errors.append(f"Failed to cleanup branch {branch}: {str(e)}")
+                logger.error(f"Cleanup error for branch {branch}: {str(e)}")
                 
         # Report any errors
         if errors:
@@ -64,6 +63,7 @@ class CLI:
             print("Cleanup completed successfully")
 
     async def run_fix_workflow(self, error: TestError, interactive: bool) -> bool:
+        """Run the fix workflow for a single error."""
         try:
             logger.info(f"Attempting to fix {error.test_function} in {error.test_file}")
             
@@ -180,10 +180,6 @@ class CLI:
                         logger.info("Skipping fix attempt as per user request")
                         continue
 
-                # Track branch for cleanup
-                branch_name = f"fix-{error.test_file.stem}-{error.test_function}"
-                self.created_branches.add(branch_name)
-
                 if asyncio.get_event_loop().run_until_complete(
                     self.run_fix_workflow(error, interactive)
                 ):
@@ -202,66 +198,3 @@ class CLI:
             asyncio.get_event_loop().run_until_complete(self.cleanup())
         
         return 0 if success_count == len(errors) else 1
-
-@click.command()
-@click.option('--api-key', envvar='OPENAI_API_KEY', required=True,
-              help='OpenAI API key (or set OPENAI_API_KEY env var)')
-@click.option('--max-retries', default=3,
-              help='Maximum fix attempts per error')
-@click.option('--initial-temp', default=0.4,
-              help='Initial AI temperature')
-@click.option('--temp-increment', default=0.1, 
-              help='Temperature increment between retries')
-@click.option('--non-interactive', is_flag=True,
-              help='Run without user prompts')
-@click.option('--test-path', type=click.Path(exists=True, path_type=Path),
-              help='Specific test file or directory to fix')
-@click.option('--test-function',
-              help='Specific test function to fix')
-@click.option('--cleanup-only', is_flag=True,
-              help='Just cleanup any leftover fix branches and exit')
-def run_cli(api_key: str,
-            max_retries: int,
-            initial_temp: float,
-            temp_increment: float,
-            non_interactive: bool,
-            test_path: Optional[Path],
-            test_function: Optional[str],
-            cleanup_only: bool) -> int:
-    """pytest-fixer: Automatically fix failing pytest tests."""
-    
-    setup_logging()
-    logger.info("Starting pytest-fixer...")
-    logger.info(f"Working directory: {Path.cwd()}")
-    
-    cli = CLI()
-    if not cli.setup_components(api_key, max_retries, initial_temp, temp_increment):
-        return 1
-
-    if cleanup_only:
-        asyncio.get_event_loop().run_until_complete(cli.cleanup())
-        return 0
-
-    # Initial test run
-    logger.info("Running pytest to find failures...")
-    test_result = cli.service.test_runner.run_test(
-        test_path=test_path,
-        test_function=test_function
-    )
-
-    if test_result.exit_code == 0:
-        logger.info("All tests passed - no fixes needed!")
-        return 0
-
-    # Parse errors
-    logger.info("Analyzing test failures...")
-    errors = parse_pytest_errors(test_result.output)
-    if not errors:
-        logger.error("Tests failed but no fixable errors were found")
-        return 1
-
-    logger.info(f"Found {len(errors)} test failures to fix")
-    return cli.process_errors(errors, not non_interactive)
-
-if __name__ == "__main__":
-    run_cli()
