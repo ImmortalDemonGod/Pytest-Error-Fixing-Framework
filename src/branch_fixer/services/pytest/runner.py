@@ -409,4 +409,5 @@ class PytestRunner:
                     logger.error(f"Failed to remove temporary directory {temp_dir}: {e}")
         self.temp_dirs.clear()
         logger.info("Cleanup completed.")
+
 TestRunner = PytestRunner
