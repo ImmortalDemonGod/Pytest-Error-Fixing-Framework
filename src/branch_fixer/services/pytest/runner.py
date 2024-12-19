@@ -1,23 +1,21 @@
 # branch_fixer/services/pytest/runner.py
+
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from dataclasses import dataclass, field
 import shutil
 import time
 import pytest
 from _pytest.reports import TestReport, CollectReport
-from _pytest.config import Config
-from _pytest.main import ExitCode, Session
-from _pytest.nodes import Item
+from _pytest.main import ExitCode
 from branch_fixer.services.pytest.models import SessionResult, TestResult
 import snoop
 
 logger = logging.getLogger(__name__)
 
-
-def force_remove(path: Path, retries: int = 3, delay: int = 1):
+def force_remove(path: Path, retries: int = 5, delay: int = 2):
     """
     Forcefully remove a directory with retries.
 
@@ -41,7 +39,6 @@ def force_remove(path: Path, retries: int = 3, delay: int = 1):
             else:
                 logger.error(f"Failed to remove directory after {retries} attempts: {path}")
                 raise e
-
 
 class PytestPlugin:
     """Plugin to capture pytest execution information."""
@@ -75,7 +72,6 @@ class PytestPlugin:
         print(f"Warning recorded: {warning_message}")
         self.runner.pytest_warning_recorded(warning_message)
 
-
 class PytestRunner:
     """Pytest execution manager with comprehensive result capture."""
 
@@ -91,7 +87,7 @@ class PytestRunner:
         self.temp_dirs: List[Path] = []  # Track temporary directories for cleanup
         logger.debug(f"PytestRunner initialized with working directory: {self.working_dir}")
 
-    @snoop.snoop(depth=2)
+    @snoop.snoop(watch=['test_file', 'fixed'])
     def run_test(self,
                 test_path: Optional[Path] = None,
                 test_function: Optional[str] = None) -> SessionResult:
@@ -174,11 +170,8 @@ class PytestRunner:
             return self._current_session
         finally:
             # Clean up
-            session = self._current_session
-            self._current_session = None
             logger.debug("Cleaning up after test run.")
             self.cleanup()
-            return session
 
     def pytest_runtest_logreport(self, report: TestReport):
         """
@@ -195,10 +188,16 @@ class PytestRunner:
 
         result = self._current_session.test_results.get(report.nodeid)
         if not result:
+            # Safely extract test_file and test_function with defaults
+            test_file = Path(report.fspath) if report.fspath else Path("unknown")
+            test_function = report.function.__name__ if hasattr(report, 'function') else "unknown"
+
             result = TestResult(
                 nodeid=report.nodeid,
-                test_file=Path(report.fspath) if report.fspath else None,
-                test_function=report.function.__name__ if hasattr(report, 'function') else None
+                test_file=test_file,
+                test_function=test_function,
+                error_message=None,
+                longrepr=None
             )
             self._current_session.test_results[report.nodeid] = result
             logger.debug(f"Created TestResult for {report.nodeid}")
@@ -227,7 +226,10 @@ class PytestRunner:
             result.longrepr = str(report.longrepr)
             crash = getattr(report.longrepr, 'reprcrash', None)
             if crash:
-                result.error_message = str(crash)
+                # Extract only the exception message without file path and line number
+                full_message = crash.message if hasattr(crash, 'message') else str(crash)
+                # Split on newline and take just the first line to match expected output
+                result.error_message = full_message.split('\n')[0]
                 logger.debug(f"Captured error message for {report.nodeid}: {result.error_message}")
 
         # Update execution info
@@ -266,36 +268,48 @@ class PytestRunner:
                 if isinstance(marker, pytest.Mark)
             ]
             logger.debug(f"Captured markers for {report.nodeid}: {result.markers}")
-
-    def verify_fix(self,
-                   test_file: Path,
-                   test_function: str) -> bool:
+    
+    @snoop
+    def verify_fix(self, test_file: Path, test_function: str) -> bool:
         """
         Verify if a specific test passes after a fix.
 
-        This method runs the specified test and checks if it passes successfully.
+        This method does not rely on self.run_test. Instead, it runs pytest as a subprocess
+        to ensure a fresh environment on each invocation. It checks if the specified test
+        passes successfully by inspecting the subprocess return code.
 
         Args:
             test_file (Path): The path to the test file.
             test_function (str): The name of the test function.
 
         Returns:
-            bool: True if the test passes, False otherwise.
+            bool: True if the test passes (exit code == 0), False otherwise.
         """
-        logger.info(f"Verifying fix for {test_file}::{test_function}")
-        session = self.run_test(test_file, test_function)
-        # A test is verified as fixed only if:
-        # 1. We collected exactly the number of tests we expected
-        # 2. All collected tests passed
-        # 3. No tests failed
-        is_fixed = (
-            session.total_collected > 0 and
-            session.passed == session.total_collected and
-            session.failed == 0
-        )
-        logger.info(f"Verification result for {test_file}::{test_function}: {is_fixed}")
-        return is_fixed
+        import subprocess
+        from _pytest.main import ExitCode
 
+        logger.info(f"Verifying fix for {test_file}::{test_function}")
+
+        # Build pytest arguments
+        args = ["pytest", "--override-ini=addopts=", "-p", "no:terminal"]
+        if self.working_dir:
+            args.extend(["--rootdir", str(self.working_dir)])
+        args.append(f"{str(test_file)}::{test_function}")
+
+        # Run pytest in a subprocess to avoid shared state
+        result = subprocess.run(args, capture_output=True, text=True)
+        exit_code = ExitCode(result.returncode)
+
+        # The test is considered fixed if pytest exits with code 0 (no failures)
+        is_fixed = (exit_code == ExitCode.OK)
+
+        logger.info(f"Verification result for {test_file}::{test_function}: {is_fixed}")
+        if not is_fixed:
+            logger.debug(f"Subprocess stdout:\n{result.stdout}")
+            logger.debug(f"Subprocess stderr:\n{result.stderr}")
+
+        return is_fixed
+    
     def format_report(self, session: SessionResult) -> str:
         """
         Format session results into a detailed report.
@@ -395,5 +409,3 @@ class PytestRunner:
                     logger.error(f"Failed to remove temporary directory {temp_dir}: {e}")
         self.temp_dirs.clear()
         logger.info("Cleanup completed.")
-
-    # Additional methods or enhancements can be added below as needed.
