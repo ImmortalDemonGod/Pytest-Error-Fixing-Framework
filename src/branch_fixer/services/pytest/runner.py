@@ -110,7 +110,7 @@ class PytestRunner:
                     
         return "\n".join(output_lines)
 
-    @snoop
+
     def run_test(self,
                 test_path: Optional[Path] = None,
                 test_function: Optional[str] = None) -> SessionResult:
@@ -295,7 +295,7 @@ class PytestRunner:
             ]
             logger.debug(f"Captured markers for {report.nodeid}: {result.markers}")
     
-    @snoop
+
     def verify_fix(self, test_file: Path, test_function: str) -> bool:
         """
         Verify if a specific test passes after a fix.
