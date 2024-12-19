@@ -1,4 +1,6 @@
 # branch_fixer/services/git/exceptions.py
+from typing import TYPE_CHECKING
+
 class GitError(Exception):
     """Base class for exceptions in this module."""
     pass
@@ -55,3 +57,10 @@ class InvalidGitRepositoryError(GitError):
 class NoSuchPathError(GitError):
     """Raised when the specified path does not exist."""
     pass
+
+class BranchNameError(GitError):
+    """Raised when branch name is invalid."""
+    pass
+
+if TYPE_CHECKING:
+    from branch_fixer.services.git.repository import GitRepository
