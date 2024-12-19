@@ -2,7 +2,7 @@
 from typing import Optional, Dict, Any
 from pathlib import Path
 import aiohttp
-from branch_fixer.domain.models import TestError, CodeChanges
+from branch_fixer.core.models import TestError, CodeChanges
 
 class AIManagerError(Exception):
     """Base exception for AI manager errors"""
