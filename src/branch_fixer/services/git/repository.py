@@ -9,10 +9,10 @@ from pathlib import Path
 from typing import List, Optional
 from git import Repo, GitCommandError
 from branch_fixer.services.git.exc import InvalidGitRepositoryError, NoSuchPathError
-from branch_fixer.git.exceptions import GitError, NotAGitRepositoryError
-from branch_fixer.git.pr_manager import PRManager
-from branch_fixer.git.branch_manager import BranchManager
-from branch_fixer.git.safety_manager import SafetyManager
+from branch_fixer.services.git.exc import GitError, NotAGitRepositoryError
+from branch_fixer.services.git.pr_manager import PRManager
+from branch_fixer.services.git.branch_manager import BranchManager
+from branch_fixer.services.git.safety_manager import SafetyManager
 
 class GitRepository:
     """
