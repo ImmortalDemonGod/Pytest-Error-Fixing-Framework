@@ -6,6 +6,8 @@ from git import Repo, GitCommandError
 from branch_fixer.services.git.exceptions import GitError, NotAGitRepositoryError, InvalidGitRepositoryError, NoSuchPathError
 from branch_fixer.services.git.pr_manager import PRManager
 from branch_fixer.services.git.safety_manager import SafetyManager
+from branch_fixer.services.git.models import CommandResult
+
 class GitRepository:
     """
     Represents a Git repository and provides methods to interact with it.
@@ -107,47 +109,53 @@ class GitRepository:
         except (OSError, IOError) as e:
             raise GitError(f"Unable to read HEAD file: {e}")
 
-    def run_command(self, cmd: List[str]) -> subprocess.CompletedProcess:
-        """
-        Execute a Git command within the repository and return the result.
-
+    async def run_command(self, cmd: List[str]) -> CommandResult:
+        """Execute a Git command asynchronously within the repository.
+        
         Args:
-            cmd (List[str]): The Git command and its arguments to execute.
-
+            cmd: The Git command and its arguments to execute
+            
         Returns:
-            subprocess.CompletedProcess: The result of the executed command.
-
+            CommandResult containing execution results
+            
         Raises:
-            GitError: If the command execution fails.
+            GitError: If command execution fails
         """
         try:
-            # First element should be 'git', remove it if present
+            # Ensure we're in the repository directory
+            cwd = self.root if hasattr(self, 'root') else None
+            
+            # Prepare full command
             if cmd[0] == 'git':
                 cmd = cmd[1:]
-            
-            # Get the git command name and arguments
-            git_cmd = cmd[0]
-            args = cmd[1:]
-            
-            # Execute the command using the stored repo instance
-            cmd_method = getattr(self.repo.git, git_cmd)
-            output = cmd_method(*args, with_extended_output=True)
-            
-            # Create CompletedProcess object
-            return subprocess.CompletedProcess(
-                args=cmd,
-                returncode=output[0],
-                stdout=output[1],
-                stderr=output[2]
+            full_cmd = ['git'] + cmd
+
+            # Create and run process
+            process = await asyncio.create_subprocess_exec(
+                *full_cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=cwd
             )
-                
-        except GitCommandError as e:
-            # Normalize the error message to match test expectations
-            if "'nonexistent' is not a git command" in str(e.stderr):
+            
+            # Wait for completion and get output
+            stdout, stderr = await process.communicate()
+            
+            # Decode output
+            stdout_str = stdout.decode('utf-8').strip() if stdout else ''
+            stderr_str = stderr.decode('utf-8').strip() if stderr else ''
+            
+            return CommandResult(
+                returncode=process.returncode,
+                stdout=stdout_str,
+                stderr=stderr_str,
+                command=' '.join(full_cmd)
+            )
+
+        except Exception as e:
+            if "'nonexistent' is not a git command" in str(e):
                 raise GitError("unknown git command")
-            raise GitError(f"Git command failed: {e.stderr}")
-        except AttributeError:
-            raise GitError("unknown git command")
+            raise GitError(f"Git command failed: {str(e)}")
 
     def clone(self, url: str, destination: Optional[Path] = None) -> bool:
         """
