@@ -5,7 +5,7 @@ from pathlib import Path
 class TestErrorInfo(unittest.TestCase):
     def setUp(self):
         """Set up common test data"""
-        from branch_fixer.pytest.error_info import ErrorInfo
+        from branch_fixer.services.pytest.error_info import ErrorInfo
         self.error_info = ErrorInfo(
             test_file="tests/test_example.py",
             function="test_something",
@@ -31,7 +31,7 @@ class TestErrorInfo(unittest.TestCase):
 
     def test_has_traceback_without_snippet(self):
         """has_traceback should return False when code_snippet is empty"""
-        from branch_fixer.pytest.error_info import ErrorInfo
+        from branch_fixer.services.pytest.error_info import ErrorInfo
         error_info = ErrorInfo(
             test_file="tests/test_example.py",
             function="test_something",
