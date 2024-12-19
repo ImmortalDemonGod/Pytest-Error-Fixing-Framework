@@ -6,7 +6,7 @@ from git import Repo, GitCommandError
 from branch_fixer.services.git.exceptions import GitError, NotAGitRepositoryError, InvalidGitRepositoryError, NoSuchPathError
 from branch_fixer.services.git.pr_manager import PRManager
 from branch_fixer.services.git.safety_manager import SafetyManager
-
+from branch_fixer.services.git.exceptions import InvalidGitRepositoryError, NoSuchPathError
 class GitRepository:
     """
     Represents a Git repository and provides methods to interact with it.
