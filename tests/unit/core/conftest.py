@@ -8,8 +8,6 @@ from textwrap import dedent
 from _pytest.reports import TestReport
 from _pytest.main import ExitCode
 
-# Configure pytest-asyncio
-pytest_plugins = ['pytest_asyncio']
 
 @pytest.fixture
 def mock_test_report():
