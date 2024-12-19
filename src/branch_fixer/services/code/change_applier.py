@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Optional
 import shutil
 
+from branch_fixer.core.models import CodeChanges
+
 class ChangeApplicationError(Exception):
     """Base exception for change application errors"""
     pass
