@@ -6,7 +6,7 @@ from unittest.mock import Mock, AsyncMock
 from branch_fixer.core.models import TestError, ErrorDetails
 from branch_fixer.orchestration.fix_service import FixService
 from branch_fixer.services.ai.manager import AIManager
-from branch_fixer.pytest.runner import TestRunner
+from branch_fixer.services.pytest.runner import PytestRunner as TestRunner
 from branch_fixer.code.change_applier import ChangeApplier
 from branch_fixer.git.repository import GitRepository
 
