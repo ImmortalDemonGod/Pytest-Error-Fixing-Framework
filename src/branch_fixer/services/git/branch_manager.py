@@ -1,6 +1,13 @@
 # branch_fixer/services/git/branch_manager.py
 from dataclasses import dataclass
 from typing import List
+from typing import List, Optional, Set, TYPE_CHECKING
+from pathlib import Path
+from branch_fixer.git.exceptions import (
+    BranchCreationError, 
+    MergeConflictError, 
+    GitError
+)
 
 @dataclass
 class BranchStatus:
@@ -15,13 +22,6 @@ class BranchStatus:
     current_branch: str
     has_changes: bool
     changes: List[str]
-from typing import List, Optional, Set, TYPE_CHECKING
-from pathlib import Path
-from branch_fixer.git.exceptions import (
-    BranchCreationError, 
-    MergeConflictError, 
-    GitError
-)
 
 @dataclass
 class BranchMetadata:
