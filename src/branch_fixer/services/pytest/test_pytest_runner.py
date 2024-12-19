@@ -161,9 +161,11 @@ def test_increment(input, expected):
             total_collected=5
         )
 
-        # Add a failed test result
+        # Add a failed test result with required arguments
         failed_test = TestResult(
             nodeid="test_fail.py::test_failure",
+            test_file=Path("test_fail.py"),
+            test_function="test_failure",
             error_message="Expected failure",
             longrepr="Detailed traceback"
         )
