@@ -13,7 +13,7 @@ from branch_fixer.services.git.exceptions import (
 from branch_fixer.services.git.pr_manager import PRManager
 from branch_fixer.services.git.safety_manager import SafetyManager
 from branch_fixer.services.git.branch_manager import BranchManager
-from branch_fixer.services.git.models import CommandResult
+from branch_fixer.services.git.models import CommandResult, TestError
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,9 +22,16 @@ class GitRepository:
     """
     Represents a Git repository and provides methods to interact with it.
 
-    **Note:** This class currently contains stub implementations for its methods.
-    Each method raises a `NotImplementedError` and needs to be fully implemented
-    to interact with an actual Git repository.
+    This class manages asynchronous Git command executions and repository state checks.
+    It wraps Git operations in async calls, providing a consistent interface for checking
+    branch existence, current branch, repository cleanliness, and more.
+
+    **Note:** Some methods remain unimplemented (`NotImplementedError`) and serve as
+    placeholders for operations like cloning, committing, pushing, and pulling, which 
+    would need to be implemented depending on the specific use case.
+
+    The class uses `CommandResult` objects to standardize command outputs and errors,
+    and leverages GitPython's `Repo` class for local repository state. 
     """
     
     def __init__(self, root: Optional[Path] = None):
@@ -34,15 +41,15 @@ class GitRepository:
             root: Path to repository root. Uses current directory if None.
             
         Raises:
-            NotAGitRepositoryError: If directory is not a git repository
-            GitError: If git operations fail
+            NotAGitRepositoryError: If the specified directory is not a git repository.
+            GitError: If other git operations fail (e.g., unable to initialize the repo).
         """
         try:
             self.root = self._find_git_root(root or Path.cwd())
             self.repo = Repo(self.root)
             self.main_branch = self._get_main_branch()
             
-            # Initialize managers
+            # Initialize managers for PRs, branches, and safety (backup/restore)
             self.pr_manager = PRManager(self)
             self.branch_manager = BranchManager(self)
             self.safety_manager = SafetyManager(self)
@@ -62,29 +69,24 @@ class GitRepository:
             root: The starting path to search for the Git root. If None, uses current directory.
 
         Returns:
-            Path to the Git root directory
+            Path: The path to the Git root directory.
 
         Raises:
-            NotAGitRepositoryError: If no Git repository found from starting path upwards
+            NotAGitRepositoryError: If no Git repository is found from the starting path upwards.
+            PermissionError: If there's a permission issue accessing the repository directory.
         """
         try:
-            # Handle None input - default to current directory
             if root is None:
                 root = Path.cwd()
 
-            # Convert to Path if needed
             root = Path(root)
 
-            # First check if basic .git directory exists to validate
+            # Check if .git directory exists to validate it's a repository
             if not (root / ".git").exists():
                 raise NotAGitRepositoryError(f"Not a git repository: {root}")
 
-            # Let GitPython find the repository root
-            # search_parent_directories=True makes it search up directory tree
+            # Let GitPython locate the repository root with parent directory search
             repo = Repo(root, search_parent_directories=True)
-
-            # Return the repository working directory (root)
-            # This will be the directory containing .git/
             return Path(repo.working_dir)
 
         except (InvalidGitRepositoryError, NoSuchPathError) as e:
@@ -96,50 +98,57 @@ class GitRepository:
         """
         Determine the main branch name of the repository (e.g., 'main' or 'master').
 
+        Reads the HEAD file to identify the currently checked-out branch, which typically
+        corresponds to the main branch after clone or initial setup. This method can help
+        to identify the repository’s primary integration branch.
+
         Returns:
             str: The name of the main branch.
 
         Raises:
-            GitError: If unable to determine the main branch.
+            GitError: If unable to determine the main branch (e.g., HEAD file is invalid).
         """
         try:
-            # Read HEAD file content
             head_file = self.root / ".git" / "HEAD"
             head_content = head_file.read_text().strip()
             
-            # Check for ref format (e.g. "ref: refs/heads/main")
+            # Check for a standard ref format (e.g., "ref: refs/heads/main")
             if head_content.startswith("ref: refs/heads/"):
-                # Extract branch name after refs/heads/
                 return head_content.replace("ref: refs/heads/", "").strip()
-                
-            # Invalid format
+
+            # If not in the standard format, it's invalid or detached
             raise GitError("Invalid HEAD file format")
                 
         except (OSError, IOError) as e:
             raise GitError(f"Unable to read HEAD file: {e}")
 
-    async def run_command(self, cmd: List[str]) -> subprocess.CompletedProcess:
-        """Execute a Git command within the repository and return the result.
+    async def run_command(self, cmd: List[str]) -> CommandResult:
+        """
+        Execute a Git command asynchronously within the repository and return a `CommandResult`.
+
+        This is the core helper method that runs a given Git command in the repository's 
+        root directory. It captures stdout, stderr, and the return code, packaging them 
+        into a `CommandResult` instance.
 
         Args:
-            cmd: The Git command and its arguments to execute.
+            cmd (List[str]): The Git command and its arguments (e.g., ['status', '--porcelain']).
 
         Returns:
-            subprocess.CompletedProcess: The result of the executed command.
+            CommandResult: An object containing the return code, stdout, stderr, and the command run.
 
         Raises:
-            GitError: If the command execution fails.
+            GitError: If the command execution fails or if the Git command is unknown.
         """
         try:
             logger.debug(f"Running command: {' '.join(cmd)} in {self.root}")
-            # First element should be 'git', remove it if present
-            if cmd[0] == 'git':
+            
+            # If the command includes 'git', remove it to avoid redundancy
+            if cmd and cmd[0] == 'git':
                 cmd = cmd[1:]
             
-            # Prepare full command
             full_cmd = ['git'] + cmd
             
-            # Create and run process
+            # Create and run the asynchronous subprocess
             process = await asyncio.create_subprocess_exec(
                 *full_cmd,
                 stdout=asyncio.subprocess.PIPE,
@@ -147,29 +156,24 @@ class GitRepository:
                 cwd=str(self.root)
             )
             
-            # Wait for completion and get output
+            # Wait for the process to complete and retrieve its output
             stdout, stderr = await process.communicate()
-            
-            # Decode output
             stdout_decoded = stdout.decode('utf-8') if stdout else ''
             stderr_decoded = stderr.decode('utf-8') if stderr else ''
             
             logger.debug(f"Command stdout: {stdout_decoded}")
             logger.debug(f"Command stderr: {stderr_decoded}")
-            
-            if process.returncode != 0:
-                raise GitError(f"Git command failed with return code {process.returncode}: {stderr_decoded}")
-            
-            return subprocess.CompletedProcess(
-                args=full_cmd,
+
+            # Wrap output in a CommandResult, returning code even if error occurred
+            return CommandResult(
                 returncode=process.returncode,
                 stdout=stdout_decoded,
-                stderr=stderr_decoded
+                stderr=stderr_decoded,
+                command=' '.join(full_cmd)
             )
                 
-        except GitError:
-            raise
         except Exception as e:
+            # Check for a common error that might indicate an unknown git command
             if "'nonexistent' is not a git command" in str(e):
                 raise GitError("unknown git command")
             raise GitError(f"Git command failed: {str(e)}")
@@ -178,15 +182,19 @@ class GitRepository:
         """
         Determine if the working directory is clean (no uncommitted changes).
 
+        Uses `git status --porcelain` to check if there are staged or unstaged changes.
+        An empty output indicates a clean working directory.
+
         Returns:
             bool: True if the working directory is clean, False otherwise.
 
         Raises:
-            GitError: If unable to determine the repository state.
+            GitError: If unable to determine the repository state (e.g., if `git status` fails).
         """
         try:
             result = await self.run_command(['status', '--porcelain'])
-            is_clean = result.stdout.strip() == ''
+            # If stdout is empty, repo is clean
+            is_clean = not bool(result.stdout.strip())
             logger.debug(f"Repository clean: {is_clean}")
             return is_clean
         except Exception as e:
@@ -196,14 +204,16 @@ class GitRepository:
         """
         Check if a branch with the specified name exists in the repository.
 
+        Uses `git branch --list <branch_name>` to check for existence.
+
         Args:
-            branch_name: The name of the branch to check.
+            branch_name (str): The name of the branch to check.
 
         Returns:
             bool: True if the branch exists, False otherwise.
 
         Raises:
-            GitError: If unable to determine branch existence.
+            GitError: If unable to determine branch existence (e.g., command failure).
         """
         try:
             result = await self.run_command(['branch', '--list', branch_name])
@@ -215,13 +225,16 @@ class GitRepository:
 
     async def get_current_branch(self) -> str:
         """
-        Retrieve the name of the currently checked-out branch.
+        Retrieve the name of the currently checked-out branch asynchronously.
+
+        Uses `git branch --show-current` to determine which branch is currently active.
 
         Returns:
             str: The name of the current branch.
 
         Raises:
-            GitError: If unable to determine the current branch.
+            GitError: If unable to determine the current branch (e.g., if in detached HEAD state 
+                      without handling or command failure).
         """
         try:
             result = await self.run_command(['branch', '--show-current'])
@@ -231,67 +244,11 @@ class GitRepository:
         except Exception as e:
             raise GitError(f"Unable to determine current branch: {str(e)}") from e
 
-    async def run_command_async(self, cmd: List[str]) -> CommandResult:
-        """Execute a Git command asynchronously within the repository.
-        
-        Args:
-            cmd: The Git command and its arguments to execute
-            
-        Returns:
-            CommandResult containing execution results
-            
-        Raises:
-            GitError: If command execution fails
-        """
-        try:
-            # Ensure we're in the repository directory
-            cwd = self.root if hasattr(self, 'root') else None
-            
-            # Prepare full command
-            if cmd[0] == 'git':
-                cmd = cmd[1:]
-            full_cmd = ['git'] + cmd
-
-            logger.debug(f"Executing async command: {' '.join(full_cmd)} in {cwd}")
-
-            # Create and run process
-            process = await asyncio.create_subprocess_exec(
-                *full_cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                cwd=cwd
-            )
-            
-            # Wait for completion and get output
-            stdout, stderr = await process.communicate()
-            
-            # Decode output
-            stdout_str = stdout.decode('utf-8').strip() if stdout else ''
-            stderr_str = stderr.decode('utf-8').strip() if stderr else ''
-            
-            logger.debug(f"Async command stdout: {stdout_str}")
-            logger.debug(f"Async command stderr: {stderr_str}")
-            
-            if process.returncode != 0:
-                raise GitError(f"Git command failed with return code {process.returncode}: {stderr_str}")
-            
-            return CommandResult(
-                returncode=process.returncode,
-                stdout=stdout_str,
-                stderr=stderr_str,
-                command=' '.join(full_cmd)
-            )
-
-        except GitError:
-            raise
-        except Exception as e:
-            if "'nonexistent' is not a git command" in str(e):
-                raise GitError("unknown git command")
-            raise GitError(f"Git command failed: {str(e)}")
-
     def clone(self, url: str, destination: Optional[Path] = None) -> bool:
         """
         Clone a Git repository from the specified URL to the destination path.
+
+        Currently not implemented (placeholder).
 
         Args:
             url (str): The URL of the repository to clone.
@@ -310,6 +267,8 @@ class GitRepository:
         """
         Commit staged changes with the provided commit message.
 
+        Currently not implemented (placeholder).
+
         Args:
             message (str): The commit message.
 
@@ -325,6 +284,8 @@ class GitRepository:
         """
         Push commits to the remote repository.
 
+        Currently not implemented (placeholder).
+
         Args:
             branch (Optional[str]): The branch to push. If None, pushes the current branch.
 
@@ -339,6 +300,8 @@ class GitRepository:
     def pull(self, branch: Optional[str] = None) -> bool:
         """
         Pull commits from the remote repository.
+
+        Currently not implemented (placeholder).
 
         Args:
             branch (Optional[str]): The branch to pull. If None, pulls the current branch.
@@ -362,7 +325,10 @@ class GitRepository:
 
     def is_clean_sync(self) -> bool:
         """
-        Determine if the working directory is clean (no uncommitted changes).
+        Determine if the working directory is clean (no uncommitted changes) synchronously.
+
+        This uses GitPython's `repo.is_dirty()` to check if there are uncommitted changes.
+        Useful if synchronous operation is desired for certain checks.
 
         Returns:
             bool: True if the working directory is clean, False otherwise.
@@ -375,12 +341,14 @@ class GitRepository:
         except Exception as e:
             raise GitError(f"Unable to determine repository state: {str(e)}") from e
 
-    def get_current_branch_sync(self) -> str:
+    def get_current_branch_sync(self) -> Optional[str]:
         """
-        Retrieve the name of the currently checked-out branch.
+        Retrieve the name of the currently checked-out branch synchronously.
+
+        Uses GitPython to determine the active branch. If the HEAD is detached, returns None.
 
         Returns:
-            str: The name of the current branch.
+            str or None: The name of the current branch, or None if in detached HEAD state.
 
         Raises:
             GitError: If unable to determine the current branch.
@@ -395,7 +363,9 @@ class GitRepository:
 
     def branch_exists_sync(self, branch_name: str) -> bool:
         """
-        Check if a branch with the specified name exists in the repository.
+        Check if a branch with the specified name exists in the repository (synchronously).
+
+        Uses GitPython to iterate over known heads.
 
         Args:
             branch_name (str): The name of the branch to check.
@@ -413,71 +383,137 @@ class GitRepository:
     
     def create_pull_request(self, title: str, description: str) -> bool:
         """
-        Create a pull request for the current changes.
+        Create a pull request for the current changes (old synchronous method).
+
+        This method is a placeholder for backward compatibility and is not used 
+        since we now have an async method for PR creation. It remains unimplemented.
 
         Args:
-            title: Title for the pull request
-            description: Description of changes
+            title (str): Title for the pull request
+            description (str): Description of the changes
 
         Returns:
-            bool indicating if PR creation succeeded
+            bool: indicating if PR creation succeeded
 
         Raises:
             GitError: If PR creation fails
         """
-        return self.pr_manager.create_pr(title, description)
+        raise NotImplementedError("Old create_pull_request method is not used.")
 
     def backup_state(self) -> str:
         """
-        Create backup of current repository state.
+        Create a backup of the current repository state.
+
+        Uses the SafetyManager to create a backup, which can be restored later.
 
         Returns:
-            str: Backup identifier
+            str: A backup identifier string.
 
         Raises:
-            GitError: If backup creation fails
+            GitError: If backup creation fails.
         """
         return self.safety_manager.create_backup()
 
     def restore_state(self, backup_id: str) -> bool:
         """
-        Restore repository state from backup.
+        Restore repository state from a previously created backup.
 
         Args:
-            backup_id: Identifier of backup to restore
+            backup_id (str): Identifier of the backup to restore.
 
         Returns:
-            bool indicating if restore succeeded
+            bool: True if the restore succeeded, False otherwise.
 
         Raises:
-            GitError: If restore fails
+            GitError: If restore fails.
         """
         return self.safety_manager.restore_backup(backup_id)
 
-    def create_fix_branch(self, branch_name: str) -> bool:
+    async def create_fix_branch(self, branch_name: str) -> bool:
         """
-        Create and switch to a new branch for fixes.
+        Create and switch to a new branch for fixes asynchronously.
+
+        This method relies on the BranchManager to create a fix branch, which
+        is a dedicated branch to apply and test fixes before merging them into
+        the main branch.
 
         Args:
-            branch_name: Name for the new branch
+            branch_name (str): Name for the new fix branch.
 
         Returns:
-            bool indicating if branch creation succeeded
+            bool: True if branch creation succeeded, False otherwise.
 
         Raises:
-            GitError: If branch creation fails
+            GitError: If branch creation fails.
         """
-        return self.branch_manager.create_fix_branch(branch_name)
+        try:
+            await self.branch_manager.create_fix_branch(branch_name)
+            return True
+        except Exception as e:
+            raise GitError(f"Failed to create branch {branch_name}: {str(e)}")
+
+    async def cleanup_fix_branch(self, branch_name: str, force: bool = False) -> bool:
+        """
+        Clean up a fix branch asynchronously.
+
+        Removes the specified fix branch if it exists, optionally forcing removal even if
+        there are unmerged changes.
+
+        Args:
+            branch_name (str): Name of the fix branch to clean up.
+            force (bool): Whether to force branch removal if it has unmerged changes.
+
+        Returns:
+            bool: True if cleanup succeeded, False otherwise.
+
+        Raises:
+            GitError: If cleanup fails.
+        """
+        try:
+            return await self.branch_manager.cleanup_fix_branch(branch_name, force)
+        except Exception as e:
+            raise GitError(f"Failed to cleanup branch {branch_name}: {str(e)}")
+
+    async def create_pull_request(self, branch_name: str, error: TestError) -> bool:
+        """
+        Create a pull request for a fix asynchronously.
+
+        Generates a pull request title and description based on the given `TestError`,
+        identifying which test function and what kind of error occurred. The PRManager
+        is then used to create the PR with the specified branch and any relevant files.
+
+        Args:
+            branch_name (str): The fix branch to create a PR from.
+            error (TestError): An error object containing details about the test failure 
+                               that prompted the fix.
+
+        Returns:
+            bool: True if the PR creation succeeded, False otherwise.
+
+        Raises:
+            GitError: If PR creation fails for any reason.
+        """
+        try:
+            title = f"Fix for {error.test_function}"
+            description = f"Fixes {error.error_details.error_type} in {error.test_file}"
+            return await self.pr_manager.create_pr(title, description, branch_name, [error.test_file])
+        except Exception as e:
+            raise GitError(f"Failed to create pull request: {str(e)}")
 
     def sync_with_remote(self) -> bool:
         """
-        Synchronize with remote repository.
+        Synchronize the local repository state with the remote repository.
+
+        Currently uses placeholders (`pull` and `push` methods), which are not implemented.
+        This method, once pull and push are implemented, should:
+        1. Pull latest changes from the remote repository.
+        2. Push local changes to the remote repository.
 
         Returns:
-            bool indicating if sync succeeded
+            bool: True if sync succeeded, False otherwise.
 
         Raises:
-            GitError: If sync fails
+            GitError: If synchronization fails (pull or push errors).
         """
         try:
             self.pull()
