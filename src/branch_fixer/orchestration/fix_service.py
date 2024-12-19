@@ -65,19 +65,14 @@ class FixService:
             FixServiceError: If fix process fails
             ValueError: If error is already fixed
         """
+        # Validate workspace before attempting fix
+        await self.validator.validate_workspace(error.test_file.parent)
+        await self.validator.check_dependencies()
+
+        # Start fix attempt with current temperature
+        attempt = error.start_fix_attempt(self.initial_temp)
+        
         try:
-            # Validate workspace before attempting fix
-            await self.validator.validate_workspace(error.test_file.parent)
-            await self.validator.check_dependencies()
-
-            # Create fix branch
-            branch_name = f"fix-{error.test_file.stem}-{error.test_function}"
-            if not await self.git_repo.branch_manager.create_fix_branch(branch_name):
-                raise FixServiceError(f"Failed to create branch {branch_name}")
-
-            # Start fix attempt with current temperature
-            attempt = error.start_fix_attempt(self.initial_temp)
-            
             # Generate fix using AI
             changes = await self.ai_manager.generate_fix(error, attempt.temperature)
             
@@ -91,26 +86,18 @@ class FixService:
                 self._handle_failed_attempt(error, attempt)
                 return False
                 
-            # Create PR if successful
-            if not await self.git_repo.create_pull_request(
-                title=f"Fix {error.test_function}",
-                description=f"Fixes failing test in {error.test_file}"
-            ):
-                raise FixServiceError("Failed to create pull request")
-                
             # Mark as fixed
             error.mark_fixed(attempt)
-            
             return True
             
         except Exception as e:
             self._handle_failed_attempt(error, attempt)
             raise FixServiceError(f"Fix attempt failed: {str(e)}") from e
         finally:
-            # Clean up branch if fix failed
-            if error.status != "fixed":
-                await self.git_repo.branch_manager.cleanup_fix_branch(branch_name)
-        
+            # Clean up branch regardless of outcome
+            branch_name = f"fix-{error.test_file.stem}-{error.test_function}"
+            await self.git_repo.branch_manager.cleanup_fix_branch(branch_name)
+            
     def _handle_failed_attempt(self, 
                              error: TestError,
                              attempt: FixAttempt) -> None:
