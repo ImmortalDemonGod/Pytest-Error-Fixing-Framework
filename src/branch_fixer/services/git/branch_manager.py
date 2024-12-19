@@ -128,10 +128,9 @@ class BranchManager:
         raise NotImplementedError()
 
     async def cleanup_fix_branch(self,
-                               branch_name: str,
-                               force: bool = False) -> bool:
-        """
-        Clean up a fix branch after merging.
+                            branch_name: str,
+                            force: bool = False) -> bool:
+        """Clean up a fix branch after merging.
 
         Args:
             branch_name: Branch to clean up
@@ -143,7 +142,20 @@ class BranchManager:
         Raises:
             GitError: If cleanup fails
         """
-        raise NotImplementedError()
+        try:
+            # Switch back to main branch if needed
+            current_branch = self.repository.get_current_branch()
+            if current_branch == branch_name:
+                await self.repository.run_command(['checkout', self.repository.main_branch])
+
+            # Delete the branch
+            delete_args = ['branch', '-D' if force else '-d', branch_name]
+            result = await self.repository.run_command(delete_args)
+            
+            return result.returncode == 0
+
+        except Exception as e:
+            raise GitError(f"Failed to clean up branch {branch_name}: {str(e)}")
 
     async def get_branch_metadata(self, branch_name: str) -> BranchMetadata:
         """
