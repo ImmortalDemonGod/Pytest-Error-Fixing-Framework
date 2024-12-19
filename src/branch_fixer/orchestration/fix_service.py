@@ -4,7 +4,7 @@ from branch_fixer.core.models import TestError, FixAttempt
 from branch_fixer.utils.workspace import WorkspaceValidator
 from branch_fixer.services.ai.manager import AIManager
 from branch_fixer.services.pytest.runner import PytestRunner
-from branch_fixer.code.change_applier import ChangeApplier
+from branch_fixer.services.code.change_applier import ChangeApplier
 from branch_fixer.git.repository import GitRepository
 import asyncio
 
