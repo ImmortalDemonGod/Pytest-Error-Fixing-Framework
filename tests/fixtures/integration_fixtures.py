@@ -4,7 +4,7 @@ from typing import List
 from unittest.mock import Mock, AsyncMock
 
 from branch_fixer.core.models import TestError, ErrorDetails
-from branch_fixer.application.fix_service import FixService
+from branch_fixer.orchestration.fix_service import FixService
 from branch_fixer.ai.manager import AIManager
 from branch_fixer.pytest.runner import TestRunner
 from branch_fixer.code.change_applier import ChangeApplier
