@@ -42,5 +42,11 @@ def main():
         test_function="test_add_simple"
     )
 
+    # Test 4: Verifying Fixes
+    run_test_and_show_results(
+        runner=runner,
+        test_path=current_dir / "test_verify_fix_workflow.py",
+        test_function="test_fix_workflow"
+    )
 if __name__ == "__main__":
     main()
