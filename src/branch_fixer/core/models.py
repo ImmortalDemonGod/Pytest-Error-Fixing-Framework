@@ -55,3 +55,9 @@ class TestError:
             raise ValueError("Cannot fail an attempt on a fixed error")
         
         attempt.status = "failed"
+
+@dataclass
+class CodeChanges:
+    """Represents code changes suggested by AI."""
+    original_code: str
+    modified_code: str
