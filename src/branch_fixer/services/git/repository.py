@@ -8,7 +8,9 @@ from branch_fixer.services.git.exceptions import (
     GitError, 
     NotAGitRepositoryError, 
     InvalidGitRepositoryError, 
-    NoSuchPathError
+    NoSuchPathError,
+    BranchNameError,
+    BranchCreationError
 )
 from branch_fixer.services.git.pr_manager import PRManager
 from branch_fixer.services.git.safety_manager import SafetyManager
@@ -138,7 +140,8 @@ class GitRepository:
 
         Raises:
             GitError: If the command execution fails or if the Git command is unknown.
-        """        try:
+        """  
+        try:
             logger.debug(f"Running command: {' '.join(cmd)} in {self.root}")
             # First element should be 'git', remove it if present
             if cmd[0] == 'git':

@@ -8,6 +8,7 @@ from branch_fixer.services.code.change_applier import ChangeApplier
 from branch_fixer.services.git.repository import GitRepository
 from branch_fixer.orchestration.exceptions import FixServiceError
 import asyncio
+import snoop
 import logging
 
 
