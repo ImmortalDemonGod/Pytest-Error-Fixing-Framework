@@ -47,3 +47,11 @@ class RestoreError(SafetyError):
 class ProtectedPathError(SafetyError):
     """Raised when attempting to modify protected paths"""
     pass
+
+class InvalidGitRepositoryError(GitError):
+    """Raised when repository initialization fails."""
+    pass
+
+class NoSuchPathError(GitError):
+    """Raised when the specified path does not exist."""
+    pass
