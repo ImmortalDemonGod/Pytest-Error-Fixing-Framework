@@ -1,6 +1,6 @@
 # branch_fixer/services/pytest/parsers/collection_parser.py
 import re
-from branch_fixer.pytest.error_info import ErrorInfo
+from branch_fixer.services.pytest.error_info import ErrorInfo
 
 # Using the exact pattern from the original working code
 COLLECTION_PATTERN = r"ERROR collecting (.*?)\n(?:.*?\n)*?.*?which is not the same as the test file we want to collect:\n\s+(.*?)\n"

@@ -2,7 +2,7 @@
 import re
 from typing import List, Optional, Tuple
 
-from branch_fixer.pytest.error_info import ErrorInfo
+from branch_fixer.services.pytest.error_info import ErrorInfo
 
 PATTERNS = [
     # File path with line number and error type
