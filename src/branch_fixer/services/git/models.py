@@ -8,13 +8,13 @@ from pathlib import Path
 
 @dataclass
 class ErrorDetails:
-    """詳細なエラー情報を保持するクラス"""
+    """Class to store detailed error information."""
     error_type: str
     message: Optional[str] = None
 
 @dataclass
 class TestError:
-    """テストエラーの詳細を保持するクラス"""
+    """Class to store details of a test error."""
     test_function: str
     test_file: str
     error_details: ErrorDetails
