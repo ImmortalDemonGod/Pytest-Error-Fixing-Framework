@@ -5,6 +5,14 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 
+@dataclass
+class CommandResult:
+    """Represents the result of a Git command execution"""
+    returncode: int
+    stdout: str
+    stderr: str
+    command: str
+    
 class PRStatus(Enum):
     """Pull request status states"""
     DRAFT = "draft"
