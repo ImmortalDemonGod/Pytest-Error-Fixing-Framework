@@ -5,7 +5,7 @@ from pathlib import Path
 class TestCollectionParser(unittest.TestCase):
     def setUp(self):
         """Set up common test data"""
-        from branch_fixer.pytest.error_parser.collection_parser import CollectionParser
+        from branch_fixer.services.pytest.error_processor import CollectionParser
         self.parser = CollectionParser()
 
     def test_parse_collection_errors_single_error(self):
@@ -79,7 +79,7 @@ class TestCollectionParser(unittest.TestCase):
     def test_extract_collection_match(self):
         """Should extract ErrorInfo from regex match"""
         import re
-        from branch_fixer.pytest.error_parser.collection_parser import COLLECTION_PATTERN
+        from branch_fixer.services.pytest.error_parser.collection_parser import COLLECTION_PATTERN
         
         error_text = """
         ERROR collecting test_example.py
@@ -100,7 +100,7 @@ class TestCollectionParser(unittest.TestCase):
 
     def test_validate_collection_error(self):
         """Should validate collection error details"""
-        from branch_fixer.pytest.error_info import ErrorInfo
+        from branch_fixer.services.pytest.error_info import ErrorInfo
         
         error = ErrorInfo(
             test_file="test_example.py",
@@ -113,7 +113,7 @@ class TestCollectionParser(unittest.TestCase):
 
     def test_validate_collection_error_invalid(self):
         """Should reject invalid collection errors"""
-        from branch_fixer.pytest.error_info import ErrorInfo
+        from branch_fixer.services.pytest.error_info import ErrorInfo
         
         # Wrong function name
         error1 = ErrorInfo(
