@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from typing import List
 from typing import List, Optional, Set, TYPE_CHECKING
+import re
 from pathlib import Path
 from branch_fixer.services.git.exceptions import (
     BranchCreationError, 
@@ -188,8 +189,7 @@ class BranchManager:
         raise NotImplementedError()
 
     async def validate_branch_name(self, branch_name: str) -> bool:
-        """
-        Validate branch name follows conventions.
+        """Validate branch name follows conventions.
 
         Args:
             branch_name: Name to validate
@@ -200,7 +200,29 @@ class BranchManager:
         Raises:
             BranchNameError: If name invalid
         """
-        raise NotImplementedError()
+        try:
+            # Check if branch name is empty
+            if not branch_name:
+                raise BranchNameError("Branch name cannot be empty")
+
+            # Check if name matches allowed pattern
+            if not re.match(self.name_pattern, branch_name):
+                raise BranchNameError(
+                    f"Branch name '{branch_name}' contains invalid characters"
+                )
+
+            # Check against forbidden names
+            if branch_name.lower() in self.forbidden_names:
+                raise BranchNameError(
+                    f"Cannot use reserved name '{branch_name}' for branch"
+                )
+
+            return True
+
+        except Exception as e:
+            if isinstance(e, BranchNameError):
+                raise e
+            raise BranchNameError(f"Failed to validate branch name: {str(e)}") from e
 
     async def is_branch_merged(self, 
                              branch_name: str,
