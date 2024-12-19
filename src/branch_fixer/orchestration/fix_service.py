@@ -1,7 +1,7 @@
 # branch_fixer/orchestration/fix_service.py
 from typing import Optional
 from branch_fixer.core.models import TestError, FixAttempt
-from branch_fixer.workspace.validator import WorkspaceValidator
+from branch_fixer.utils.workspace import WorkspaceValidator
 from branch_fixer.ai.manager import AIManager
 from branch_fixer.pytest.runner import TestRunner
 from branch_fixer.code.change_applier import ChangeApplier
