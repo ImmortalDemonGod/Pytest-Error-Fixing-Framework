@@ -4,7 +4,7 @@ from pathlib import Path
 
 def test_parse_import_error_debug():
     """Debugging version to understand function name extraction"""
-    from branch_fixer.pytest.error_parser.failure_parser import FailureParser
+    from branch_fixer.services.pytest.error_parser.failure_parser import FailureParser
     
     @snoop(depth=2)
     def debug_parsing():
@@ -16,7 +16,7 @@ self = <test_failure_parser.TestFailureParser testMethod=test_extract_traceback>
 
     def setUp(self):
         \"\"\"Set up common test data\"\"\"
->       from branch_fixer.pytest.error_parser.failure_parser import FailureParser
+>       from branch_fixer.services.pytest.error_parser.failure_parser import FailureParser
 E       ImportError: cannot import name 'FailureParser' from 'branch_fixer.pytest.error_parser.failure_parser'
 
 tests/pytest/error_parser/test_failure_parser.py:10: ImportError"""
