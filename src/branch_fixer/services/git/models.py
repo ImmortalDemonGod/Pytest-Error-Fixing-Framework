@@ -55,3 +55,37 @@ class BackupMetadata:
     branch_name: str
     file_hashes: Dict[str, str]
     metadata: Dict[str, Any]
+
+
+@dataclass
+class BranchStatus:
+    """
+    Represents the status of a Git branch.
+    
+    Attributes:
+        current_branch (str): The name of the current branch.
+        has_changes (bool): Indicates if there are uncommitted changes.
+        changes (List[str]): List of changed files.
+    """
+    current_branch: str
+    has_changes: bool
+    changes: List[str]
+
+@dataclass
+class BranchMetadata:
+    """
+    Metadata about a Git branch.
+    
+    Attributes:
+        name: Branch name
+        current: Whether this is the current branch
+        upstream: Remote tracking branch if any
+        last_commit: SHA of last commit
+        modified_files: Files with uncommitted changes
+    """
+    name: str
+    current: bool 
+    upstream: Optional[str]
+    last_commit: str
+    modified_files: List[Path]
+
