@@ -3,6 +3,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Set, Optional, List, Any
 import logging
+import os
+import shutil
+import tempfile
 
 from .models import BackupMetadata
 from .exceptions import SafetyError, BackupError, RestoreError, ProtectedPathError
@@ -21,7 +24,7 @@ class SafetyManager:
         
         Args:
             repository: GitRepository instance
-            backup_dir: Directory for backups
+            backup_dir: Directory for backups (defaults to temp directory)
             backup_limit: Maximum number of backups
             backup_ttl: Backup retention period
             
@@ -29,7 +32,31 @@ class SafetyManager:
             ValueError: If limits invalid
             PermissionError: If backup_dir not writable
         """
-        raise NotImplementedError()
+        if backup_limit <= 0:
+            raise ValueError("backup_limit must be positive")
+            
+        self.repository = repository
+        
+        # Set up backup directory
+        if backup_dir is None:
+            backup_dir = Path(tempfile.gettempdir()) / "pytest-fixer-backups"
+        self.backup_dir = backup_dir
+        self.backup_dir.mkdir(parents=True, exist_ok=True)
+        
+        if not os.access(self.backup_dir, os.W_OK):
+            raise PermissionError(f"Backup directory not writable: {backup_dir}")
+            
+        self.backup_limit = backup_limit
+        self.backup_ttl = backup_ttl
+        self.backups: Dict[str, BackupMetadata] = {}
+        
+        # Define protected paths that shouldn't be modified
+        self.protected_paths: Set[Path] = {
+            self.repository.root / ".git",
+            self.backup_dir
+        }
+        
+        logger.debug(f"Initialized SafetyManager with backup dir: {self.backup_dir}")
 
     async def create_backup(self,
                           description: str,
