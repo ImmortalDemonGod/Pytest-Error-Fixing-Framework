@@ -72,7 +72,7 @@ class PytestPlugin:
         print(f"Warning recorded: {warning_message}")
         self.runner.pytest_warning_recorded(warning_message)
 
-class TestRunner:
+class PytestRunner:
     """Pytest execution manager with comprehensive result capture."""
 
     def __init__(self, working_dir: Optional[Path] = None):
