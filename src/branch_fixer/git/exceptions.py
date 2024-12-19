@@ -9,3 +9,6 @@ class BranchCreationError(GitError):
 class MergeConflictError(GitError):
     """Raised when merging branches results in conflicts."""
     pass
+class NotAGitRepositoryError(GitError):
+    """Raised when the specified directory is not a Git repository."""
+    pass
