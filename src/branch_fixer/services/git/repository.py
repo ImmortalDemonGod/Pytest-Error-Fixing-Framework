@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import List, Optional
 from git import Repo, GitCommandError
 from branch_fixer.services.git.exceptions import InvalidGitRepositoryError, NoSuchPathError
-from branch_fixer.services.git.exceptions import GitError, NotAGitRepositoryError
 from pathlib import Path
 from typing import List, Optional
 from git import Repo, GitCommandError
