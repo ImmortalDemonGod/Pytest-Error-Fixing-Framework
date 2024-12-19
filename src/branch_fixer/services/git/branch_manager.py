@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import List
 from typing import List, Optional, Set, TYPE_CHECKING
 from pathlib import Path
-from branch_fixer.git.exceptions import (
+from branch_fixer.services.git.exceptions import (
     BranchCreationError, 
     MergeConflictError, 
     GitError
