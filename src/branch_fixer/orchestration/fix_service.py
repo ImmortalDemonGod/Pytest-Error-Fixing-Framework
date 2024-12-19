@@ -2,6 +2,10 @@
 from typing import Optional
 from branch_fixer.core.models import TestError, FixAttempt
 from branch_fixer.workspace.validator import WorkspaceValidator
+from branch_fixer.ai.manager import AIManager
+from branch_fixer.pytest.runner import TestRunner
+from branch_fixer.code.change_applier import ChangeApplier
+from branch_fixer.git.repository import GitRepository
 import asyncio
 
 class FixServiceError(Exception):
