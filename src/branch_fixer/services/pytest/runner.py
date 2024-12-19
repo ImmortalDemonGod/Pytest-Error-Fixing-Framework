@@ -49,27 +49,28 @@ class PytestPlugin:
     @pytest.hookimpl
     def pytest_collection_modifyitems(self, session, config, items):
         """Print information about collected tests."""
-        print(f"Collected {len(items)} test items:")
+        #print(f"Collected {len(items)} test items:")
         for item in items:
             print(f"  - {item.nodeid}")
 
     @pytest.hookimpl
     def pytest_runtest_logreport(self, report):
         """Handle test execution reports."""
-        print(f"Test report for {report.nodeid}: {report.outcome} in phase {report.when}")
+        #print(f"Test report for {report.nodeid}: {report.outcome} in phase {report.when}")
         self.runner.pytest_runtest_logreport(report)
 
     @pytest.hookimpl
     def pytest_collectreport(self, report):
         """Handle collection reports."""
         if report.outcome == 'failed':
-            print(f"Collection failed: {report.longrepr}")
+            #print(f"Collection failed: {report.longrepr}")
+            pass
         self.runner.pytest_collectreport(report)
 
     @pytest.hookimpl
     def pytest_warning_recorded(self, warning_message, when, nodeid, location):
         """Handle warnings during test execution."""
-        print(f"Warning recorded: {warning_message}")
+        #print(f"Warning recorded: {warning_message}")
         self.runner.pytest_warning_recorded(warning_message)
 
 class PytestRunner:
@@ -87,7 +88,29 @@ class PytestRunner:
         self.temp_dirs: List[Path] = []  # Track temporary directories for cleanup
         logger.debug(f"PytestRunner initialized with working directory: {self.working_dir}")
 
-    @snoop.snoop(watch=['test_file', 'fixed'])
+    def capture_test_output(self) -> str:
+        """Returns formatted test output that our parsers can handle"""
+        output_lines = []
+        
+        # Add test collection output
+        if self._current_session and self._current_session.collection_errors:
+            for error in self._current_session.collection_errors:
+                output_lines.append(f"COLLECTION ERROR: {error}")
+                
+        # Add test failures
+        if self._current_session:
+            for test_id, result in self._current_session.test_results.items():
+                if result.failed:
+                    file_path, test_name = test_id.split("::", 1)
+                    output_lines.append(f"FAILED {file_path} {test_name}")
+                    if result.error_message:
+                        output_lines.append(f"E   {result.error_message}")
+                    if result.longrepr:
+                        output_lines.append(result.longrepr)
+                    
+        return "\n".join(output_lines)
+
+    @snoop
     def run_test(self,
                 test_path: Optional[Path] = None,
                 test_function: Optional[str] = None) -> SessionResult:
@@ -167,6 +190,9 @@ class PytestRunner:
 
             logger.debug(f"Session results: {self._current_session}")
 
+            # **Updated Part: Capture and format test output**
+            self._current_session.output = self.capture_test_output()
+
             return self._current_session
         finally:
             # Clean up
@@ -188,13 +214,13 @@ class PytestRunner:
 
         result = self._current_session.test_results.get(report.nodeid)
         if not result:
-            # Safely extract test_file and test_function with defaults
-            test_file = Path(report.fspath) if report.fspath else Path("unknown")
+            # Safely extract test_path and test_function with defaults
+            test_path = Path(report.fspath) if report.fspath else Path("unknown")
             test_function = report.function.__name__ if hasattr(report, 'function') else "unknown"
 
             result = TestResult(
                 nodeid=report.nodeid,
-                test_file=test_file,
+                test_file=test_path,
                 test_function=test_function,
                 error_message=None,
                 longrepr=None
