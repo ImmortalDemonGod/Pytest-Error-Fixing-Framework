@@ -1,12 +1,22 @@
 # branch_fixer/services/git/repository.py
+import asyncio
 import subprocess
 from pathlib import Path
 from typing import List, Optional
 from git import Repo, GitCommandError
-from branch_fixer.services.git.exceptions import GitError, NotAGitRepositoryError, InvalidGitRepositoryError, NoSuchPathError
+from branch_fixer.services.git.exceptions import (
+    GitError, 
+    NotAGitRepositoryError, 
+    InvalidGitRepositoryError, 
+    NoSuchPathError
+)
 from branch_fixer.services.git.pr_manager import PRManager
 from branch_fixer.services.git.safety_manager import SafetyManager
+from branch_fixer.services.git.branch_manager import BranchManager
 from branch_fixer.services.git.models import CommandResult
+import logging
+
+logger = logging.getLogger(__name__)
 
 class GitRepository:
     """
@@ -34,7 +44,6 @@ class GitRepository:
             
             # Initialize managers
             self.pr_manager = PRManager(self)
-            from branch_fixer.services.git.branch_manager import BranchManager
             self.branch_manager = BranchManager(self)
             self.safety_manager = SafetyManager(self)
             
@@ -109,7 +118,120 @@ class GitRepository:
         except (OSError, IOError) as e:
             raise GitError(f"Unable to read HEAD file: {e}")
 
-    async def run_command(self, cmd: List[str]) -> CommandResult:
+    async def run_command(self, cmd: List[str]) -> subprocess.CompletedProcess:
+        """Execute a Git command within the repository and return the result.
+
+        Args:
+            cmd: The Git command and its arguments to execute.
+
+        Returns:
+            subprocess.CompletedProcess: The result of the executed command.
+
+        Raises:
+            GitError: If the command execution fails.
+        """
+        try:
+            logger.debug(f"Running command: {' '.join(cmd)} in {self.root}")
+            # First element should be 'git', remove it if present
+            if cmd[0] == 'git':
+                cmd = cmd[1:]
+            
+            # Prepare full command
+            full_cmd = ['git'] + cmd
+            
+            # Create and run process
+            process = await asyncio.create_subprocess_exec(
+                *full_cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=str(self.root)
+            )
+            
+            # Wait for completion and get output
+            stdout, stderr = await process.communicate()
+            
+            # Decode output
+            stdout_decoded = stdout.decode('utf-8') if stdout else ''
+            stderr_decoded = stderr.decode('utf-8') if stderr else ''
+            
+            logger.debug(f"Command stdout: {stdout_decoded}")
+            logger.debug(f"Command stderr: {stderr_decoded}")
+            
+            if process.returncode != 0:
+                raise GitError(f"Git command failed with return code {process.returncode}: {stderr_decoded}")
+            
+            return subprocess.CompletedProcess(
+                args=full_cmd,
+                returncode=process.returncode,
+                stdout=stdout_decoded,
+                stderr=stderr_decoded
+            )
+                
+        except GitError:
+            raise
+        except Exception as e:
+            if "'nonexistent' is not a git command" in str(e):
+                raise GitError("unknown git command")
+            raise GitError(f"Git command failed: {str(e)}")
+
+    async def is_clean(self) -> bool:
+        """
+        Determine if the working directory is clean (no uncommitted changes).
+
+        Returns:
+            bool: True if the working directory is clean, False otherwise.
+
+        Raises:
+            GitError: If unable to determine the repository state.
+        """
+        try:
+            result = await self.run_command(['status', '--porcelain'])
+            is_clean = result.stdout.strip() == ''
+            logger.debug(f"Repository clean: {is_clean}")
+            return is_clean
+        except Exception as e:
+            raise GitError(f"Unable to determine repository state: {str(e)}") from e
+
+    async def branch_exists(self, branch_name: str) -> bool:
+        """
+        Check if a branch with the specified name exists in the repository.
+
+        Args:
+            branch_name: The name of the branch to check.
+
+        Returns:
+            bool: True if the branch exists, False otherwise.
+
+        Raises:
+            GitError: If unable to determine branch existence.
+        """
+        try:
+            result = await self.run_command(['branch', '--list', branch_name])
+            exists = bool(result.stdout.strip())
+            logger.debug(f"Branch '{branch_name}' exists: {exists}")
+            return exists
+        except Exception as e:
+            raise GitError(f"Unable to check branch existence: {str(e)}") from e
+
+    async def get_current_branch(self) -> str:
+        """
+        Retrieve the name of the currently checked-out branch.
+
+        Returns:
+            str: The name of the current branch.
+
+        Raises:
+            GitError: If unable to determine the current branch.
+        """
+        try:
+            result = await self.run_command(['branch', '--show-current'])
+            current_branch = result.stdout.strip()
+            logger.debug(f"Current branch: {current_branch}")
+            return current_branch
+        except Exception as e:
+            raise GitError(f"Unable to determine current branch: {str(e)}") from e
+
+    async def run_command_async(self, cmd: List[str]) -> CommandResult:
         """Execute a Git command asynchronously within the repository.
         
         Args:
@@ -130,6 +252,8 @@ class GitRepository:
                 cmd = cmd[1:]
             full_cmd = ['git'] + cmd
 
+            logger.debug(f"Executing async command: {' '.join(full_cmd)} in {cwd}")
+
             # Create and run process
             process = await asyncio.create_subprocess_exec(
                 *full_cmd,
@@ -145,6 +269,12 @@ class GitRepository:
             stdout_str = stdout.decode('utf-8').strip() if stdout else ''
             stderr_str = stderr.decode('utf-8').strip() if stderr else ''
             
+            logger.debug(f"Async command stdout: {stdout_str}")
+            logger.debug(f"Async command stderr: {stderr_str}")
+            
+            if process.returncode != 0:
+                raise GitError(f"Git command failed with return code {process.returncode}: {stderr_str}")
+            
             return CommandResult(
                 returncode=process.returncode,
                 stdout=stdout_str,
@@ -152,6 +282,8 @@ class GitRepository:
                 command=' '.join(full_cmd)
             )
 
+        except GitError:
+            raise
         except Exception as e:
             if "'nonexistent' is not a git command" in str(e):
                 raise GitError("unknown git command")
@@ -228,7 +360,7 @@ class GitRepository:
         """
         return hasattr(self, 'repo') and self.repo is not None
 
-    def is_clean(self) -> bool:
+    def is_clean_sync(self) -> bool:
         """
         Determine if the working directory is clean (no uncommitted changes).
 
@@ -243,7 +375,7 @@ class GitRepository:
         except Exception as e:
             raise GitError(f"Unable to determine repository state: {str(e)}") from e
 
-    def get_current_branch(self) -> str:
+    def get_current_branch_sync(self) -> str:
         """
         Retrieve the name of the currently checked-out branch.
 
@@ -261,7 +393,7 @@ class GitRepository:
         except GitCommandError as e:
             raise GitError(f"Unable to determine current branch: {str(e)}") from e
 
-    def branch_exists(self, branch_name: str) -> bool:
+    def branch_exists_sync(self, branch_name: str) -> bool:
         """
         Check if a branch with the specified name exists in the repository.
 
