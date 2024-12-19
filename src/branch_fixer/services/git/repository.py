@@ -11,7 +11,6 @@ from git import Repo, GitCommandError
 from branch_fixer.services.git.exc import InvalidGitRepositoryError, NoSuchPathError
 from branch_fixer.services.git.exc import GitError, NotAGitRepositoryError
 from branch_fixer.services.git.pr_manager import PRManager
-from branch_fixer.services.git.branch_manager import BranchManager
 from branch_fixer.services.git.safety_manager import SafetyManager
 
 class GitRepository:
@@ -40,6 +39,7 @@ class GitRepository:
         
         # Initialize managers
         self.pr_manager = PRManager(self)
+        from branch_fixer.services.git.branch_manager import BranchManager
         self.branch_manager = BranchManager(self)
         self.safety_manager = SafetyManager(self)
 

@@ -1,6 +1,6 @@
 # branch_fixer/services/git/branch_manager.py
 from dataclasses import dataclass
-from typing import List, Optional, Set
+from typing import List, Optional, Set, TYPE_CHECKING
 from pathlib import Path
 from branch_fixer.git.exceptions import (
     BranchCreationError, 
@@ -30,6 +30,9 @@ class BranchNameError(GitError):
     """Raised when branch name is invalid."""
     pass
 
+if TYPE_CHECKING:
+    from branch_fixer.services.git.repository import GitRepository
+
 class BranchManager:
     """
     Manages Git branch operations with safety checks and error handling.
@@ -38,7 +41,7 @@ class BranchManager:
     validation and error recovery.
     """
     
-    def __init__(self, repository: GitRepository):
+    def __init__(self, repository: 'GitRepository'):
         """
         Initialize with repository reference.
 
