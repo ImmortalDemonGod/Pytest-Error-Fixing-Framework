@@ -8,11 +8,11 @@ from uuid import UUID, uuid4
 import logging
 import asyncio
 
-from branch_fixer.domain.models import TestError, FixAttempt
-from branch_fixer.ai.manager import AIManager
-from branch_fixer.pytest.runner import TestRunner
-from branch_fixer.code.change_applier import ChangeApplier
-from branch_fixer.git.repository import GitRepository
+from branch_fixer.core.models import TestError, FixAttempt
+from branch_fixer.services.ai.manager import AIManager
+from branch_fixer.services.pytest.runner import TestRunner
+from branch_fixer.services.code.change_applier import ChangeApplier
+from branch_fixer.services.git.repository import GitRepository
 
 logger = logging.getLogger(__name__)
 
