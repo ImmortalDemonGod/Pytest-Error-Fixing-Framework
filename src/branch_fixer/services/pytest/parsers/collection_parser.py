@@ -1,4 +1,4 @@
-# branch_fixer/services/pytest/parsers/collection_parser.py
+# src/branch_fixer/services/pytest/parsers/collection_parser.py
 import re
 from branch_fixer.services.pytest.error_info import ErrorInfo
 
