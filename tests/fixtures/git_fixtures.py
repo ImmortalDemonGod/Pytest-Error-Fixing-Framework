@@ -2,7 +2,7 @@ import pytest
 from pathlib import Path
 from git import Repo
 from git.exc import InvalidGitRepositoryError, NoSuchPathError
-from branch_fixer.git.exceptions import NotAGitRepositoryError
+from branch_fixer.services.git.exceptions import NotAGitRepositoryError
 
 @pytest.fixture
 def empty_directory(tmp_path):
