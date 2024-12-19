@@ -1,10 +1,9 @@
 # branch_fixer/services/pytest/models.py
-from dataclasses import dataclass
-from datetime import datetime
-from typing import Optional, Dict, Any
-from pathlib import Path
-from typing import Optional, List, Dict, Any
+
 from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Optional, List, Dict, Any
+from pathlib import Path
 from _pytest.main import ExitCode
 
 @dataclass
@@ -70,4 +69,3 @@ class SessionResult:
     test_results: Dict[str, TestResult] = field(default_factory=dict)
     collection_errors: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
-
