@@ -8,7 +8,7 @@ import re
 class TestFailureParser(unittest.TestCase):
     def setUp(self):
         """Set up common test data"""
-        from branch_fixer.pytest.error_parser.failure_parser import FailureParser
+        from branch_fixer.services.pytest.parsers.failure_parser import FailureParser
         self.parser = FailureParser()
 
     def test_parse_import_error(self):
@@ -20,7 +20,7 @@ self = <test_failure_parser.TestFailureParser testMethod=test_extract_traceback>
 
     def setUp(self):
         \"\"\"Set up common test data\"\"\"
->       from branch_fixer.pytest.error_parser.failure_parser import FailureParser
+>       from branch_fixer.services.pytest.error_parser.failure_parser import FailureParser
 E       ImportError: cannot import name 'FailureParser' from 'branch_fixer.pytest.error_parser.failure_parser' (/Volumes/Totallynotaharddrive/Pytest-Error-Fixing-Framework/src/branch_fixer/pytest/error_parser/failure_parser.py)
 
 tests/pytest/error_parser/test_failure_parser.py:10: ImportError"""
@@ -56,7 +56,7 @@ self = <test_failure_parser.TestFailureParser testMethod=test_extract_traceback>
 
     def setUp(self):
         \"\"\"Set up common test data\"\"\"
->       from branch_fixer.pytest.error_parser.failure_parser import FailureParser
+>       from branch_fixer.services.pytest.error_parser.failure_parser import FailureParser
 E       ImportError: cannot import name 'FailureParser' from 'branch_fixer.pytest.error_parser.failure_parser'
 
 tests/pytest/error_parser/test_failure_parser.py:10: ImportError"""
@@ -239,7 +239,7 @@ test_example.py:30: AssertionError"""
             "",
             '    def setUp(self):',
             '        """Set up common test data"""',
-            '>       from branch_fixer.pytest.error_parser.failure_parser import FailureParser',
+            '>       from branch_fixer.services.pytest.error_parser.failure_parser import FailureParser',
             "E       ImportError: cannot import name 'FailureParser' from 'branch_fixer.pytest.error_parser.failure_parser'",
             "",
             "tests/pytest/error_parser/test_failure_parser.py:10: ImportError"
@@ -247,4 +247,4 @@ test_example.py:30: AssertionError"""
 
         traceback, _ = self.parser.extract_traceback(lines, 0)
         self.assertIn("Set up common test data", traceback)
-        self.assertIn("from branch_fixer.pytest.error_parser.failure_parser import FailureParser", traceback)
+        self.assertIn("from branch_fixer.services.pytest.error_parser.failure_parser import FailureParser", traceback)
