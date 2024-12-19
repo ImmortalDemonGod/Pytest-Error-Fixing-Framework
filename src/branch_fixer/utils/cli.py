@@ -5,7 +5,7 @@ import asyncio
 from pathlib import Path
 from typing import Optional, List
 import traceback
-
+import snoop
 from branch_fixer.services.ai.manager import AIManager
 from branch_fixer.services.pytest.runner import TestRunner
 from branch_fixer.services.code.change_applier import ChangeApplier
@@ -71,39 +71,38 @@ class CLI:
                 logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
             return False
 
+    # In cli.py's run_fix_workflow method
     async def run_fix_workflow(self, error: TestError, interactive: bool) -> bool:
-        """Run fix workflow for a single error."""
         try:
             logger.info(f"Attempting to fix {error.test_function} in {error.test_file}")
             
-            # Create fix branch
+            # Create fix branch - Make this await properly
             branch_name = f"fix-{error.test_file.stem}-{error.test_function}"
-            if not self.service.git_repo.create_fix_branch(branch_name):
+            if not await self.service.git_repo.branch_manager.create_fix_branch(branch_name):
                 logger.error(f"Failed to create fix branch: {branch_name}")
                 return False
                 
-            # Attempt fix
             logger.info("Attempting to generate and apply fix...")
             if await self.service.attempt_fix(error):
                 if interactive:
                     if not click.confirm("Fix succeeded. Create PR?", default=True):
                         logger.info("Skipping PR creation as per user request")
                         return False
-                        
+                            
                 # Create PR
                 logger.info("Creating pull request...")
-                if self.service.git_repo.create_pull_request(branch_name, error):
+                if await self.service.git_repo.create_pull_request(branch_name, error):
                     logger.info("Created pull request successfully")
                     return True
                 else:
                     logger.error("Failed to create pull request")
                     return False
-            
+                
             logger.warning("Fix attempt failed")
             return False
-            
+                
         except Exception as e:
-            logger.error(f"Fix workflow failed: {e}")
+            logger.error(f"Fix workflow failed: {str(e)}")
             if DEBUG:
                 logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
             return False
