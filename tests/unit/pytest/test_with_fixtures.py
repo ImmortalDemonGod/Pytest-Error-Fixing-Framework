@@ -1,6 +1,6 @@
-# src/branch_fixer/services/pytest/test_fixtures.py
+# tests/unit/pytest/test_with_fixtures.py
 import pytest
-from branch_fixer.services.pytest.comprehensive_test_inputs import DataPoint
+from tests.unit.pytest.comprehensive_test_inputs import DataPoint
 
 @pytest.fixture
 def sample_point():

@@ -1,4 +1,4 @@
-from branch_fixer.services.pytest.comprehensive_test_inputs import MathOperations, DataPoint
+from tests.unit.pytest.comprehensive_test_inputs import MathOperations, DataPoint
 
 def test_precision():
     math = MathOperations(precision=3)
