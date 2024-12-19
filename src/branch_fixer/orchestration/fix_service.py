@@ -8,8 +8,10 @@ from branch_fixer.services.code.change_applier import ChangeApplier
 from branch_fixer.services.git.repository import GitRepository
 from branch_fixer.orchestration.exceptions import FixServiceError
 import asyncio
+import logging
 
 
+logger = logging.getLogger(__name__)
 
 class FixService:
     """Orchestrates test fixing process"""
@@ -65,38 +67,50 @@ class FixService:
             FixServiceError: If fix process fails
             ValueError: If error is already fixed
         """
-        # Validate workspace before attempting fix
-        await self.validator.validate_workspace(error.test_file.parent)
-        await self.validator.check_dependencies()
-
-        # Start fix attempt with current temperature
-        attempt = error.start_fix_attempt(self.initial_temp)
-        
         try:
-            # Generate fix using AI
-            changes = await self.ai_manager.generate_fix(error, attempt.temperature)
+            # Validate workspace before attempting fix
+            try:
+                await self.validator.validate_workspace(error.test_file.parent)
+                await self.validator.check_dependencies()
+            except Exception as e:
+                raise FixServiceError(f"Workspace validation failed: {str(e)}") from e
+
+            # Start fix attempt with current temperature
+            attempt = error.start_fix_attempt(self.initial_temp)
             
-            # Apply changes
-            if not self.change_applier.apply_changes(error.test_file, changes):
-                self._handle_failed_attempt(error, attempt)
-                return False
+            try:
+                # Generate fix using AI
+                changes = await self.ai_manager.generate_fix(error, attempt.temperature)
                 
-            # Verify fix
-            if not await self._verify_fix(error, attempt):
-                self._handle_failed_attempt(error, attempt)
-                return False
+                # Apply changes
+                if not self.change_applier.apply_changes(error.test_file, changes):
+                    self._handle_failed_attempt(error, attempt)
+                    return False
+                    
+                # Verify fix
+                if not await self._verify_fix(error, attempt):
+                    self._handle_failed_attempt(error, attempt)
+                    return False
+                    
+                # Mark as fixed
+                error.mark_fixed(attempt)
+                return True
                 
-            # Mark as fixed
-            error.mark_fixed(attempt)
-            return True
-            
+            except Exception as e:
+                self._handle_failed_attempt(error, attempt)
+                raise FixServiceError(str(e)) from e
+
         except Exception as e:
-            self._handle_failed_attempt(error, attempt)
-            raise FixServiceError(f"Fix attempt failed: {str(e)}") from e
+            # Get the root cause, not the FixServiceError wrapper
+            root_cause = getattr(e, '__cause__', e)
+            raise FixServiceError(str(root_cause)) from e
         finally:
-            # Clean up branch regardless of outcome
-            branch_name = f"fix-{error.test_file.stem}-{error.test_function}"
-            await self.git_repo.branch_manager.cleanup_fix_branch(branch_name)
+            # Clean up regardless
+            try:
+                branch_name = f"fix-{error.test_file.stem}-{error.test_function}"
+                await self.git_repo.branch_manager.cleanup_fix_branch(branch_name)
+            except Exception as cleanup_error:
+                logger.error(f"Failed to cleanup branch {branch_name}: {cleanup_error}")
             
     def _handle_failed_attempt(self, 
                              error: TestError,

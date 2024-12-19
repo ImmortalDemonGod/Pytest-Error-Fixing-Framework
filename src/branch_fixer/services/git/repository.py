@@ -138,42 +138,69 @@ class GitRepository:
 
         Raises:
             GitError: If the command execution fails or if the Git command is unknown.
-        """
-        try:
+        """        try:
             logger.debug(f"Running command: {' '.join(cmd)} in {self.root}")
-            
-            # If the command includes 'git', remove it to avoid redundancy
-            if cmd and cmd[0] == 'git':
+            # First element should be 'git', remove it if present
+            if cmd[0] == 'git':
                 cmd = cmd[1:]
             
+            # Prepare full command
             full_cmd = ['git'] + cmd
             
-            # Create and run the asynchronous subprocess
-            process = await asyncio.create_subprocess_exec(
-                *full_cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                cwd=str(self.root)
-            )
-            
-            # Wait for the process to complete and retrieve its output
-            stdout, stderr = await process.communicate()
-            stdout_decoded = stdout.decode('utf-8') if stdout else ''
-            stderr_decoded = stderr.decode('utf-8') if stderr else ''
-            
-            logger.debug(f"Command stdout: {stdout_decoded}")
-            logger.debug(f"Command stderr: {stderr_decoded}")
-
-            # Wrap output in a CommandResult, returning code even if error occurred
-            result = CommandResult(
-                returncode=process.returncode,
-                stdout=stdout_decoded,
-                stderr=stderr_decoded,
-                command=' '.join(full_cmd)
-            )
+            # Create and run process
+            try:
+                process = await asyncio.create_subprocess_exec(
+                    *full_cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    cwd=str(self.root)
+                )
                 
+                if process is None:
+                    raise GitError(f"Failed to create subprocess for command: {' '.join(full_cmd)}")
+                
+                # Wait for completion and get output
+                stdout, stderr = await process.communicate()
+                
+                if stdout is None:
+                    stdout = b''
+                if stderr is None:
+                    stderr = b''
+                    
+                # Decode output
+                stdout_decoded = stdout.decode('utf-8') if stdout else ''
+                stderr_decoded = stderr.decode('utf-8') if stderr else ''
+                
+                # Create result object
+                result = CommandResult(
+                    returncode=process.returncode,
+                    stdout=stdout_decoded,
+                    stderr=stderr_decoded,
+                    command=full_cmd
+                )
+                
+                # Log result for debugging
+                logger.debug(f"Command result: {result}")
+                
+                if result.returncode != 0:
+                    raise GitError(f"Git command failed with return code {result.returncode}: {result.stderr}")
+                    
+                return result
+                
+            except asyncio.CancelledError:
+                if process:
+                    process.terminate()
+                raise GitError("Git command was cancelled")
+                
+            except Exception as e:
+                if process:
+                    process.terminate()
+                raise GitError(f"Git command execution failed: {str(e)}")
+                
+        except GitError:
+            # Don't wrap GitError - let it propagate
+            raise
         except Exception as e:
-            # Check for a common error that might indicate an unknown git command
             if "'nonexistent' is not a git command" in str(e):
                 raise GitError("unknown git command")
             raise GitError(f"Git command failed: {str(e)}")
@@ -429,28 +456,66 @@ class GitRepository:
         """
         return self.safety_manager.restore_backup(backup_id)
 
-    async def create_fix_branch(self, branch_name: str) -> bool:
-        """
-        Create and switch to a new branch for fixes asynchronously.
-
-        This method relies on the BranchManager to create a fix branch, which
-        is a dedicated branch to apply and test fixes before merging them into
-        the main branch.
+    async def create_fix_branch(self, 
+                            branch_name: str,
+                            from_branch: Optional[str] = None) -> bool:
+        """Create and switch to a fix branch.
 
         Args:
-            branch_name (str): Name for the new fix branch.
+            branch_name: Name for new branch
+            from_branch: Optional base branch
 
         Returns:
-            bool: True if branch creation succeeded, False otherwise.
+            True if created successfully
 
         Raises:
-            GitError: If branch creation fails.
+            BranchNameError: If name is invalid
+            BranchCreationError: If creation fails
+            GitError: For other Git errors
         """
         try:
-            await self.branch_manager.create_fix_branch(branch_name)
-            return True
+            logger.debug(f"Creating fix branch: {branch_name}")
+            
+            # Validate branch name
+            if not await self.validate_branch_name(branch_name):
+                raise BranchNameError(f"Invalid branch name: {branch_name}")
+
+            # Check if branch exists
+            try:
+                exists = await self.repository.branch_exists(branch_name)
+                if exists:
+                    raise BranchCreationError(f"Branch {branch_name} already exists")
+            except GitError as e:
+                # Preserve GitError but provide context
+                raise GitError(f"Failed to check if branch exists: {str(e)}") from e
+                    
+            # Get base branch
+            from_branch = from_branch or self.repository.main_branch
+
+            # Create new branch from base
+            try:
+                result = await self.repository.run_command(
+                    ['checkout', '-b', branch_name, from_branch]
+                )
+                
+                if result.returncode != 0:
+                    raise BranchCreationError(
+                        f"Failed to create branch {branch_name}: {result.stderr}"
+                    )
+
+                logger.info(f"Successfully created branch: {branch_name}")
+                return True
+
+            except GitError as e:
+                # Preserve GitError but provide context
+                raise GitError(f"Failed to create branch {branch_name}: {str(e)}") from e
+
+        except (BranchNameError, BranchCreationError, GitError):
+            # Don't wrap these errors
+            raise
         except Exception as e:
-            raise GitError(f"Failed to create branch {branch_name}: {str(e)}")
+            # Wrap unexpected errors
+            raise GitError(f"Unexpected error creating branch {branch_name}: {str(e)}") from e
 
     async def cleanup_fix_branch(self, branch_name: str, force: bool = False) -> bool:
         """
