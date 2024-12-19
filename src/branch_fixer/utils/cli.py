@@ -1,4 +1,3 @@
-# branch_fixer/utils/cli.py
 import click
 import logging
 import asyncio
@@ -23,7 +22,85 @@ class CLI:
     
     def __init__(self):
         self.service = None
+        self.created_branches = set()  # Track branches we create
+        self._exit_requested = False
         
+    def setup_signal_handlers(self):
+        """Setup handlers for graceful exit"""
+        import signal
+        
+        def handle_exit(signum, frame):
+            print("\nReceived exit signal. Starting cleanup...")
+            self._exit_requested = True
+            # Let the main loop handle actual cleanup
+            
+        signal.signal(signal.SIGINT, handle_exit)
+        signal.signal(signal.SIGTERM, handle_exit)
+
+    async def cleanup(self):
+        """Cleanup resources before exit"""
+        if not self.service:
+            return
+            
+        print("\nCleaning up resources...")
+        errors = []
+        
+        # Cleanup branches
+        for branch in self.created_branches:
+            try:
+                print(f"Cleaning up branch: {branch}")
+                await self.service.git_repo.branch_manager.cleanup_fix_branch(
+                    branch, force=True
+                )
+            except Exception as e:
+                errors.append(f"Failed to cleanup branch {branch}: {str(e)}")
+                
+        # Report any errors
+        if errors:
+            print("\nEncountered errors during cleanup:")
+            for error in errors:
+                print(f"- {error}")
+        else:
+            print("Cleanup completed successfully")
+
+    async def run_fix_workflow(self, error: TestError, interactive: bool) -> bool:
+        try:
+            logger.info(f"Attempting to fix {error.test_function} in {error.test_file}")
+            
+            # Create fix branch
+            branch_name = f"fix-{error.test_file.stem}-{error.test_function}"
+            if not await self.service.git_repo.branch_manager.create_fix_branch(branch_name):
+                logger.error(f"Failed to create fix branch: {branch_name}")
+                return False
+                
+            # Track branch for cleanup
+            self.created_branches.add(branch_name)
+                
+            logger.info("Attempting to generate and apply fix...")
+            if await self.service.attempt_fix(error):
+                if interactive:
+                    if not click.confirm("Fix succeeded. Create PR?", default=True):
+                        logger.info("Skipping PR creation as per user request")
+                        return False
+                            
+                # Create PR
+                logger.info("Creating pull request...")
+                if await self.service.git_repo.create_pull_request(branch_name, error):
+                    logger.info("Created pull request successfully")
+                    return True
+                else:
+                    logger.error("Failed to create pull request")
+                    return False
+                
+            logger.warning("Fix attempt failed")
+            return False
+                
+        except Exception as e:
+            logger.error(f"Fix workflow failed: {str(e)}")
+            if DEBUG:
+                logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
+            return False
+
     def setup_components(self, api_key: str, max_retries: int, 
                         initial_temp: float, temp_increment: float) -> bool:
         """Initialize all required components."""
@@ -71,67 +148,58 @@ class CLI:
                 logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
             return False
 
-    # In cli.py's run_fix_workflow method
-    async def run_fix_workflow(self, error: TestError, interactive: bool) -> bool:
-        try:
-            logger.info(f"Attempting to fix {error.test_function} in {error.test_file}")
-            
-            # Create fix branch - Make this await properly
-            branch_name = f"fix-{error.test_file.stem}-{error.test_function}"
-            if not await self.service.git_repo.branch_manager.create_fix_branch(branch_name):
-                logger.error(f"Failed to create fix branch: {branch_name}")
-                return False
-                
-            logger.info("Attempting to generate and apply fix...")
-            if await self.service.attempt_fix(error):
-                if interactive:
-                    if not click.confirm("Fix succeeded. Create PR?", default=True):
-                        logger.info("Skipping PR creation as per user request")
-                        return False
-                            
-                # Create PR
-                logger.info("Creating pull request...")
-                if await self.service.git_repo.create_pull_request(branch_name, error):
-                    logger.info("Created pull request successfully")
-                    return True
-                else:
-                    logger.error("Failed to create pull request")
-                    return False
-                
-            logger.warning("Fix attempt failed")
-            return False
-                
-        except Exception as e:
-            logger.error(f"Fix workflow failed: {str(e)}")
-            if DEBUG:
-                logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
-            return False
-
     def process_errors(self, errors: List[TestError], interactive: bool) -> int:
         """Process all found errors."""
         success_count = 0
         
-        logger.info(f"\nStarting fix attempts for {len(errors)} failed tests")
-        for i, error in enumerate(errors, 1):
-            logger.info(f"\nProcessing error {i}/{len(errors)}:")
-            logger.info(f"Test: {error.test_function}")
-            logger.info(f"Error: {error.error_details.error_type}: {error.error_details.message}")
+        try:
+            self.setup_signal_handlers()
+            
+            logger.info(f"\nStarting fix attempts for {len(errors)} failed tests")
+            for i, error in enumerate(errors, 1):
+                if self._exit_requested:
+                    logger.info("Exit requested, stopping fix attempts")
+                    break
+                    
+                logger.info(f"\nProcessing error {i}/{len(errors)}:")
+                logger.info(f"Test: {error.test_function}")
+                logger.info(f"Error: {error.error_details.error_type}: {error.error_details.message}")
 
-            if interactive:
-                if not click.confirm(f"\nAttempt to fix {error.test_function}?", default=True):
-                    logger.info("Skipping fix attempt as per user request")
-                    continue
+                if interactive:
+                    choices = ['y', 'n', 'q']
+                    while True:
+                        choice = input(f"\nAttempt to fix {error.test_function}? [Y/n/q]: ").lower() or 'y'
+                        if choice in choices:
+                            break
+                        print(f"Please enter one of: {', '.join(choices)}")
+                    
+                    if choice == 'q':
+                        logger.info("Exiting as requested")
+                        break
+                    elif choice == 'n':
+                        logger.info("Skipping fix attempt as per user request")
+                        continue
 
-            if asyncio.get_event_loop().run_until_complete(self.run_fix_workflow(error, interactive)):
-                success_count += 1
-                logger.info(f"Successfully fixed {error.test_function}")
-            else:
-                logger.warning(f"Failed to fix {error.test_function}")
+                # Track branch for cleanup
+                branch_name = f"fix-{error.test_file.stem}-{error.test_function}"
+                self.created_branches.add(branch_name)
 
-        logger.info(f"\nFix attempts completed:")
-        logger.info(f"- Total errors: {len(errors)}")
-        logger.info(f"- Successfully fixed: {success_count}")
-        logger.info(f"- Failed to fix: {len(errors) - success_count}")
+                if asyncio.get_event_loop().run_until_complete(
+                    self.run_fix_workflow(error, interactive)
+                ):
+                    success_count += 1
+                    logger.info(f"Successfully fixed {error.test_function}")
+                else:
+                    logger.warning(f"Failed to fix {error.test_function}")
+
+            logger.info(f"\nFix attempts completed:")
+            logger.info(f"- Total errors processed: {i}/{len(errors)}")
+            logger.info(f"- Successfully fixed: {success_count}")
+            logger.info(f"- Failed to fix: {i - success_count}")
+            
+        finally:
+            # Always run cleanup
+            asyncio.get_event_loop().run_until_complete(self.cleanup())
         
         return 0 if success_count == len(errors) else 1
 
@@ -150,16 +218,18 @@ class CLI:
               help='Specific test file or directory to fix')
 @click.option('--test-function',
               help='Specific test function to fix')
+@click.option('--cleanup-only', is_flag=True,
+              help='Just cleanup any leftover fix branches and exit')
 def run_cli(api_key: str,
             max_retries: int,
             initial_temp: float,
             temp_increment: float,
             non_interactive: bool,
             test_path: Optional[Path],
-            test_function: Optional[str]) -> int:
+            test_function: Optional[str],
+            cleanup_only: bool) -> int:
     """pytest-fixer: Automatically fix failing pytest tests."""
     
-    # Setup logging
     setup_logging()
     logger.info("Starting pytest-fixer...")
     logger.info(f"Working directory: {Path.cwd()}")
@@ -167,6 +237,10 @@ def run_cli(api_key: str,
     cli = CLI()
     if not cli.setup_components(api_key, max_retries, initial_temp, temp_increment):
         return 1
+
+    if cleanup_only:
+        asyncio.get_event_loop().run_until_complete(cli.cleanup())
+        return 0
 
     # Initial test run
     logger.info("Running pytest to find failures...")
