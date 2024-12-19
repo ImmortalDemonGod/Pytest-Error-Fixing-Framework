@@ -3,9 +3,21 @@ from enum import Enum
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, List, Any, Optional
+from dataclasses import dataclass
 from pathlib import Path
 
 @dataclass
+class ErrorDetails:
+    """詳細なエラー情報を保持するクラス"""
+    error_type: str
+    message: Optional[str] = None
+
+@dataclass
+class TestError:
+    """テストエラーの詳細を保持するクラス"""
+    test_function: str
+    test_file: str
+    error_details: ErrorDetails
 class CommandResult:
     """Represents the result of a Git command execution"""
     returncode: int
