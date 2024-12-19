@@ -1,5 +1,20 @@
 # branch_fixer/services/git/branch_manager.py
 from dataclasses import dataclass
+from typing import List
+
+@dataclass
+class BranchStatus:
+    """
+    Represents the status of a Git branch.
+    
+    Attributes:
+        current_branch (str): The name of the current branch.
+        has_changes (bool): Indicates if there are uncommitted changes.
+        changes (List[str]): List of changed files.
+    """
+    current_branch: str
+    has_changes: bool
+    changes: List[str]
 from typing import List, Optional, Set, TYPE_CHECKING
 from pathlib import Path
 from branch_fixer.git.exceptions import (
@@ -55,7 +70,21 @@ class BranchManager:
         # Branch name validation patterns
         self.name_pattern = r'^[a-zA-Z0-9\-_\/]+$'
         self.forbidden_names: Set[str] = {'master', 'main', 'develop'}
-        raise NotImplementedError()
+        def get_status(self) -> BranchStatus:
+            """
+            Retrieve the current status of the Git repository.
+        
+            Returns:
+                BranchStatus: The current branch status.
+            """
+            current_branch = self.repository.get_current_branch()
+            has_changes = self.repository.is_clean()
+            changes = [item.a_path for item in self.repository.repo.index.diff(None)]
+            return BranchStatus(
+                current_branch=current_branch,
+                has_changes=not has_changes,
+                changes=changes
+            )
 
     async def create_fix_branch(self, 
                               branch_name: str,
