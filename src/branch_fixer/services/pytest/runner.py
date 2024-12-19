@@ -1,5 +1,6 @@
 # branch_fixer/services/pytest/runner.py
 
+import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -296,7 +297,7 @@ class PytestRunner:
             logger.debug(f"Captured markers for {report.nodeid}: {result.markers}")
     
 
-    def verify_fix(self, test_file: Path, test_function: str) -> bool:
+    async def verify_fix(self, test_file: Path, test_function: str) -> bool:
         """
         Verify if a specific test passes after a fix.
 
@@ -311,30 +312,38 @@ class PytestRunner:
         Returns:
             bool: True if the test passes (exit code == 0), False otherwise.
         """
-        import subprocess
-        from _pytest.main import ExitCode
-
         logger.info(f"Verifying fix for {test_file}::{test_function}")
 
-        # Build pytest arguments
-        args = ["pytest", "--override-ini=addopts=", "-p", "no:terminal"]
-        if self.working_dir:
-            args.extend(["--rootdir", str(self.working_dir)])
-        args.append(f"{str(test_file)}::{test_function}")
+        try:
+            # Create subprocess command
+            args = ["pytest", "--override-ini=addopts=", "-p", "no:terminal"]
+            if self.working_dir:
+                args.extend(["--rootdir", str(self.working_dir)])
+            args.append(f"{str(test_file)}::{test_function}")
 
-        # Run pytest in a subprocess to avoid shared state
-        result = subprocess.run(args, capture_output=True, text=True)
-        exit_code = ExitCode(result.returncode)
+            # Run pytest asynchronously
+            process = await asyncio.create_subprocess_exec(
+                *args,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
 
-        # The test is considered fixed if pytest exits with code 0 (no failures)
-        is_fixed = (exit_code == ExitCode.OK)
+            # Wait for completion
+            stdout, stderr = await process.communicate()
+            
+            # The test is considered fixed if pytest exits with code 0 (no failures)
+            is_fixed = (process.returncode == 0)
 
-        logger.info(f"Verification result for {test_file}::{test_function}: {is_fixed}")
-        if not is_fixed:
-            logger.debug(f"Subprocess stdout:\n{result.stdout}")
-            logger.debug(f"Subprocess stderr:\n{result.stderr}")
+            logger.info(f"Verification result for {test_file}::{test_function}: {is_fixed}")
+            if not is_fixed:
+                logger.debug(f"Verification stdout:\n{stdout.decode()}")
+                logger.debug(f"Verification stderr:\n{stderr.decode()}")
 
-        return is_fixed
+            return is_fixed
+
+        except Exception as e:
+            logger.error(f"Verification failed: {str(e)}")
+            return False
     
     def format_report(self, session: SessionResult) -> str:
         """
