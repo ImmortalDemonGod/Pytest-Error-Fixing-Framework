@@ -26,7 +26,12 @@ class PRManager:
         Raises:
             ValueError: If max_files <= 0
         """
-        raise NotImplementedError()
+        if max_files <= 0:
+            raise ValueError("max_files must be positive")
+        self.repository = repository
+        self.max_files = max_files
+        self.required_checks = required_checks or []
+        self.prs = {}
 
     async def create_pr(self,
                        title: str,
@@ -51,7 +56,17 @@ class PRManager:
             PRCreationError: If creation fails or validation fails
             PRValidationError: If branch doesn't exist or has conflicts
         """
-        raise NotImplementedError()
+        pr_id = len(self.prs) + 1
+        details = PRDetails(
+            id=pr_id,
+            title=title,
+            description=description,
+            branch_name=branch_name, 
+            status=PRStatus.OPEN,
+            created_at=datetime.now()
+        )
+        self.prs[pr_id] = details
+        return details
 
     async def update_pr(self,
                        pr_id: int,
@@ -73,7 +88,9 @@ class PRManager:
             PRUpdateError: If PR not found or update fails
             PRValidationError: If new state is invalid
         """
-        raise NotImplementedError()
+        if pr_id not in self.prs:
+            raise PRUpdateError("PR not found")
+        return self.prs[pr_id]
 
     async def validate_pr(self, pr_id: int) -> bool:
         """Validate PR is in consistent state
@@ -88,7 +105,7 @@ class PRManager:
             PRValidationError: If validation fails
             KeyError: If PR not found
         """
-        raise NotImplementedError()
+        return pr_id in self.prs
 
     async def get_pr_history(self, pr_id: int) -> List[PRChange]:
         """Get complete change history for PR
