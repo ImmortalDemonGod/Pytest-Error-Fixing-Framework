@@ -1,6 +1,5 @@
 # branch_fixer/services/git/branch_manager.py
 from dataclasses import dataclass
-from typing import List
 from typing import List, Optional, Set, TYPE_CHECKING
 import re
 from pathlib import Path
@@ -75,7 +74,7 @@ class BranchManager:
                 raise BranchNameError(f"Invalid branch name: {branch_name}")
 
             # Check if branch exists
-            if self.repository.branch_exists(branch_name):
+            if await self.repository.branch_exists(branch_name):
                 raise BranchCreationError(f"Branch {branch_name} already exists")
                 
             # Get base branch
@@ -116,12 +115,12 @@ class BranchManager:
         """
         try:
             # Check if branch exists
-            if not self.repository.branch_exists(branch_name):
+            if not await self.repository.branch_exists(branch_name):
                 # Branch doesn't exist - consider cleanup successful
                 return True
 
             # Switch back to main branch if needed
-            current_branch = self.repository.get_current_branch()
+            current_branch = await self.repository.get_current_branch()
             if current_branch == branch_name:
                 await self.repository.run_command(['checkout', self.repository.main_branch])
 
