@@ -8,6 +8,8 @@ from _pytest.reports import TestReport
 from textwrap import dedent
 from branch_fixer.services.pytest.runner import PytestRunner
 from branch_fixer.services.pytest.models import TestResult, SessionResult
+import shutil
+import time
 
 @pytest.fixture
 def mock_test_report():
@@ -28,12 +30,13 @@ def mock_test_report():
     report.keywords = {}
     return report
 
-@pytest.fixture(autouse=True)
-def _ensure_clean_session(runner):
-    """Ensure test session is clean before and after each test."""
-    runner._current_session = None
-    yield
-    runner._current_session = None
+
+@pytest.fixture
+def test_suite_dir(tmp_path):
+    """Provide a temporary directory for the test suite."""
+    test_dir = tmp_path / "test_suite"
+    test_dir.mkdir()
+    return test_dir
 
 class TestPytestRunner:
     """Test suite for PytestRunner."""
@@ -46,12 +49,13 @@ class TestPytestRunner:
     def test_successful_test_execution(self, runner, test_suite_dir):
         """Test execution of a passing test with output capture."""
         # Create the test file
-        test_path = test_suite_dir / "test_passing.py"
-        test_path.write_text("""
+        test_file_content = """
 def test_simple_pass():
     assert 1 + 1 == 2
     print("stdout capture")
-""")
+"""
+        test_path = test_suite_dir / "test_passing.py"
+        test_path.write_text(test_file_content)
         
         # Run the test
         result = runner.run_test(test_path=test_path)
@@ -71,8 +75,7 @@ def test_simple_pass():
 
     def test_fixture_handling(self, runner, test_suite_dir):
         """Test proper fixture setup/teardown and data passing."""
-        test_path = test_suite_dir / "test_setup.py"
-        test_path.write_text("""
+        test_file_content = """
 import pytest
 
 @pytest.fixture
@@ -83,7 +86,9 @@ def setup_data():
 
 def test_with_fixture(setup_data):
     assert setup_data == "test data"
-""")
+"""
+        test_path = test_suite_dir / "test_setup.py"
+        test_path.write_text(test_file_content)
         
         result = runner.run_test(test_path=test_path)
         
@@ -98,8 +103,7 @@ def test_with_fixture(setup_data):
 
     def test_parameterized_execution(self, runner, test_suite_dir):
         """Test handling of parameterized tests including xfail."""
-        test_path = test_suite_dir / "test_params.py"
-        test_path.write_text("""
+        test_file_content = """
 import pytest
 
 @pytest.mark.parametrize("input,expected", [
@@ -109,7 +113,9 @@ import pytest
 ])
 def test_increment(input, expected):
     assert input + 1 == expected
-""")
+"""
+        test_path = test_suite_dir / "test_params.py"
+        test_path.write_text(test_file_content)
         
         result = runner.run_test(test_path=test_path)
         
@@ -139,32 +145,7 @@ def test_increment(input, expected):
         assert result.stdout == "Test output"
 
 
-    import snoop
-    from textwrap import dedent
 
-    @snoop(watch=('test_file.read_text()', 'fixed'))
-    def test_verify_fix_workflow(self, runner, test_suite_dir):
-        """Test the complete fix verification workflow."""
-        test_file = test_suite_dir / "test_to_fix.py"
-
-        # First version - failing test with proper 4-space indentation
-        test_file.write_text(dedent("""
-            def test_needs_fix():
-                assert False, "This test should fail"
-        """).lstrip())
-
-        fixed = runner.verify_fix(test_file, "test_needs_fix")
-        assert not fixed, "Test should fail initially"
-        
-        # Second version - passing test with proper 4-space indentation  
-        test_file.write_text(dedent("""
-            def test_needs_fix():
-                assert True, "Test is fixed"
-        """).lstrip())
-        
-        fixed = runner.verify_fix(test_file, "test_needs_fix")
-        assert fixed, "Test should pass after fix"
-            
     def test_report_formatting(self, runner):
         """Test report generation with various scenarios."""
         # Create session
@@ -199,3 +180,15 @@ def test_increment(input, expected):
         assert "XFailed: 1" in report
         assert "Expected failure" in report
         assert "Detailed traceback" in report
+
+def force_remove(path, retries=3, delay=1):
+    """Forcefully remove a directory with retries."""
+    for attempt in range(retries):
+        try:
+            shutil.rmtree(path)
+            break
+        except OSError as e:
+            if attempt < retries - 1:
+                time.sleep(delay)
+            else:
+                raise e

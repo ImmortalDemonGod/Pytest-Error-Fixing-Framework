@@ -4,21 +4,48 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass, field
-import snoop
-
+import shutil
+import time
 import pytest
 from _pytest.reports import TestReport, CollectReport
 from _pytest.config import Config
 from _pytest.main import ExitCode, Session
 from _pytest.nodes import Item
 from branch_fixer.services.pytest.models import SessionResult, TestResult
+import snoop
 
 logger = logging.getLogger(__name__)
 
 
+def force_remove(path: Path, retries: int = 3, delay: int = 1):
+    """
+    Forcefully remove a directory with retries.
+
+    Args:
+        path (Path): The path to the directory to remove.
+        retries (int): Number of retry attempts.
+        delay (int): Delay in seconds between retries.
+
+    Raises:
+        OSError: If the directory cannot be removed after retries.
+    """
+    for attempt in range(retries):
+        try:
+            shutil.rmtree(path)
+            logger.debug(f"Successfully removed directory: {path}")
+            break
+        except OSError as e:
+            logger.warning(f"Attempt {attempt + 1} failed to remove {path}: {e}")
+            if attempt < retries - 1:
+                time.sleep(delay)
+            else:
+                logger.error(f"Failed to remove directory after {retries} attempts: {path}")
+                raise e
+
+
 class PytestPlugin:
     """Plugin to capture pytest execution information."""
-    
+
     def __init__(self, runner):
         self.runner = runner
 
@@ -43,7 +70,7 @@ class PytestPlugin:
         self.runner.pytest_collectreport(report)
 
     @pytest.hookimpl
-    def pytest_warning_recorded(self, warning_message):
+    def pytest_warning_recorded(self, warning_message, when, nodeid, location):
         """Handle warnings during test execution."""
         print(f"Warning recorded: {warning_message}")
         self.runner.pytest_warning_recorded(warning_message)
@@ -53,10 +80,18 @@ class PytestRunner:
     """Pytest execution manager with comprehensive result capture."""
 
     def __init__(self, working_dir: Optional[Path] = None):
-        self.working_dir = working_dir
-        self._current_session: Optional[SessionResult] = None
+        """
+        Initialize the PytestRunner.
 
-    @snoop(depth=2)
+        Args:
+            working_dir (Optional[Path]): The working directory for pytest runs.
+        """
+        self.working_dir = working_dir or Path.cwd()
+        self._current_session: Optional[SessionResult] = None
+        self.temp_dirs: List[Path] = []  # Track temporary directories for cleanup
+        logger.debug(f"PytestRunner initialized with working directory: {self.working_dir}")
+
+    @snoop.snoop(depth=2)
     def run_test(self,
                 test_path: Optional[Path] = None,
                 test_function: Optional[str] = None) -> SessionResult:
@@ -64,13 +99,14 @@ class PytestRunner:
         Run pytest with detailed result capture.
 
         Args:
-            test_path (Optional[Path]): The path to the test file or directory
-            test_function (Optional[str]): The specific test function to run
+            test_path (Optional[Path]): The path to the test file or directory.
+            test_function (Optional[str]): The specific test function to run.
 
         Returns:
-            SessionResult: The result of the test session
+            SessionResult: The result of the test session.
         """
         start_time = datetime.now()
+        logger.info(f"Starting test run at {start_time}")
 
         # Initialize session
         self._current_session = SessionResult(
@@ -83,13 +119,13 @@ class PytestRunner:
         try:
             # Register plugin
             plugin = PytestPlugin(self)
-            
+
             # Create base arguments
             args = []
 
             # Override addopts from ini file to prevent conflicts
             args.append("--override-ini=addopts=")
-            
+
             # Set reporting options
             args.extend(["-p", "no:terminal"])
 
@@ -105,6 +141,7 @@ class PytestRunner:
                     args.append(str(test_path))
 
             # Run pytest
+            logger.debug(f"Running pytest with arguments: {args}")
             exit_code = pytest.main(args, plugins=[plugin])
 
             # Update session info
@@ -112,6 +149,9 @@ class PytestRunner:
             self._current_session.end_time = end_time
             self._current_session.duration = (end_time - start_time).total_seconds()
             self._current_session.exit_code = ExitCode(exit_code)
+
+            logger.info(f"Test run completed at {end_time} with exit code {exit_code}")
+            logger.debug(f"Session duration: {self._current_session.duration}s")
 
             # Update result counts
             for result in self._current_session.test_results.values():
@@ -129,13 +169,17 @@ class PytestRunner:
             self._current_session.total_collected = len(self._current_session.test_results)
             self._current_session.errors = len(self._current_session.collection_errors)
 
+            logger.debug(f"Session results: {self._current_session}")
+
             return self._current_session
         finally:
             # Clean up
             session = self._current_session
             self._current_session = None
+            logger.debug("Cleaning up after test run.")
+            self.cleanup()
             return session
-        
+
     def pytest_runtest_logreport(self, report: TestReport):
         """
         Hook to capture comprehensive test information during test execution.
@@ -146,6 +190,7 @@ class PytestRunner:
             report (TestReport): The report object containing test execution details.
         """
         if not self._current_session:
+            logger.warning("No active session to log test report.")
             return
 
         result = self._current_session.test_results.get(report.nodeid)
@@ -156,6 +201,7 @@ class PytestRunner:
                 test_function=report.function.__name__ if hasattr(report, 'function') else None
             )
             self._current_session.test_results[report.nodeid] = result
+            logger.debug(f"Created TestResult for {report.nodeid}")
 
         # Update phase results
         if report.when == 'setup':
@@ -168,10 +214,13 @@ class PytestRunner:
         # Capture outputs
         if report.capstdout:
             result.stdout = report.capstdout
+            logger.debug(f"Captured stdout for {report.nodeid}: {report.capstdout}")
         if report.capstderr:
             result.stderr = report.capstderr
+            logger.debug(f"Captured stderr for {report.nodeid}: {report.capstderr}")
         if hasattr(report, 'caplog'):
             result.log_output = report.caplog
+            logger.debug(f"Captured log output for {report.nodeid}: {report.caplog}")
 
         # Capture error information
         if report.longrepr:
@@ -179,26 +228,29 @@ class PytestRunner:
             crash = getattr(report.longrepr, 'reprcrash', None)
             if crash:
                 result.error_message = str(crash)
+                logger.debug(f"Captured error message for {report.nodeid}: {result.error_message}")
 
         # Update execution info
         result.duration = report.duration
+        logger.debug(f"Captured duration for {report.nodeid}: {result.duration}s")
 
         # Update outcome flags based on all phases
-        # A test is only considered passed if all phases pass
         result.passed = (
             result.setup_outcome == 'passed' and
             (result.call_outcome == 'passed' or result.call_outcome == 'skipped') and
             result.teardown_outcome == 'passed'
         )
-        
+
         # Handle xfail cases properly
         if hasattr(report, 'wasxfail'):
             if report.skipped:
                 result.xfailed = True
                 result.passed = False
+                logger.debug(f"Test {report.nodeid} was expected to fail and did fail.")
             elif report.passed:
                 result.xpassed = True
                 result.passed = True
+                logger.debug(f"Test {report.nodeid} was expected to fail but passed.")
 
         # A test is considered failed if any phase fails
         result.failed = any(
@@ -213,10 +265,11 @@ class PytestRunner:
                 name for name, marker in report.keywords.items()
                 if isinstance(marker, pytest.Mark)
             ]
-    
+            logger.debug(f"Captured markers for {report.nodeid}: {result.markers}")
+
     def verify_fix(self,
-                        test_file: Path,
-                        test_function: str) -> bool:
+                   test_file: Path,
+                   test_function: str) -> bool:
         """
         Verify if a specific test passes after a fix.
 
@@ -229,16 +282,19 @@ class PytestRunner:
         Returns:
             bool: True if the test passes, False otherwise.
         """
+        logger.info(f"Verifying fix for {test_file}::{test_function}")
         session = self.run_test(test_file, test_function)
         # A test is verified as fixed only if:
         # 1. We collected exactly the number of tests we expected
         # 2. All collected tests passed
         # 3. No tests failed
-        return (
+        is_fixed = (
             session.total_collected > 0 and
             session.passed == session.total_collected and
             session.failed == 0
         )
+        logger.info(f"Verification result for {test_file}::{test_function}: {is_fixed}")
+        return is_fixed
 
     def format_report(self, session: SessionResult) -> str:
         """
@@ -288,8 +344,9 @@ class PytestRunner:
                     ""
                 ])
 
-        return "\n".join(lines)
-     
+        report = "\n".join(lines)
+        logger.debug("Formatted test report generated.")
+        return report
 
     def pytest_collectreport(self, report: CollectReport):
         """
@@ -301,10 +358,13 @@ class PytestRunner:
             report (CollectReport): The report object containing collection details.
         """
         if not self._current_session:
+            logger.warning("No active session to log collect report.")
             return
 
         if report.outcome == 'failed':
-            self._current_session.collection_errors.append(str(report.longrepr))
+            error_message = str(report.longrepr)
+            self._current_session.collection_errors.append(error_message)
+            logger.error(f"Collection failed: {error_message}")
 
     def pytest_warning_recorded(self, warning_message: Warning):
         """
@@ -317,5 +377,23 @@ class PytestRunner:
         """
         if self._current_session:
             self._current_session.warnings.append(str(warning_message))
-    
+            logger.warning(f"Warning recorded during test execution: {warning_message}")
 
+    def cleanup(self):
+        """
+        Clean up temporary directories and resources.
+
+        This method removes all tracked temporary directories to ensure no residual files are left.
+        """
+        logger.info("Starting cleanup of temporary directories.")
+        for temp_dir in self.temp_dirs:
+            if temp_dir.exists():
+                try:
+                    force_remove(temp_dir)
+                    logger.debug(f"Cleaned up temporary directory: {temp_dir}")
+                except OSError as e:
+                    logger.error(f"Failed to remove temporary directory {temp_dir}: {e}")
+        self.temp_dirs.clear()
+        logger.info("Cleanup completed.")
+
+    # Additional methods or enhancements can be added below as needed.
