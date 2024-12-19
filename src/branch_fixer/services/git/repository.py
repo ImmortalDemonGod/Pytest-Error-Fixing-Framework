@@ -16,25 +16,32 @@ class GitRepository:
     """
     
     def __init__(self, root: Optional[Path] = None):
-        """
-        Initialize the GitRepository instance by locating the Git root and determining the main branch.
-
-        Args:
-            root (Optional[Path]): The path to the repository root. If None, the current working directory is used.
-
-        Raises:
-            NotAGitRepositoryError: If the specified directory is not a Git repository.
-            GitError: If an error occurs while determining the main branch.
-        """
-        self.root = self._find_git_root(root)
-        self.repo = Repo(self.root)  # Add this line to store the Repo instance
-        self.main_branch = self._get_main_branch()
+        """Initialize a GitRepository instance.
         
-        # Initialize managers
-        self.pr_manager = PRManager(self)
-        from branch_fixer.services.git.branch_manager import BranchManager
-        self.branch_manager = BranchManager(self)
-        self.safety_manager = SafetyManager(self)
+        Args:
+            root: Path to repository root. Uses current directory if None.
+            
+        Raises:
+            NotAGitRepositoryError: If directory is not a git repository
+            GitError: If git operations fail
+        """
+        try:
+            self.root = self._find_git_root(root or Path.cwd())
+            self.repo = Repo(self.root)
+            self.main_branch = self._get_main_branch()
+            
+            # Initialize managers
+            self.pr_manager = PRManager(self)
+            from branch_fixer.services.git.branch_manager import BranchManager
+            self.branch_manager = BranchManager(self)
+            self.safety_manager = SafetyManager(self)
+            
+        except (InvalidGitRepositoryError, NoSuchPathError) as e:
+            raise NotAGitRepositoryError(f"Not a git repository: {root}") from e
+        except GitCommandError as e:
+            raise GitError(f"Git initialization failed: {e.stderr}") from e
+        except Exception as e:
+            raise GitError(f"Repository initialization failed: {str(e)}") from e
 
     def _find_git_root(self, root: Optional[Path]) -> Path:
         """
