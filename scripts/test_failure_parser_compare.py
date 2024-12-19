@@ -5,8 +5,8 @@ import re
 
 def test_compare_parsers():
     """Compare original working parser with new implementation"""
-    from branch_fixer.pytest.error_parser.failure_parser import FailureParser
-    from branch_fixer.pytest.error_info import ErrorInfo
+    from branch_fixer.services.pytest.error_parser.failure_parser import FailureParser
+    from branch_fixer.services.pytest.error_info import ErrorInfo
 
     @snoop
     def debug_parsing():
@@ -18,7 +18,7 @@ self = <test_failure_parser.TestFailureParser testMethod=test_extract_traceback>
 
     def setUp(self):
         \"\"\"Set up common test data\"\"\"
->       from branch_fixer.pytest.error_parser.failure_parser import FailureParser
+>       from branch_fixer.services.pytest.error_parser.failure_parser import FailureParser
 E       ImportError: cannot import name 'FailureParser' from 'branch_fixer.pytest.error_parser.failure_parser'
 
 tests/pytest/error_parser/test_failure_parser.py:10: ImportError"""
