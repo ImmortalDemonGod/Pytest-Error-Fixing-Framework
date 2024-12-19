@@ -106,27 +106,6 @@ class BranchManager:
         """
         raise NotImplementedError()
 
-    async def merge_fix_branch(self,
-                             branch_name: str,
-                             target_branch: Optional[str] = None,
-                             squash: bool = True) -> bool:
-        """
-        Merge a fix branch.
-
-        Args:
-            branch_name: Branch to merge
-            target_branch: Branch to merge into
-            squash: Whether to squash commits
-
-        Returns:
-            True if merged successfully
-
-        Raises:
-            MergeConflictError: If conflicts occur
-            GitError: For other merge failures
-        """
-        raise NotImplementedError()
-
     async def cleanup_fix_branch(self,
                             branch_name: str,
                             force: bool = False) -> bool:
@@ -140,9 +119,14 @@ class BranchManager:
             True if cleaned up successfully
 
         Raises:
-            GitError: If cleanup fails
+            GitError: If cleanup fails with unexpected error
         """
         try:
+            # Check if branch exists
+            if not self.repository.branch_exists(branch_name):
+                # Branch doesn't exist - consider cleanup successful
+                return True
+
             # Switch back to main branch if needed
             current_branch = self.repository.get_current_branch()
             if current_branch == branch_name:
@@ -155,7 +139,10 @@ class BranchManager:
             return result.returncode == 0
 
         except Exception as e:
-            raise GitError(f"Failed to clean up branch {branch_name}: {str(e)}")
+            # Only raise if it's not just a "branch not found" error
+            if "not found" not in str(e).lower():
+                raise GitError(f"Failed to clean up branch {branch_name}: {str(e)}")
+            return True
 
     async def get_branch_metadata(self, branch_name: str) -> BranchMetadata:
         """
