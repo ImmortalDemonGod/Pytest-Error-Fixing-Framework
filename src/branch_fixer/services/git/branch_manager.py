@@ -70,27 +70,27 @@ class BranchManager:
         # Branch name validation patterns
         self.name_pattern = r'^[a-zA-Z0-9\-_\/]+$'
         self.forbidden_names: Set[str] = {'master', 'main', 'develop'}
-        def get_status(self) -> BranchStatus:
-            """
-            Retrieve the current status of the Git repository.
-        
-            Returns:
-                BranchStatus: The current branch status.
-            """
-            current_branch = self.repository.get_current_branch()
-            has_changes = self.repository.is_clean()
-            changes = [item.a_path for item in self.repository.repo.index.diff(None)]
-            return BranchStatus(
-                current_branch=current_branch,
-                has_changes=not has_changes,
-                changes=changes
-            )
+    
+    def get_status(self) -> BranchStatus:
+        """
+        Retrieve the current status of the Git repository.
+    
+        Returns:
+            BranchStatus: The current branch status.
+        """
+        current_branch = self.repository.get_current_branch()
+        has_changes = self.repository.is_clean()
+        changes = [item.a_path for item in self.repository.repo.index.diff(None)]
+        return BranchStatus(
+            current_branch=current_branch,
+            has_changes=not has_changes,
+            changes=changes
+        )
 
     async def create_fix_branch(self, 
-                              branch_name: str,
-                              from_branch: Optional[str] = None) -> bool:
-        """
-        Create and switch to a fix branch.
+                            branch_name: str,
+                            from_branch: Optional[str] = None) -> bool:
+        """Create and switch to a fix branch.
 
         Args:
             branch_name: Name for new branch
@@ -104,8 +104,36 @@ class BranchManager:
             BranchCreationError: If creation fails
             GitError: For other Git errors
         """
-        raise NotImplementedError()
+        try:
+            # Validate branch name
+            if not await self.validate_branch_name(branch_name):
+                raise BranchNameError(f"Invalid branch name: {branch_name}")
 
+            # Check if branch exists
+            if self.repository.branch_exists(branch_name):
+                raise BranchCreationError(f"Branch {branch_name} already exists")
+                
+            # Get base branch
+            from_branch = from_branch or self.repository.main_branch
+
+            # Create new branch from base
+            result = await self.repository.run_command(
+                ['checkout', '-b', branch_name, from_branch]
+            )
+            
+            if result.returncode != 0:
+                raise BranchCreationError(
+                    f"Failed to create branch {branch_name}: {result.stderr}"
+                )
+
+            return True
+
+        except Exception as e:
+            # Convert to appropriate error type
+            if isinstance(e, (BranchNameError, BranchCreationError)):
+                raise e
+            raise GitError(f"Failed to create branch {branch_name}: {str(e)}")
+        
     async def cleanup_fix_branch(self,
                             branch_name: str,
                             force: bool = False) -> bool:
