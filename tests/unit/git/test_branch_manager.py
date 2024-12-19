@@ -4,8 +4,8 @@ import pytest
 from unittest.mock import Mock, MagicMock
 from dataclasses import dataclass
 
-from src.branch_fixer.services.git.branch_manager import BranchManager, BranchStatus
-from src.branch_fixer.services.git.exceptions import GitError, BranchCreationError, MergeConflictError
+from branch_fixer.services.git.branch_manager import BranchManager, BranchStatus
+from branch_fixer.services.git.exceptions import GitError, BranchCreationError, MergeConflictError
 
 
 class TestBranchStatus:
