@@ -4,12 +4,13 @@ import logging
 import asyncio
 from pathlib import Path
 from typing import Optional, List
+import traceback
 
 from branch_fixer.services.ai.manager import AIManager
 from branch_fixer.services.pytest.runner import TestRunner
 from branch_fixer.services.code.change_applier import ChangeApplier
 from branch_fixer.core.models import TestError
-from branch_fixer.services.pytest.parsers.collection_parser import parse_pytest_errors
+from branch_fixer.services.pytest.error_processor import parse_pytest_errors
 from branch_fixer.services.git.repository import GitRepository
 from branch_fixer.config.settings import DEBUG, SECRET_KEY
 from branch_fixer.config.logging_config import setup_logging
@@ -39,11 +40,19 @@ class CLI:
             bool indicating successful setup
         """
         try:
+            logger.info("Initializing AI Manager...")
             ai_manager = AIManager(api_key)
+            
+            logger.info("Initializing Test Runner...")
             test_runner = TestRunner()
+            
+            logger.info("Initializing Change Applier...")
             change_applier = ChangeApplier()
+            
+            logger.info("Initializing Git Repository...")
             git_repo = GitRepository()
             
+            logger.info("Creating Fix Service...")
             self.service = FixService(
                 ai_manager=ai_manager,
                 test_runner=test_runner,
@@ -54,14 +63,24 @@ class CLI:
                 temp_increment=temp_increment
             )
             
-            # Validate workspace
-            asyncio.run(self.service.validator.validate_workspace(Path.cwd()))
-            asyncio.run(self.service.validator.check_dependencies())
+            # Run workspace validation
+            logger.info("Validating workspace...")
+            asyncio.get_event_loop().run_until_complete(
+                self.service.validator.validate_workspace(Path.cwd())
+            )
             
+            logger.info("Checking dependencies...")
+            asyncio.get_event_loop().run_until_complete(
+                self.service.validator.check_dependencies()
+            )
+            
+            logger.info("Component initialization completed successfully")
             return True
             
         except Exception as e:
-            logger.error(f"Failed to initialize components: {e}")
+            logger.error(f"Component initialization failed: {str(e)}")
+            if DEBUG:
+                logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
             return False
 
     async def run_fix_workflow(self, error: TestError, interactive: bool) -> bool:
@@ -103,7 +122,7 @@ class CLI:
                 if not click.confirm(f"\nAttempt to fix {error.test_function}?", default=True):
                     continue
 
-            if asyncio.run(self.run_fix_workflow(error, interactive)):
+            if asyncio.get_event_loop().run_until_complete(self.run_fix_workflow(error, interactive)):
                 success_count += 1
                 logger.info(f"Successfully fixed {error.test_function}")
             else:
@@ -137,11 +156,10 @@ def run_cli(api_key: str,
     """pytest-fixer: Automatically fix failing pytest tests."""
     
     # Setup logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(levelname)s - %(message)s"
-    )
-
+    setup_logging()
+    logger.info("Starting pytest-fixer...")
+    logger.debug(f"Working directory: {Path.cwd()}")
+    
     cli = CLI()
     if not cli.setup_components(api_key, max_retries, initial_temp, temp_increment):
         return 1
@@ -165,3 +183,6 @@ def run_cli(api_key: str,
 
     logger.info(f"Found {len(errors)} test failures to fix")
     return cli.process_errors(errors, not non_interactive)
+
+if __name__ == "__main__":
+    run_cli()
