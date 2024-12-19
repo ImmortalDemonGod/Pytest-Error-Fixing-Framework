@@ -69,3 +69,6 @@ class SessionResult:
     test_results: Dict[str, TestResult] = field(default_factory=dict)
     collection_errors: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
+
+    # Outputs
+    output: str = ""  # Added output parameter to store test session output
