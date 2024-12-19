@@ -8,7 +8,7 @@ from branch_fixer.orchestration.fix_service import FixService
 from branch_fixer.services.ai.manager import AIManager
 from branch_fixer.services.pytest.runner import PytestRunner as TestRunner
 from branch_fixer.services.code.change_applier import ChangeApplier
-from branch_fixer.git.repository import GitRepository
+from branch_fixer.services.git.repository import GitRepository
 
 @pytest.fixture
 def error_factory():
