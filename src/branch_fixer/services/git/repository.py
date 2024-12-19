@@ -3,6 +3,7 @@ import asyncio
 import subprocess
 from pathlib import Path
 from git import Repo, GitCommandError
+from typing import List, Optional
 from branch_fixer.services.git.exceptions import (
     GitError, 
     NotAGitRepositoryError, 
