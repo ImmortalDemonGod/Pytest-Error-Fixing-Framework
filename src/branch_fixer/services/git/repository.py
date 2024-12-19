@@ -2,7 +2,6 @@
 import asyncio
 import subprocess
 from pathlib import Path
-from typing import List, Optional
 from git import Repo, GitCommandError
 from branch_fixer.services.git.exceptions import (
     GitError, 
@@ -165,7 +164,7 @@ class GitRepository:
             logger.debug(f"Command stderr: {stderr_decoded}")
 
             # Wrap output in a CommandResult, returning code even if error occurred
-            return CommandResult(
+            result = CommandResult(
                 returncode=process.returncode,
                 stdout=stdout_decoded,
                 stderr=stderr_decoded,

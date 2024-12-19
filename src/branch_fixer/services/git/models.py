@@ -2,7 +2,7 @@
 from enum import Enum
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, List
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -18,12 +18,27 @@ class TestError:
     test_function: str
     test_file: str
     error_details: ErrorDetails
+@dataclass
 class CommandResult:
     """Represents the result of a Git command execution"""
     returncode: int
     stdout: str
     stderr: str
-    command: str
+    command: List[str]  # Changed from str to List[str]
+
+    @property
+    def failed(self) -> bool:
+        """Check if command failed"""
+        return self.returncode != 0
+
+    @property
+    def success(self) -> bool:
+        """Check if command succeeded"""
+        return self.returncode == 0
+
+    def __str__(self) -> str:
+        """String representation of command result"""
+        return f"CommandResult(command='{' '.join(self.command)}', returncode={self.returncode})"
     
 class PRStatus(Enum):
     """Pull request status states"""
