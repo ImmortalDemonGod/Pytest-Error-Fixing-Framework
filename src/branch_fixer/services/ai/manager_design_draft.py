@@ -165,25 +165,30 @@ class FileManager:
             raise BackupError(f"Failed to create backup: {str(e)}")
             
     async def apply_changes(self, changes: List[FileChange]) -> None:
-        """Apply changes atomically with backup/rollback"""
-        backups = {}
+        """Apply changes atomically with pre-validation, backup, and partial rollback"""
+        successful_changes = []
+        
+        # Add pre-validation
+        for change in changes:
+            if not await self._validate_file_operation(change):
+                raise ValidationError(f"Invalid change for file: {change.file_path}")
         
         try:
-            # Create backups
             for change in changes:
                 backup_path = await self.create_backup(change.file_path)
-                backups[change.file_path] = backup_path
                 change.backup_path = backup_path
-            
-            # Apply changes in reverse line order
-            for change in changes:
                 await self._apply_file_changes(change)
+                successful_changes.append(change)
                 
         except Exception as e:
-            # Rollback on error
-            await self._rollback_changes(backups)
-            raise FileOperationError(f"Failed to apply changes: {str(e)}")
-            
+            # Rollback only successful changes
+            if successful_changes:
+                await self._rollback_changes({
+                    change.file_path: change.backup_path 
+                    for change in successful_changes
+                })
+            raise FileOperationError(f"Partial failure applying changes: {str(e)}")
+                
     async def _apply_file_changes(self, change: FileChange) -> None:
         """Apply changes to a single file"""
         file_path = self.base_dir / change.file_path
@@ -218,6 +223,20 @@ class FileManager:
                 shutil.copy2(backup_path, self.base_dir / file_path)
             except Exception as e:
                 raise BackupError(f"Failed to rollback {file_path}: {str(e)}")
+                
+    async def _validate_file_operation(self, change: FileChange) -> bool:
+        """
+        Placeholder for file operation validation logic.
+        Implement necessary validation checks here.
+        """
+        # Example validation: Ensure that for EDIT and REMOVE, the file exists
+        file_exists = (self.base_dir / change.file_path).exists()
+        if not file_exists and any(
+            c.action in {ChangeAction.EDIT, ChangeAction.REMOVE} for c in change.changes
+        ):
+            return False
+        return True
+
 
 # Test Infrastructure
 class TestRunner:
@@ -313,6 +332,7 @@ class TestRunner:
                 flaky_tests.add(test)
                 
         return flaky_tests
+
 
 class AIManager:
     """
@@ -428,8 +448,61 @@ class AIManager:
         if not style_result["passes_pep8"]:
             return False
             
-        # TODO: Add test running and regression checking
-        return True
+        # Add test execution
+        test_suite = TestSuite(
+            test_files=[error.file_path],
+            test_names=[error.test_name],
+            timeout=60
+        )
+        
+        results, flaky_tests = await self.run_tests(test_suite)
+        
+        # Check if original failing test now passes
+        if not all(r.passed for r in results if r.test_name == error.test_name):
+            return False
+            
+        # Check for regressions in other tests
+        regression_suite = TestSuite(
+            test_files=self._get_affected_test_files(changes),
+            timeout=60
+        )
+        regression_results, _ = await self.run_tests(regression_suite)
+        
+        return all(r.passed for r in regression_results)
+
+    def _get_affected_test_files(self, changes: CodeChanges) -> List[str]:
+        """
+        Determine which test files are affected by the given code changes.
+        Implement logic to map code changes to relevant test files.
+        """
+        # Placeholder implementation
+        # In a real scenario, this might analyze dependencies or use a test mapping
+        return [change.file_path for change in changes.file_changes]
+
+    async def _adapt_strategy(
+        self,
+        error: TestError,
+        previous_attempt: Optional[FixAttempt],
+        current_temp: float
+    ) -> float:
+        """Adapt strategy based on previous attempt"""
+        if not previous_attempt:
+            return self.base_temperature
+            
+        # If syntax/style failed, small temperature bump
+        if any('syntax' in err or 'style' in err 
+               for err in previous_attempt.validation_errors):
+            return current_temp + 0.1
+            
+        # If tests failed, larger temperature change
+        if any('test' in err for err in previous_attempt.validation_errors):
+            return current_temp + 0.2
+            
+        # If completion error, try different strategy
+        if previous_attempt.validation_errors and isinstance(previous_attempt.validation_errors[0], CompletionError):
+            return self.base_temperature * 1.5
+
+        return current_temp  # No change if none of the above conditions met
 
     async def _attempt_fix(
         self,
@@ -467,7 +540,7 @@ class AIManager:
         """
         Generate a fix for the given test error.
         
-        Makes multiple attempts with increasing temperature if needed.
+        Makes multiple attempts with adaptive temperature scaling if needed.
         Tracks all attempts and maintains state.
         
         Args:
@@ -479,11 +552,16 @@ class AIManager:
         attempt = 0
         
         while attempt < self.max_attempts:
-            current_temp = temperature * (1 + attempt * 0.2)
-            
             try:
+                # Get temperature based on previous attempt
+                temperature = await self._adapt_strategy(
+                    error,
+                    self.state.fix_attempts[-1] if self.state.fix_attempts else None,
+                    temperature
+                )
+                
                 # Generate fix
-                fix = await self._attempt_fix(error, current_temp, intent)
+                fix = await self._attempt_fix(error, temperature, intent)
                 
                 # Validate fix
                 is_valid = await self._validate_fix(fix, error)
@@ -494,7 +572,7 @@ class AIManager:
                         timestamp=datetime.now(),
                         error=error,
                         changes=fix,
-                        temperature=current_temp,
+                        temperature=temperature,
                         success=is_valid,
                     )
                 )
@@ -514,7 +592,7 @@ class AIManager:
                             explanation=str(e),
                             confidence_score=0.0,
                         ),
-                        temperature=current_temp,
+                        temperature=temperature,
                         success=False,
                         validation_errors=[str(e)],
                     )
@@ -529,7 +607,7 @@ class AIManager:
     async def verify_fix(self, changes: CodeChanges, error: TestError) -> bool:
         """Verify a generated fix meets all requirements"""
         return await self._validate_fix(changes, error)
-
+    
     async def apply_fix(self, changes: CodeChanges) -> None:
         """Apply a validated fix to the codebase"""
         try:
