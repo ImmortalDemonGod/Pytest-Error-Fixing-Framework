@@ -18,6 +18,7 @@ from branch_fixer.storage.recovery import RecoveryManager
 from branch_fixer.storage.session_store import SessionStore
 from pydantic import BaseModel, Field
 import asyncio
+import logging
 
 # Change Operation Types
 class ChangeAction(str, Enum):
@@ -395,8 +396,14 @@ class AIManager:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Cleanup resources when exiting context"""
-        if self.thread and self.thread.id:
-            await self.thread.delete()
+        try:
+            await self.recovery_manager.cleanup()
+            await self.session_store.cleanup()
+        except Exception as e:
+            logging.error(f"Cleanup error: {str(e)}")
+        finally:
+            if self.thread and self.thread.id:
+                await self.thread.delete()
 
     @marvin.fn
     def _analyze_error(self, error: TestError) -> Dict[str, Any]:
@@ -526,13 +533,10 @@ class AIManager:
     async def _handle_fix_attempt(self, error: TestError, attempt: int, fix: CodeChanges, changed_files: List[str]) -> bool:
         """Handle the fix attempt by managing Git operations"""
         branch_name = f"fix-{Path(error.file_path).stem}-{error.test_name}"
-        await self.git_repo.branch_manager.create_fix_branch(branch_name)
         
         try:
-            # Apply the fix
+            await self.git_repo.branch_manager.create_fix_branch(branch_name)
             await self.apply_fix(fix)
-            
-            # Create PR using PRManager
             await self.git_repo.pr_manager.create_pr(
                 title=f"Fix {error.test_name}",
                 description=f"Fixes {error.message}",
@@ -541,9 +545,10 @@ class AIManager:
             )
             return True
         except Exception as e:
-            # Cleanup on failure
             await self.git_repo.branch_manager.cleanup_fix_branch(branch_name)
-            raise AIManagerError(f"Failed to handle fix attempt: {str(e)}") from e
+            raise AIManagerError(
+                f"Failed to handle fix attempt {attempt} for {error.test_name} ({error.file_path}): {str(e)}"
+            ) from e
 
     async def generate_fix(
         self, 
@@ -566,6 +571,9 @@ class AIManager:
         session = await self.state_manager.create_session(error)
         
         try:
+            # Transition to INITIALIZING
+            await self.state_manager.transition_state(session, "INITIALIZING")
+            
             # Create recovery point
             recovery_point = await self.recovery_manager.create_checkpoint(
                 session, 
@@ -635,14 +643,20 @@ class AIManager:
                     # Try to recover
                     if not await self.recovery_manager.handle_failure(e, session, {}):
                         raise
-    
+
+            # Transition to FAILED after all attempts
+            await self.state_manager.transition_state(session, "FAILED")
+            raise AIManagerError(f"Failed to generate valid fix after {self.max_attempts} attempts")
+        
+        except Exception as e:
+            # Transition to FAILED on exception
+            await self.state_manager.transition_state(session, "FAILED")
+            raise
         finally:
             # Save session state
             await self.session_store.save_session(session)
     
-        raise AIManagerError(
-            f"Failed to generate valid fix after {self.max_attempts} attempts"
-        )
+
 
     async def verify_fix(self, changes: CodeChanges, error: TestError) -> bool:
         """Verify a generated fix meets all requirements"""
