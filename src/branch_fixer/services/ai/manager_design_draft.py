@@ -9,9 +9,15 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 import marvin
 from marvin.beta.assistants import Assistant, Thread
+from branch_fixer.services.pytest.error_processor import parse_pytest_errors
+from branch_fixer.services.git.branch_manager import BranchManager
+from branch_fixer.services.git.pr_manager import PRManager
+from branch_fixer.services.git.repository import GitRepository
+from branch_fixer.storage.state_manager import StateManager
+from branch_fixer.storage.recovery import RecoveryManager
+from branch_fixer.storage.session_store import SessionStore
 from pydantic import BaseModel, Field
 import asyncio
-
 
 # Change Operation Types
 class ChangeAction(str, Enum):
@@ -55,7 +61,6 @@ class TestErrorSeverity(str, Enum):
     MEDIUM = "medium"
     HIGH = "high"
 
-
 class TestError(BaseModel):
     """Structured representation of a test error"""
     message: str = Field(..., description="The error message")
@@ -65,14 +70,13 @@ class TestError(BaseModel):
     severity: TestErrorSeverity
     context: Dict[str, Any] = Field(default_factory=dict, description="Additional context")
 
-
 class CodeChanges(BaseModel):
     """Represents code changes to fix a test error.
     
     Handles both high-level code representation and specific line changes."""
     original_code: str = Field(..., description="Original failing code")
     modified_code: str = Field(..., description="Modified code that fixes the error")
-    file_changes: List[FileChange] = Field(default_factory=list, description="Specific line-level changes")
+    file_changes: Dict[str, List[Tuple[ChangeAction, int, str, Optional[int]]]] = Field(default_factory=dict, description="Specific line-level changes")
     explanation: str = Field(..., description="Explanation of the changes made")
     confidence_score: float = Field(
         ..., 
@@ -80,7 +84,6 @@ class CodeChanges(BaseModel):
         le=1.0,
         description="Confidence score for the fix"
     )
-
 
 class FixAttempt(BaseModel):
     """Record of an attempt to fix a test error"""
@@ -90,7 +93,6 @@ class FixAttempt(BaseModel):
     temperature: float
     success: bool = False
     validation_errors: List[str] = Field(default_factory=list)
-
 
 class ManagerState(BaseModel):
     """State tracking for AIManager"""
@@ -104,7 +106,6 @@ class ManagerState(BaseModel):
         if not self.fix_attempts:
             return 0.0
         return len([a for a in self.fix_attempts if a.success]) / len(self.fix_attempts)
-
 
 # Custom Exceptions
 class AIManagerError(Exception):
@@ -123,21 +124,17 @@ class BackupError(AIManagerError):
     """Error managing backups"""
     pass
 
-
 class PromptGenerationError(AIManagerError):
     """Error generating prompt from test error"""
     pass
-
 
 class CompletionError(AIManagerError):
     """Error getting completion from LLM"""
     pass
 
-
 class ValidationError(AIManagerError):
     """Error validating generated fix"""
     pass
-
 
 # Main Implementation
 # File Operations
@@ -237,8 +234,8 @@ class FileManager:
             return False
         return True
 
-
 # Test Infrastructure
+# TODO: Intergate into our existing system
 class TestRunner:
     """Manages test execution in isolated environment"""
     
@@ -334,6 +331,7 @@ class TestRunner:
         return flaky_tests
 
 
+
 class AIManager:
     """
     Manages AI interactions for generating and validating code fixes.
@@ -349,6 +347,10 @@ class AIManager:
     def __init__(
         self, 
         base_dir: str,
+        git_repo: GitRepository,
+        state_manager: StateManager,
+        recovery_manager: RecoveryManager,
+        session_store: SessionStore,
         api_key: Optional[str] = None,
         model: str = "gpt-4",
         base_temperature: float = 0.4,
@@ -365,6 +367,10 @@ class AIManager:
         # Initialize components
         self.file_manager = FileManager(base_dir)
         self.test_runner = TestRunner(base_dir)
+        self.git_repo = git_repo
+        self.state_manager = state_manager
+        self.recovery_manager = recovery_manager
+        self.session_store = session_store
         
         # Initialize assistant
         self.assistant = Assistant(
@@ -439,36 +445,22 @@ class AIManager:
         3. Run affected tests
         4. Check for regressions
         """
-        # Basic validation
-        if not await self._validate_syntax(changes.modified_code):
-            return False
-            
-        # Style check
-        style_result = await self._check_style(changes.modified_code)
-        if not style_result["passes_pep8"]:
-            return False
-            
-        # Add test execution
+        # Use PytestRunner instead of custom validation
         test_suite = TestSuite(
             test_files=[error.file_path],
             test_names=[error.test_name],
             timeout=60
         )
         
-        results, flaky_tests = await self.run_tests(test_suite)
+        # Use existing runner
+        results = await self.test_runner.run_tests(test_suite)
         
-        # Check if original failing test now passes
-        if not all(r.passed for r in results if r.test_name == error.test_name):
+        # Parse results using error_processor
+        if errors := parse_pytest_errors("\n".join([result.output for result in results])):
+            # Test still failing
             return False
             
-        # Check for regressions in other tests
-        regression_suite = TestSuite(
-            test_files=self._get_affected_test_files(changes),
-            timeout=60
-        )
-        regression_results, _ = await self.run_tests(regression_suite)
-        
-        return all(r.passed for r in regression_results)
+        return True
 
     def _get_affected_test_files(self, changes: CodeChanges) -> List[str]:
         """
@@ -477,7 +469,7 @@ class AIManager:
         """
         # Placeholder implementation
         # In a real scenario, this might analyze dependencies or use a test mapping
-        return [change.file_path for change in changes.file_changes]
+        return list(changes.file_changes.keys())
 
     async def _adapt_strategy(
         self,
@@ -531,6 +523,28 @@ class AIManager:
         except Exception as e:
             raise CompletionError(f"Error generating fix: {str(e)}") from e
 
+    async def _handle_fix_attempt(self, error: TestError, attempt: int, fix: CodeChanges, changed_files: List[str]) -> bool:
+        """Handle the fix attempt by managing Git operations"""
+        branch_name = f"fix-{Path(error.file_path).stem}-{error.test_name}"
+        await self.git_repo.branch_manager.create_fix_branch(branch_name)
+        
+        try:
+            # Apply the fix
+            await self.apply_fix(fix)
+            
+            # Create PR using PRManager
+            await self.git_repo.pr_manager.create_pr(
+                title=f"Fix {error.test_name}",
+                description=f"Fixes {error.message}",
+                branch_name=branch_name,
+                modified_files=changed_files
+            )
+            return True
+        except Exception as e:
+            # Cleanup on failure
+            await self.git_repo.branch_manager.cleanup_fix_branch(branch_name)
+            raise AIManagerError(f"Failed to handle fix attempt: {str(e)}") from e
+
     async def generate_fix(
         self, 
         error: TestError,
@@ -548,58 +562,84 @@ class AIManager:
             intent: Optional user intent to guide the fix
             temperature: Optional starting temperature (uses base_temperature if not provided)
         """
-        temperature = temperature or self.base_temperature
-        attempt = 0
+        # Create session state
+        session = await self.state_manager.create_session(error)
         
-        while attempt < self.max_attempts:
-            try:
-                # Get temperature based on previous attempt
-                temperature = await self._adapt_strategy(
-                    error,
-                    self.state.fix_attempts[-1] if self.state.fix_attempts else None,
-                    temperature
-                )
-                
-                # Generate fix
-                fix = await self._attempt_fix(error, temperature, intent)
-                
-                # Validate fix
-                is_valid = await self._validate_fix(fix, error)
-                
-                # Record attempt
-                self.state.fix_attempts.append(
-                    FixAttempt(
-                        timestamp=datetime.now(),
-                        error=error,
-                        changes=fix,
-                        temperature=temperature,
-                        success=is_valid,
+        try:
+            # Create recovery point
+            recovery_point = await self.recovery_manager.create_checkpoint(
+                session, 
+                metadata={"temperature": temperature or self.base_temperature}
+            )
+            
+            temperature = temperature or self.base_temperature
+            attempt = 0
+            
+            for attempt in range(self.max_attempts):
+                try:
+                    # Update session state
+                    await self.state_manager.transition_state(
+                        session, 
+                        "RUNNING"
                     )
-                )
-                
-                if is_valid:
-                    return fix
                     
-            except (CompletionError, ValidationError) as e:
-                # Record failed attempt
-                self.state.fix_attempts.append(
-                    FixAttempt(
-                        timestamp=datetime.now(),
-                        error=error,
-                        changes=CodeChanges(
-                            original_code=error.context.get("code", ""),
-                            modified_code="",
-                            explanation=str(e),
-                            confidence_score=0.0,
-                        ),
-                        temperature=temperature,
-                        success=False,
-                        validation_errors=[str(e)],
+                    # Adapt temperature based on previous attempt
+                    temperature = await self._adapt_strategy(
+                        error,
+                        self.state.fix_attempts[-1] if self.state.fix_attempts else None,
+                        temperature
                     )
-                )
-            
-            attempt += 1
-            
+                    
+                    # Generate fix
+                    fix = await self._attempt_fix(error, temperature, intent)
+                    
+                    # Validate fix
+                    is_valid = await self._validate_fix(fix, error)
+                    
+                    # Record attempt
+                    self.state.fix_attempts.append(
+                        FixAttempt(
+                            timestamp=datetime.now(),
+                            error=error,
+                            changes=fix,
+                            temperature=temperature,
+                            success=is_valid,
+                        )
+                    )
+                    
+                    if is_valid:
+                        # Handle Git operations
+                        changed_files = list(fix.file_changes.keys())
+                        await self._handle_fix_attempt(error, attempt, fix, changed_files)
+                        return fix
+                        
+                except (CompletionError, ValidationError) as e:
+                    # Record failed attempt
+                    self.state.fix_attempts.append(
+                        FixAttempt(
+                            timestamp=datetime.now(),
+                            error=error,
+                            changes=CodeChanges(
+                                original_code=error.context.get("code", ""),
+                                modified_code="",
+                                file_changes={},
+                                explanation=str(e),
+                                confidence_score=0.0,
+                            ),
+                            temperature=temperature,
+                            success=False,
+                            validation_errors=[str(e)],
+                        )
+                    )
+                    
+                    # Try to recover
+                    if not await self.recovery_manager.handle_failure(e, session, {}):
+                        raise
+    
+        finally:
+            # Save session state
+            await self.session_store.save_session(session)
+    
         raise AIManagerError(
             f"Failed to generate valid fix after {self.max_attempts} attempts"
         )
@@ -611,9 +651,25 @@ class AIManager:
     async def apply_fix(self, changes: CodeChanges) -> None:
         """Apply a validated fix to the codebase"""
         try:
-            await self.file_manager.apply_changes(changes.file_changes)
+            # Convert CodeChanges to FileChange format
+            file_changes = [
+                FileChange(
+                    file_path=file_path,
+                    changes=[
+                        LineChange(
+                            action=action,
+                            line_number=line_num,
+                            content=content,
+                            indent_level=indent
+                        ) for action, line_num, content, indent in changes.file_changes.get(file_path, [])
+                    ]
+                ) for file_path in changes.file_changes
+            ]
+            
+            # Use existing FileManager
+            await self.file_manager.apply_changes(file_changes)
         except (FileOperationError, BackupError) as e:
-            raise AIManagerError(f"Failed to apply fix: {str(e)}")
+            raise AIManagerError(f"Failed to apply fix: {str(e)}") from e
             
     async def run_tests(
         self,
