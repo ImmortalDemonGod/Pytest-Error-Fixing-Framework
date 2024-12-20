@@ -1,7 +1,6 @@
 abstract_singleton==1.0.1
 accelerate==0.22.0
 addict==2.4.0
-aider-chat==0.12.0
 aioconsole==0.6.2
 aiohttp==3.8.4
 aiosignal==1.3.1
@@ -30,7 +29,7 @@ blinker==1.6.2
 blis==0.7.10
 bokeh==3.4.1
 boto3==1.28.24
-botocore==1.31.24
+botocore
 build==1.2.1
 cachetools==5.3.3
 camel-converter==3.0.2
@@ -76,7 +75,6 @@ einops==0.6.1
 email_validator==2.1.1
 embeddings==0.0.8
 emoji==2.7.0
-en-core-web-sm==3.4.0
 et-xmlfile==1.1.0
 executing==1.2.0
 faiss-cpu==1.7.4
@@ -143,9 +141,6 @@ lancedb==0.8.0
 langchain==0.2.0
 langchain-chroma==0.1.1
 langchain-community==0.2.0
-langchain-core==0.2.0
-langchain-openai==0.1.6
-langchain-pinecone==0.1.0
 langchain-text-splitters==0.2.0
 langchainplus-sdk==0.0.20
 langcodes==3.3.0
@@ -165,12 +160,9 @@ matplotlib==3.7.2
 matplotlib-inline==0.1.6
 mccabe==0.7.0
 mdurl==0.1.2
-megatron-util==1.3.2
 meilisearch==0.21.0
-metagpt==0.1
 mmh3==4.1.0
 mock==5.1.0
-modelscope==1.8.1
 monotonic==1.6
 more-itertools==10.0.0
 mpmath==1.3.0
@@ -191,7 +183,7 @@ numpy==1.24.3
 oauthlib==3.2.2
 onnxruntime==1.18.0
 openai==0.27.6
-openapi-schema-pydantic==1.2.4
+openapi-schema-pydantic
 openpyxl==3.1.2
 opentelemetry-api==1.24.0
 opentelemetry-exporter-otlp-proto-common==1.24.0
@@ -240,8 +232,8 @@ pycairo==1.27.0
 pycodestyle==2.11.0
 pycparser==2.21
 pycryptodome==3.18.0
-pydantic==2.7.1
-pydantic_core==2.18.2
+pydantic
+pydantic_core
 pyflakes==3.1.0
 pygame==2.5.2
 Pygments==2.15.1
@@ -275,7 +267,7 @@ ratelimiter==1.2.0.post0
 readme-renderer==40.0
 realtime==1.0.0
 regex==2023.6.3
-requests==2.30.0
+requests
 requests-oauthlib==2.0.0
 requests-toolbelt==1.0.0
 retry==0.9.2
@@ -304,7 +296,7 @@ sniffio==1.3.0
 sortedcontainers==2.4.0
 sounddevice==0.4.6
 soundfile==0.12.1
-spacy==3.4.4
+spacy
 spacy-legacy==3.0.12
 spacy-loggers==1.0.4
 speedtest-cli==2.1.3
@@ -327,14 +319,14 @@ tensor-parallel==1.0.23
 termcolor==2.3.0
 thinc==8.1.11
 threadpoolctl==3.2.0
-tiktoken==0.4.0
+tiktoken
 tokenizers==0.15.2
 tomli==2.0.1
 tomlkit==0.12.1
 toolz==0.12.1
-torch==2.2.0.dev20230909
-torchaudio==2.2.0.dev20230909
-torchvision==0.17.0.dev20230909
+torch
+torchaudio
+torchvision
 tornado==6.2
 tqdm==4.65.0
 traitlets==5.9.0
