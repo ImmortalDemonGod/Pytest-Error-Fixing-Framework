@@ -62,6 +62,7 @@ class TestErrorSeverity(str, Enum):
     MEDIUM = "medium"
     HIGH = "high"
 
+# TODO: we seem to have muliple TestError classes branch_fixer/services/git/models.py and branch_fixer/core/models.py
 class TestError(BaseModel):
     """Structured representation of a test error"""
     message: str = Field(..., description="The error message")
