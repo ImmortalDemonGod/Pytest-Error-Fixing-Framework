@@ -1,24 +1,27 @@
 # src/branch_fixer/utils/run_cli.py
+
 import click
 import logging
-import asyncio
 from pathlib import Path
 from typing import Optional
-from branch_fixer.services.pytest.error_processor import parse_pytest_errors
 from branch_fixer.config.logging_config import setup_logging
 from branch_fixer.utils.cli import CLI
 
 logger = logging.getLogger(__name__)
 
+@click.group()
+def cli():
+    """Pytest Error Fixing Framework - Automatically fix failing pytest tests."""
+    pass
 
-@click.command()
+@cli.command()
 @click.option('--api-key', envvar='OPENAI_API_KEY', required=True,
               help='OpenAI API key (or set OPENAI_API_KEY env var)')
-@click.option('--max-retries', default=3,
-              help='Maximum fix attempts per error')
-@click.option('--initial-temp', default=0.4,
-              help='Initial AI temperature')
-@click.option('--temp-increment', default=0.1, 
+@click.option('--max-retries', default=3, show_default=True,
+              help='Maximum number of fix attempts per error')
+@click.option('--initial-temp', default=0.4, show_default=True,
+              help='Initial temperature for AI')
+@click.option('--temp-increment', default=0.1, show_default=True,
               help='Temperature increment between retries')
 @click.option('--non-interactive', is_flag=True,
               help='Run without user prompts')
@@ -27,30 +30,34 @@ logger = logging.getLogger(__name__)
 @click.option('--test-function',
               help='Specific test function to fix')
 @click.option('--cleanup-only', is_flag=True,
-              help='Just cleanup any leftover fix branches and exit')
-def run_cli(api_key: str,
-            max_retries: int,
-            initial_temp: float,
-            temp_increment: float,
-            non_interactive: bool,
-            test_path: Optional[Path],
-            test_function: Optional[str],
-            cleanup_only: bool) -> int:
-    """pytest-fixer: Automatically fix failing pytest tests."""
-    
+              help='Only cleanup leftover fix branches')
+def fix(api_key: str,
+        max_retries: int,
+        initial_temp: float,
+        temp_increment: float,
+        non_interactive: bool,
+        test_path: Optional[Path],
+        test_function: Optional[str],
+        cleanup_only: bool):
+    """Fix failing pytest tests automatically."""
+    from branch_fixer.services.pytest.error_processor import parse_pytest_errors
+
     setup_logging()
     logger.info("Starting pytest-fixer...")
     logger.info(f"Working directory: {Path.cwd()}")
-    
+
     cli = CLI()
+    
+    # Setup components
     if not cli.setup_components(api_key, max_retries, initial_temp, temp_increment):
         return 1
-
+        
+    # Run cleanup if requested
     if cleanup_only:
-        asyncio.get_event_loop().run_until_complete(cli.cleanup())
+        cli.cleanup()
         return 0
-
-    # Initial test run
+    
+    # Run pytest to find failures
     logger.info("Running pytest to find failures...")
     test_result = cli.service.test_runner.run_test(
         test_path=test_path,
@@ -61,7 +68,7 @@ def run_cli(api_key: str,
         logger.info("All tests passed - no fixes needed!")
         return 0
 
-    # Parse errors
+    # Parse errors using the function from error_processor
     logger.info("Analyzing test failures...")
     errors = parse_pytest_errors(test_result.output)
     if not errors:
@@ -71,5 +78,6 @@ def run_cli(api_key: str,
     logger.info(f"Found {len(errors)} test failures to fix")
     return cli.process_errors(errors, not non_interactive)
 
-if __name__ == "__main__":
-    run_cli()
+def main():
+    """Main entry point."""
+    return cli()
