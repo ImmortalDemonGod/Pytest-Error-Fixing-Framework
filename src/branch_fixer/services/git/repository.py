@@ -1,5 +1,4 @@
 # branch_fixer/services/git/repository.py
-import asyncio
 import subprocess
 from pathlib import Path
 from git import Repo, GitCommandError
@@ -24,8 +23,8 @@ class GitRepository:
     """
     Represents a Git repository and provides methods to interact with it.
 
-    This class manages asynchronous Git command executions and repository state checks.
-    It wraps Git operations in async calls, providing a consistent interface for checking
+    This class manages Git command executions and repository state checks.
+    It wraps Git operations in synchronous calls, providing a consistent interface for checking
     branch existence, current branch, repository cleanliness, and more.
 
     **Note:** Some methods remain unimplemented (`NotImplementedError`) and serve as
@@ -124,9 +123,9 @@ class GitRepository:
         except (OSError, IOError) as e:
             raise GitError(f"Unable to read HEAD file: {e}")
 
-    async def run_command(self, cmd: List[str]) -> CommandResult:
+    def run_command(self, cmd: List[str]) -> CommandResult:
         """
-        Execute a Git command asynchronously within the repository and return a `CommandResult`.
+        Execute a Git command synchronously within the repository and return a `CommandResult`.
 
         This is the core helper method that runs a given Git command in the repository's 
         root directory. It captures stdout, stderr, and the return code, packaging them 
@@ -150,65 +149,41 @@ class GitRepository:
             # Prepare full command
             full_cmd = ['git'] + cmd
             
-            # Create and run process
-            try:
-                process = await asyncio.create_subprocess_exec(
-                    *full_cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                    cwd=str(self.root)
-                )
+            # Run the command
+            process = subprocess.run(
+                full_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=str(self.root),
+                text=True
+            )
+            
+            # Create result object
+            result = CommandResult(
+                returncode=process.returncode,
+                stdout=process.stdout,
+                stderr=process.stderr,
+                command=full_cmd
+            )
+            
+            # Log result for debugging
+            logger.debug(f"Command result: {result}")
+            
+            if result.returncode != 0:
+                raise GitError(f"Git command failed with return code {result.returncode}: {result.stderr}")
                 
-                if process is None:
-                    raise GitError(f"Failed to create subprocess for command: {' '.join(full_cmd)}")
+            return result
                 
-                # Wait for completion and get output
-                stdout, stderr = await process.communicate()
-                
-                if stdout is None:
-                    stdout = b''
-                if stderr is None:
-                    stderr = b''
-                    
-                # Decode output
-                stdout_decoded = stdout.decode('utf-8') if stdout else ''
-                stderr_decoded = stderr.decode('utf-8') if stderr else ''
-                
-                # Create result object
-                result = CommandResult(
-                    returncode=process.returncode,
-                    stdout=stdout_decoded,
-                    stderr=stderr_decoded,
-                    command=full_cmd
-                )
-                
-                # Log result for debugging
-                logger.debug(f"Command result: {result}")
-                
-                if result.returncode != 0:
-                    raise GitError(f"Git command failed with return code {result.returncode}: {result.stderr}")
-                    
-                return result
-                
-            except asyncio.CancelledError:
-                if process:
-                    process.terminate()
-                raise GitError("Git command was cancelled")
-                
-            except Exception as e:
-                if process:
-                    process.terminate()
-                raise GitError(f"Git command execution failed: {str(e)}")
-                
-        except GitError:
-            # Don't wrap GitError - let it propagate
-            raise
+        except subprocess.CalledProcessError as e:
+            raise GitError(f"Git command failed: {e.stderr}") from e
+        except FileNotFoundError:
+            raise GitError("Git command not found")
         except Exception as e:
             if "'nonexistent' is not a git command" in str(e):
                 raise GitError("unknown git command")
-            raise GitError(f"Git command failed: {str(e)}")
+            raise GitError(f"Git command failed: {str(e)}") from e
 
-    async def is_clean(self) -> bool:
+    def is_clean(self) -> bool:
         """
         Determine if the working directory is clean (no uncommitted changes).
 
@@ -222,7 +197,7 @@ class GitRepository:
             GitError: If unable to determine the repository state (e.g., if `git status` fails).
         """
         try:
-            result = await self.run_command(['status', '--porcelain'])
+            result = self.run_command(['status', '--porcelain'])
             # If stdout is empty, repo is clean
             is_clean = not bool(result.stdout.strip())
             logger.debug(f"Repository clean: {is_clean}")
@@ -230,7 +205,7 @@ class GitRepository:
         except Exception as e:
             raise GitError(f"Unable to determine repository state: {str(e)}") from e
 
-    async def branch_exists(self, branch_name: str) -> bool:
+    def branch_exists(self, branch_name: str) -> bool:
         """
         Check if a branch with the specified name exists in the repository.
 
@@ -246,16 +221,16 @@ class GitRepository:
             GitError: If unable to determine branch existence (e.g., command failure).
         """
         try:
-            result = await self.run_command(['branch', '--list', branch_name])
+            result = self.run_command(['branch', '--list', branch_name])
             exists = bool(result.stdout.strip())
             logger.debug(f"Branch '{branch_name}' exists: {exists}")
             return exists
         except Exception as e:
             raise GitError(f"Unable to check branch existence: {str(e)}") from e
 
-    async def get_current_branch(self) -> str:
+    def get_current_branch(self) -> str:
         """
-        Retrieve the name of the currently checked-out branch asynchronously.
+        Retrieve the name of the currently checked-out branch.
 
         Uses `git branch --show-current` to determine which branch is currently active.
 
@@ -267,7 +242,7 @@ class GitRepository:
                       without handling or command failure).
         """
         try:
-            result = await self.run_command(['branch', '--show-current'])
+            result = self.run_command(['branch', '--show-current'])
             current_branch = result.stdout.strip()
             logger.debug(f"Current branch: {current_branch}")
             return current_branch
@@ -459,9 +434,9 @@ class GitRepository:
         """
         return self.safety_manager.restore_backup(backup_id)
 
-    async def create_fix_branch(self, 
-                            branch_name: str,
-                            from_branch: Optional[str] = None) -> bool:
+    def create_fix_branch(self, 
+                          branch_name: str,
+                          from_branch: Optional[str] = None) -> bool:
         """Create and switch to a fix branch.
 
         Args:
@@ -480,38 +455,29 @@ class GitRepository:
             logger.debug(f"Creating fix branch: {branch_name}")
             
             # Validate branch name
-            if not await self.validate_branch_name(branch_name):
+            if not self.validate_branch_name(branch_name):
                 raise BranchNameError(f"Invalid branch name: {branch_name}")
 
             # Check if branch exists
-            try:
-                exists = await self.repository.branch_exists(branch_name)
-                if exists:
-                    raise BranchCreationError(f"Branch {branch_name} already exists")
-            except GitError as e:
-                # Preserve GitError but provide context
-                raise GitError(f"Failed to check if branch exists: {str(e)}") from e
-                    
+            exists = self.branch_exists(branch_name)
+            if exists:
+                raise BranchCreationError(f"Branch {branch_name} already exists")
+                
             # Get base branch
-            from_branch = from_branch or self.repository.main_branch
+            from_branch = from_branch or self.main_branch
 
             # Create new branch from base
-            try:
-                result = await self.repository.run_command(
-                    ['checkout', '-b', branch_name, from_branch]
+            result = self.run_command(
+                ['checkout', '-b', branch_name, from_branch]
+            )
+            
+            if result.returncode != 0:
+                raise BranchCreationError(
+                    f"Failed to create branch {branch_name}: {result.stderr}"
                 )
-                
-                if result.returncode != 0:
-                    raise BranchCreationError(
-                        f"Failed to create branch {branch_name}: {result.stderr}"
-                    )
 
-                logger.info(f"Successfully created branch: {branch_name}")
-                return True
-
-            except GitError as e:
-                # Preserve GitError but provide context
-                raise GitError(f"Failed to create branch {branch_name}: {str(e)}") from e
+            logger.info(f"Successfully created branch: {branch_name}")
+            return True
 
         except (BranchNameError, BranchCreationError, GitError):
             # Don't wrap these errors
@@ -520,9 +486,9 @@ class GitRepository:
             # Wrap unexpected errors
             raise GitError(f"Unexpected error creating branch {branch_name}: {str(e)}") from e
 
-    async def cleanup_fix_branch(self, branch_name: str, force: bool = False) -> bool:
+    def cleanup_fix_branch(self, branch_name: str, force: bool = False) -> bool:
         """
-        Clean up a fix branch asynchronously.
+        Clean up a fix branch.
 
         Removes the specified fix branch if it exists, optionally forcing removal even if
         there are unmerged changes.
@@ -538,13 +504,13 @@ class GitRepository:
             GitError: If cleanup fails.
         """
         try:
-            return await self.branch_manager.cleanup_fix_branch(branch_name, force)
+            return self.branch_manager.cleanup_fix_branch(branch_name, force)
         except Exception as e:
             raise GitError(f"Failed to cleanup branch {branch_name}: {str(e)}")
 
-    async def create_pull_request(self, branch_name: str, error: TestError) -> bool:
+    def create_pull_request_sync(self, branch_name: str, error: TestError) -> bool:
         """
-        Create a pull request for a fix asynchronously.
+        Create a pull request for a fix synchronously.
 
         Generates a pull request title and description based on the given `TestError`,
         identifying which test function and what kind of error occurred. The PRManager
@@ -564,9 +530,9 @@ class GitRepository:
         try:
             title = f"Fix for {error.test_function}"
             description = f"Fixes {error.error_details.error_type} in {error.test_file}"
-            return await self.pr_manager.create_pr(title, description, branch_name, [error.test_file])
+            return self.pr_manager.create_pr(title, description, branch_name, [error.test_file])
         except Exception as e:
-            raise GitError(f"Failed to create pull request: {str(e)}")
+            raise GitError(f"Failed to create pull request: {str(e)}") from e
 
     def sync_with_remote(self) -> bool:
         """

@@ -27,7 +27,7 @@ class SessionStore:
         """
         raise NotImplementedError()
 
-    async def save_session(self, session: FixSession) -> None:
+    def save_session(self, session: FixSession) -> None:
         """
         Persist session state to storage.
         
@@ -40,7 +40,7 @@ class SessionStore:
         """
         raise NotImplementedError()
 
-    async def load_session(self, session_id: UUID) -> Optional[FixSession]:
+    def load_session(self, session_id: UUID) -> Optional[FixSession]:
         """
         Load session from branch_fixer.storage.
         
@@ -56,7 +56,7 @@ class SessionStore:
         """
         raise NotImplementedError()
 
-    async def list_sessions(self, 
+    def list_sessions(self, 
                           status: Optional[FixSessionState] = None) -> List[FixSession]:
         """
         List all stored sessions, optionally filtered by status.
@@ -72,7 +72,7 @@ class SessionStore:
         """
         raise NotImplementedError()
 
-    async def delete_session(self, session_id: UUID) -> bool:
+    def delete_session(self, session_id: UUID) -> bool:
         """
         Delete a session from branch_fixer.storage.
         

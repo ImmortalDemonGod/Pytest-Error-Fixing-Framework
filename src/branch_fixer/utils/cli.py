@@ -1,11 +1,11 @@
 # src/branch_fixer/utils/cli.py
 import click
 import logging
-import asyncio
 from pathlib import Path
 from typing import Optional, List
 import traceback
 import signal
+import time
 from branch_fixer.services.ai.manager import AIManager
 from branch_fixer.services.pytest.runner import TestRunner
 from branch_fixer.services.code.change_applier import ChangeApplier
@@ -35,7 +35,7 @@ class CLI:
         signal.signal(signal.SIGINT, handle_exit)
         signal.signal(signal.SIGTERM, handle_exit)
 
-    async def cleanup(self):
+    def cleanup(self):
         """Cleanup resources before exit"""
         if not self.service:
             return
@@ -47,7 +47,7 @@ class CLI:
         for branch in self.created_branches:
             try:
                 print(f"Cleaning up branch: {branch}")
-                await self.service.git_repo.branch_manager.cleanup_fix_branch(
+                self.service.git_repo.branch_manager.cleanup_fix_branch(
                     branch, force=True
                 )
             except Exception as e:
@@ -62,14 +62,14 @@ class CLI:
         else:
             print("Cleanup completed successfully")
 
-    async def run_fix_workflow(self, error: TestError, interactive: bool) -> bool:
+    def run_fix_workflow(self, error: TestError, interactive: bool) -> bool:
         """Run the fix workflow for a single error."""
         try:
             logger.info(f"Attempting to fix {error.test_function} in {error.test_file}")
             
             # Create fix branch
             branch_name = f"fix-{error.test_file.stem}-{error.test_function}"
-            if not await self.service.git_repo.branch_manager.create_fix_branch(branch_name):
+            if not self.service.git_repo.branch_manager.create_fix_branch(branch_name):
                 logger.error(f"Failed to create fix branch: {branch_name}")
                 return False
                 
@@ -77,7 +77,7 @@ class CLI:
             self.created_branches.add(branch_name)
                 
             logger.info("Attempting to generate and apply fix...")
-            if await self.service.attempt_fix(error):
+            if self.service.attempt_fix(error):
                 if interactive:
                     if not click.confirm("Fix succeeded. Create PR?", default=True):
                         logger.info("Skipping PR creation as per user request")
@@ -85,7 +85,7 @@ class CLI:
                             
                 # Create PR
                 logger.info("Creating pull request...")
-                if await self.service.git_repo.create_pull_request(branch_name, error):
+                if self.service.git_repo.create_pull_request(branch_name, error):
                     logger.info("Created pull request successfully")
                     return True
                 else:
@@ -130,14 +130,10 @@ class CLI:
             
             # Run workspace validation
             logger.info("Validating workspace...")
-            asyncio.get_event_loop().run_until_complete(
-                self.service.validator.validate_workspace(Path.cwd())
-            )
+            self.service.validator.validate_workspace(Path.cwd())
             
             logger.info("Checking dependencies...")
-            asyncio.get_event_loop().run_until_complete(
-                self.service.validator.check_dependencies()
-            )
+            self.service.validator.check_dependencies()
             
             logger.info("Component initialization completed successfully")
             return True
@@ -180,9 +176,7 @@ class CLI:
                         logger.info("Skipping fix attempt as per user request")
                         continue
 
-                if asyncio.get_event_loop().run_until_complete(
-                    self.run_fix_workflow(error, interactive)
-                ):
+                if self.run_fix_workflow(error, interactive):
                     success_count += 1
                     logger.info(f"Successfully fixed {error.test_function}")
                 else:
@@ -195,6 +189,6 @@ class CLI:
             
         finally:
             # Always run cleanup
-            asyncio.get_event_loop().run_until_complete(self.cleanup())
+            self.cleanup()
         
         return 0 if success_count == len(errors) else 1

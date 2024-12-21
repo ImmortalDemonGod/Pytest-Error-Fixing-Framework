@@ -33,7 +33,7 @@ class PRManager:
         self.required_checks = required_checks or []
         self.prs = {}
 
-    async def create_pr(self,
+    def create_pr(self,
                        title: str,
                        description: str,
                        branch_name: str,

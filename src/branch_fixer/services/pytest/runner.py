@@ -1,6 +1,5 @@
 # branch_fixer/services/pytest/runner.py
 
-import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -8,6 +7,7 @@ from typing import Optional, List
 from dataclasses import dataclass, field
 import shutil
 import time
+import subprocess
 import pytest
 from _pytest.reports import TestReport, CollectReport
 from _pytest.main import ExitCode
@@ -297,7 +297,7 @@ class PytestRunner:
             logger.debug(f"Captured markers for {report.nodeid}: {result.markers}")
     
 
-    async def verify_fix(self, test_file: Path, test_function: str) -> bool:
+    def verify_fix(self, test_file: Path, test_function: str) -> bool:
         """
         Verify if a specific test passes after a fix.
 
@@ -321,23 +321,20 @@ class PytestRunner:
                 args.extend(["--rootdir", str(self.working_dir)])
             args.append(f"{str(test_file)}::{test_function}")
 
-            # Run pytest asynchronously
-            process = await asyncio.create_subprocess_exec(
-                *args,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+            # Run pytest synchronously
+            result = subprocess.run(
+                args,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
             )
 
-            # Wait for completion
-            stdout, stderr = await process.communicate()
-            
             # The test is considered fixed if pytest exits with code 0 (no failures)
-            is_fixed = (process.returncode == 0)
+            is_fixed = (result.returncode == 0)
 
             logger.info(f"Verification result for {test_file}::{test_function}: {is_fixed}")
             if not is_fixed:
-                logger.debug(f"Verification stdout:\n{stdout.decode()}")
-                logger.debug(f"Verification stderr:\n{stderr.decode()}")
+                logger.debug(f"Verification stdout:\n{result.stdout.decode()}")
+                logger.debug(f"Verification stderr:\n{result.stderr.decode()}")
 
             return is_fixed
 

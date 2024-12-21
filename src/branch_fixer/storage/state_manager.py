@@ -77,7 +77,7 @@ class StateManager:
         """
         raise NotImplementedError()
 
-    async def transition_state(self,
+    def transition_state(self,
                              session: 'FixSession',
                              new_state: 'FixSessionState',
                              metadata: Optional[Dict] = None,
