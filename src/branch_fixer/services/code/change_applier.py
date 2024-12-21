@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional
 import shutil
 from logging import getLogger
+import snoop
 
 logger = getLogger(__name__)
 
@@ -19,6 +20,7 @@ class BackupError(ChangeApplicationError):
 class ChangeApplier:
     """Handles safe application of code changes with backup/restore"""
 
+    @snoop
     def apply_changes(self, test_file: Path, changes: CodeChanges) -> bool:
         """Apply code changes to file with automatic backup.
         
@@ -38,10 +40,19 @@ class ChangeApplier:
             # Create backup
             backup_path = self._backup_file(test_file)
             if not backup_path:
-                raise BackupError("Failed to create backup)")
+                raise BackupError(f"Failed to create backup for {test_file}")
+            
+            # Clean up code markers from AI response
+            modified_code = changes.modified_code
+            if modified_code.startswith('```python'):
+                modified_code = modified_code[8:]  # Remove ```python
+            if modified_code.endswith('```'):
+                modified_code = modified_code[:-3]  # Remove ```
+            modified_code = modified_code.strip()
             
             # Write changes 
-            test_file.write_text(changes.modified_code)
+            test_file.write_text(modified_code)
+            logger.debug(f"Wrote changes to {test_file}")
 
             # Verify changes are valid
             if not self._verify_changes(test_file):
