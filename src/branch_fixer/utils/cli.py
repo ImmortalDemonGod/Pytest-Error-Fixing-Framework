@@ -178,6 +178,7 @@ class CLI:
     def process_errors(self, errors: List[TestError], interactive: bool) -> int:
         """Process all found errors."""
         success_count = 0
+        total_processed = 0
         
         try:
             self.setup_signal_handlers()
@@ -199,9 +200,11 @@ class CLI:
                     choice = self._prompt_for_fix(i, total_errors, error)
                     
                     if choice == 'q':
+                        print("Quitting as per user request.")
                         logger.info("Exiting as requested")
                         break
                     elif choice == 'n':
+                        print("Skipping test as per user request.\n")
                         logger.info("Skipping fix attempt as per user request")
                         continue
 
@@ -212,16 +215,18 @@ class CLI:
                 else:
                     print(f"✗ Failed to fix {error.test_function}\n")
                     logger.warning(f"Failed to fix {error.test_function}")
+                
+                total_processed += 1
 
             # Summary
             fixed = success_count
-            failed = i - success_count
+            failed = total_processed - success_count
             print("\nFix attempts completed:")
-            print(f"- Total errors processed: {i}/{total_errors}")
+            print(f"- Total errors processed: {total_processed}/{total_errors}")
             print(f"- Successfully fixed: {fixed}")
             print(f"- Failed to fix: {failed}")
             logger.info(f"\nFix attempts completed:")
-            logger.info(f"- Total errors processed: {i}/{total_errors}")
+            logger.info(f"- Total errors processed: {total_processed}/{total_errors}")
             logger.info(f"- Successfully fixed: {fixed}")
             logger.info(f"- Failed to fix: {failed}")
             
