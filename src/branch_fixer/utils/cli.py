@@ -197,41 +197,43 @@ class CLI:
                 logger.info(f"Error: {error.error_details.error_type}: {error.error_details.message}")
 
                 if interactive:
-                    choice = self._prompt_for_fix(i, total_errors, error)
+                    choice = self._prompt_for_fix(error)
                     
                     if choice == 'q':
-                        print("Quitting as per user request.")
-                        logger.info("Exiting as requested")
+                        print("\nQuitting as requested...")
+                        logger.info("Quitting as requested")
                         break
                     elif choice == 'n':
-                        print("Skipping test as per user request.\n")
-                        logger.info("Skipping fix attempt as per user request")
+                        print("Skipping test\n")
+                        logger.info("Skipping test per user request")
+                        total_processed += 1
                         continue
-
-                if self.run_fix_workflow(error, interactive):
-                    success_count += 1
-                    print(f"✓ Successfully fixed {error.test_function}\n")
-                    logger.info(f"Successfully fixed {error.test_function}")
+                    elif choice == 'y':  # Only run workflow on explicit yes
+                        if self.run_fix_workflow(error, interactive):
+                            success_count += 1
+                            print(f"✓ Successfully fixed {error.test_function}\n")
+                        else:
+                            print(f"✗ Failed to fix {error.test_function}\n")
+                        total_processed += 1
                 else:
-                    print(f"✗ Failed to fix {error.test_function}\n")
-                    logger.warning(f"Failed to fix {error.test_function}")
-                
-                total_processed += 1
+                    # Non-interactive mode always attempts fixes
+                    if self.run_fix_workflow(error, interactive):
+                        success_count += 1
+                        print(f"✓ Successfully fixed {error.test_function}\n")
+                    else:
+                        print(f"✗ Failed to fix {error.test_function}\n")
+                    total_processed += 1
 
             # Summary
-            fixed = success_count
-            failed = total_processed - success_count
-            print("\nFix attempts completed:")
-            print(f"- Total errors processed: {total_processed}/{total_errors}")
-            print(f"- Successfully fixed: {fixed}")
-            print(f"- Failed to fix: {failed}")
-            logger.info(f"\nFix attempts completed:")
-            logger.info(f"- Total errors processed: {total_processed}/{total_errors}")
-            logger.info(f"- Successfully fixed: {fixed}")
-            logger.info(f"- Failed to fix: {failed}")
+            if total_processed > 0:
+                print("\nFix attempts completed:")
+                print(f"Tests processed: {total_processed}/{total_errors}")
+                print(f"Successfully fixed: {success_count}")
+                print(f"Failed/skipped: {total_processed - success_count}\n")
             
         finally:
-            # Always run cleanup
+            print("Starting cleanup...")
             self.cleanup()
+            print("Cleanup complete")
         
-        return 0 if success_count == total_errors else 1
+        return 0 if success_count == total_processed else 1
