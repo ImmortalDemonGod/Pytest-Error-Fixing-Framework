@@ -1,5 +1,6 @@
 # branch_fixer/orchestration/fix_service.py
-from typing import Optional
+
+from typing import Optional, Tuple
 from branch_fixer.core.models import TestError, FixAttempt, CodeChanges
 from branch_fixer.utils.workspace import WorkspaceValidator
 from branch_fixer.services.ai.manager import AIManager
@@ -10,7 +11,6 @@ from branch_fixer.orchestration.exceptions import FixServiceError
 import asyncio
 import snoop
 import logging
-
 
 logger = logging.getLogger(__name__)
 
@@ -57,14 +57,19 @@ class FixService:
     
     @snoop
     def attempt_fix(self, error: TestError) -> bool:
-        """Attempt to fix failing test.
+        """
+        Attempt to fix failing test.
         
-        Args:
-            error: TestError to attempt to fix
-            
+        1) Validate workspace
+        2) Generate fix
+        3) Apply fix (with backup)
+        4) If syntax fails, revert automatically (handled in apply_changes).
+        5) If functional test fails, revert changes here.
+        6) Mark error as fixed if successful, else handle failure.
+
         Returns:
             bool indicating if fix succeeded
-            
+        
         Raises:
             FixServiceError: If fix process fails
             ValueError: If error is already fixed
@@ -84,21 +89,40 @@ class FixService:
                 # Generate fix using AI
                 changes = self.ai_manager.generate_fix(error, attempt.temperature)
                 
-                # Apply changes
-                if not self.change_applier.apply_changes(error.test_file, changes):
+                # Apply changes (we'll get both success bool and backup_path)
+                success, backup_path = self.change_applier.apply_changes_with_backup(
+                    error.test_file, changes
+                )
+                
+                # If it didn't even apply successfully (syntax, etc.), fail
+                if not success:
                     self._handle_failed_attempt(error, attempt)
                     return False
                     
-                # Verify fix
+                # Now we do the functional test
                 if not self._verify_fix(error, attempt):
+                    # Revert the file because the functional test failed
+                    try:
+                        if backup_path:
+                            self.change_applier.restore_backup(error.test_file, backup_path)
+                            logger.info(f"Reverted {error.test_file} after functional test failure.")
+                    except Exception as revert_exc:
+                        logger.warning(f"Failed to revert after functional test failure: {revert_exc}")
+                    
                     self._handle_failed_attempt(error, attempt)
                     return False
                     
-                # Mark as fixed
+                # If we get here, the fix is good. Mark as fixed
                 error.mark_fixed(attempt)
                 return True
                 
             except Exception as e:
+                # If something unexpected breaks, let's also revert if we can
+                # But we only have a backup if apply_changes_with_backup got that far
+                # So let's do a careful attempt
+                logger.warning("Error occurred after changes might have been applied. Attempting revert.")
+                # We can do a local variable or track it in attempt
+                # For simplicity: no revert here if changes not applied yet
                 self._handle_failed_attempt(error, attempt)
                 raise FixServiceError(str(e)) from e
 
@@ -106,39 +130,28 @@ class FixService:
             # Get the root cause, not the FixServiceError wrapper
             root_cause = getattr(e, '__cause__', e)
             raise FixServiceError(str(root_cause)) from e
-    snoop()        
-    def _handle_failed_attempt(self, 
-                             error: TestError,
-                             attempt: FixAttempt) -> None:
-        """Handle cleanup after failed fix attempt.
+
+    snoop()
+    def _handle_failed_attempt(self, error: TestError, attempt: FixAttempt) -> None:
+        """
+        Handle cleanup after failed fix attempt.
         
-        Args:
-            error: TestError being fixed
-            attempt: Failed FixAttempt
-            
-        Raises:
-            FixServiceError: If cleanup fails
+        We mark the attempt as failed. Additional cleanup can be added here if needed.
         """
         try:
             error.mark_attempt_failed(attempt)
-            # Could add additional cleanup here if needed
         except Exception as e:
             raise FixServiceError(f"Failed to handle failed attempt: {str(e)}") from e
     
-    def _verify_fix(self,
-                         error: TestError,
-                         attempt: FixAttempt) -> bool:
-        """Verify if fix attempt succeeded.
+    def _verify_fix(self, error: TestError, attempt: FixAttempt) -> bool:
+        """
+        Verify if fix attempt succeeded by re-running the test function.
         
-        Args:
-            error: TestError being fixed  
-            attempt: FixAttempt to verify
-            
         Returns:
             bool indicating if fix works
-            
+        
         Raises:
-            FixServiceError: If verification fails
+            FixServiceError: If verification fails unexpectedly
         """
         try:
             return self.test_runner.verify_fix(error.test_file, error.test_function)

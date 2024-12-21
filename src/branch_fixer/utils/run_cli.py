@@ -9,10 +9,12 @@ from branch_fixer.utils.cli import CLI
 
 logger = logging.getLogger(__name__)
 
+
 @click.group()
 def cli():
     """Pytest Error Fixing Framework - Automatically fix failing pytest tests."""
     pass
+
 
 @cli.command()
 @click.option('--api-key', envvar='OPENAI_API_KEY', required=True,
@@ -25,6 +27,8 @@ def cli():
               help='Temperature increment between retries')
 @click.option('--non-interactive', is_flag=True,
               help='Run without user prompts')
+@click.option('--fast-run', is_flag=True,
+              help='Debug mode: only fix the first failing test and then exit')
 @click.option('--test-path', type=click.Path(exists=True, path_type=Path),
               help='Specific test file or directory to fix')
 @click.option('--test-function',
@@ -36,10 +40,14 @@ def fix(api_key: str,
         initial_temp: float,
         temp_increment: float,
         non_interactive: bool,
+        fast_run: bool,
         test_path: Optional[Path],
         test_function: Optional[str],
         cleanup_only: bool):
-    """Fix failing pytest tests automatically."""
+    """
+    Fix failing pytest tests automatically.
+    """
+
     from branch_fixer.services.pytest.error_processor import parse_pytest_errors
 
     setup_logging()
@@ -53,7 +61,7 @@ def fix(api_key: str,
         logger.error("Failed to setup components")
         return 1
         
-    # Run cleanup if requested
+    # If just doing cleanup
     if cleanup_only:
         cli.cleanup()
         return 0
@@ -65,12 +73,12 @@ def fix(api_key: str,
         test_function=test_function
     )
 
-    # Inform about test run results
+    # Summarize test results
     total_tests = test_result.total_collected
     failed_tests = test_result.failed
     logger.info(f"Test run complete. Total tests: {total_tests}, Failed tests: {failed_tests}")
 
-    # Always proceed, even if tests fail
+    # If no failures, nothing to fix
     if failed_tests == 0:
         logger.info("All tests passed - no fixes needed!")
         return 0
@@ -83,7 +91,22 @@ def fix(api_key: str,
         return 1
 
     logger.info(f"Found {len(errors)} test failures to fix")
+
+    # FAST-RUN logic: fix just the first failing test, then exit
+    if fast_run:
+        first_error = errors[0]
+        logger.info("FAST-RUN mode enabled. Only fixing the first failing test.")
+        success = cli.run_fix_workflow(first_error, interactive=False)
+        if success:
+            click.echo("FAST-RUN: Successfully fixed the first failing test!\n")
+            return 0
+        else:
+            click.echo("FAST-RUN: Failed to fix the first failing test.\n")
+            return 1
+
+    # Otherwise, proceed with normal multi-test flow
     return cli.process_errors(errors, not non_interactive)
+
 
 def main():
     """Main entry point."""

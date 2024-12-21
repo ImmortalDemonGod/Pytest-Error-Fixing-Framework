@@ -64,7 +64,7 @@ class CLI:
         else:
             print("Cleanup completed successfully")
 
-    @snoop
+
     def run_fix_workflow(self, error: TestError, interactive: bool) -> bool:
         """Run the fix workflow for a single error."""
         try:
@@ -155,26 +155,30 @@ class CLI:
             if DEBUG:
                 logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
             return False
+    
 
-    def _prompt_for_fix(self, test_number: int, total_tests: int, error: TestError) -> Optional[str]:
-        """Prompt the user with detailed information and options for fixing a test."""
-        print(f"\n[Test {test_number}/{total_tests}]")
-        print(f"Fix this failing test?")
-        print(f"  Test: {error.test_function}")
-        print(f"  Error: {error.error_details.error_type}: {error.error_details.message}\n")
-        print("Options:")
-        print("  [Y]es: Attempt to fix this test")
-        print("  [N]o:  Skip this test")
-        print("  [Q]uit: Stop fixing tests and exit\n")
+    def _prompt_for_fix(self, error: TestError) -> Optional[str]:
+        """
+        Prompt user on how to handle a failing test in interactive mode.
+        Uses click.prompt() to handle the user input.
+        """
+        click.echo("\nFix this failing test?")
+        click.echo(f"Test: {error.test_function}")
+        click.echo(f"Error: {error.error_details.error_type}: {error.error_details.message}")
+        click.echo("\nOptions:")
+        click.echo("[Y]es: Attempt to fix this test")
+        click.echo("[N]o:  Skip this test")
+        click.echo("[Q]uit: Stop fixing tests and exit")
+
+        choice = click.prompt(
+            "Your choice",
+            type=click.Choice(["y", "n", "q"], case_sensitive=False),
+            default="y",
+            show_default=True
+        )
         
-        choices = {'y': 'y', 'n': 'n', 'q': 'q'}
-        while True:
-            choice = (input("Your choice [Y/n/q]: ").strip() or 'y').lower()
-            if choice in choices:
-                return choice
-            print("Please enter one of: Y, n, Q")
-
-    @snoop
+        return choice.lower()
+    
     def process_errors(self, errors: List[TestError], interactive: bool) -> int:
         """Process all found errors."""
         success_count = 0
