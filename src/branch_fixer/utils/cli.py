@@ -15,6 +15,7 @@ from branch_fixer.services.git.repository import GitRepository
 from branch_fixer.config.settings import DEBUG
 from branch_fixer.config.logging_config import setup_logging
 from branch_fixer.orchestration.fix_service import FixService
+import snoop
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,7 @@ class CLI:
                 print(f"- {error}")
         else:
             print("Cleanup completed successfully")
-
+    @snoop
     def run_fix_workflow(self, error: TestError, interactive: bool) -> bool:
         """Run the fix workflow for a single error."""
         try:
