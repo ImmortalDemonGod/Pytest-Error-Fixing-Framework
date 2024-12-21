@@ -154,6 +154,24 @@ class CLI:
                 logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
             return False
 
+    def _prompt_for_fix(self, test_number: int, total_tests: int, error: TestError) -> Optional[str]:
+        """Prompt the user with detailed information and options for fixing a test."""
+        print(f"\n[Test {test_number}/{total_tests}]")
+        print(f"Fix this failing test?")
+        print(f"  Test: {error.test_function}")
+        print(f"  Error: {error.error_details.error_type}: {error.error_details.message}\n")
+        print("Options:")
+        print("  [Y]es: Attempt to fix this test")
+        print("  [N]o:  Skip this test")
+        print("  [Q]uit: Stop fixing tests and exit\n")
+        
+        choices = {'y': 'y', 'n': 'n', 'q': 'q'}
+        while True:
+            choice = input("Your choice [Y/n/q]: ").strip().lower() or 'y'
+            if choice in choices:
+                return choice
+            print("Please enter one of: Y, n, Q")
+
     def process_errors(self, errors: List[TestError], interactive: bool) -> int:
         """Process all found errors."""
         success_count = 0
@@ -161,23 +179,21 @@ class CLI:
         try:
             self.setup_signal_handlers()
             
-            logger.info(f"\nStarting fix attempts for {len(errors)} failed tests")
+            total_errors = len(errors)
+            print(f"Starting fix attempts for {total_errors} failed tests\n")
+            logger.info(f"\nStarting fix attempts for {total_errors} failed tests")
+            
             for i, error in enumerate(errors, 1):
                 if self._exit_requested:
                     logger.info("Exit requested, stopping fix attempts")
                     break
                     
-                logger.info(f"\nProcessing error {i}/{len(errors)}:")
+                logger.info(f"\nProcessing error {i}/{total_errors}:")
                 logger.info(f"Test: {error.test_function}")
                 logger.info(f"Error: {error.error_details.error_type}: {error.error_details.message}")
 
                 if interactive:
-                    choices = ['y', 'n', 'q']
-                    while True:
-                        choice = input(f"\nAttempt to fix {error.test_function}? [Y/n/q]: ").lower() or 'y'
-                        if choice in choices:
-                            break
-                        print(f"Please enter one of: {', '.join(choices)}")
+                    choice = self._prompt_for_fix(i, total_errors, error)
                     
                     if choice == 'q':
                         logger.info("Exiting as requested")
@@ -188,17 +204,26 @@ class CLI:
 
                 if self.run_fix_workflow(error, interactive):
                     success_count += 1
+                    print(f"✓ Successfully fixed {error.test_function}\n")
                     logger.info(f"Successfully fixed {error.test_function}")
                 else:
+                    print(f"✗ Failed to fix {error.test_function}\n")
                     logger.warning(f"Failed to fix {error.test_function}")
 
+            # Summary
+            fixed = success_count
+            failed = i - success_count
+            print("\nFix attempts completed:")
+            print(f"- Total errors processed: {i}/{total_errors}")
+            print(f"- Successfully fixed: {fixed}")
+            print(f"- Failed to fix: {failed}")
             logger.info(f"\nFix attempts completed:")
-            logger.info(f"- Total errors processed: {i}/{len(errors)}")
-            logger.info(f"- Successfully fixed: {success_count}")
-            logger.info(f"- Failed to fix: {i - success_count}")
+            logger.info(f"- Total errors processed: {i}/{total_errors}")
+            logger.info(f"- Successfully fixed: {fixed}")
+            logger.info(f"- Failed to fix: {failed}")
             
         finally:
             # Always run cleanup
             self.cleanup()
         
-        return 0 if success_count == len(errors) else 1
+        return 0 if success_count == total_errors else 1
