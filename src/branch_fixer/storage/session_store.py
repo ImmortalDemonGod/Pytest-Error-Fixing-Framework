@@ -4,10 +4,11 @@ from typing import Optional, Dict, List, Any
 from uuid import UUID
 import json
 from datetime import datetime
-from branch_fixer.orchestrator import FixSession, FixSessionState
-from branch_fixer.errors import StorageError
+from branch_fixer.orchestration.orchestrator import FixSession, FixSessionState
 
-
+class StorageError(Exception):
+    """Base exception for storage errors"""
+    pass
 class SessionPersistenceError(StorageError):
     """Raised when session persistence operations fail"""
     pass
