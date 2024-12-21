@@ -18,7 +18,7 @@ class WorkspaceValidator:
     ]
 
     @staticmethod
-    async def validate_workspace(path: Path) -> None:
+    def validate_workspace(path: Path) -> None:
         """Validate the workspace directory
         
         Args:
@@ -44,7 +44,7 @@ class WorkspaceValidator:
         logger.debug(f"Workspace validation successful for {path}")
 
     @staticmethod
-    async def check_dependencies() -> None:
+    def check_dependencies() -> None:
         """Check for required dependencies
         
         Raises:
