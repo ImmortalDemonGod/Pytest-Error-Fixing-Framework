@@ -55,6 +55,7 @@ class FixService:
         self.initial_temp = initial_temp
         self.temp_increment = temp_increment
     
+    @snoop
     def attempt_fix(self, error: TestError) -> bool:
         """Attempt to fix failing test.
         
@@ -124,7 +125,7 @@ class FixService:
         except Exception as e:
             raise FixServiceError(f"Failed to handle failed attempt: {str(e)}") from e
     
-    async def _verify_fix(self,
+    def _verify_fix(self,
                          error: TestError,
                          attempt: FixAttempt) -> bool:
         """Verify if fix attempt succeeded.
