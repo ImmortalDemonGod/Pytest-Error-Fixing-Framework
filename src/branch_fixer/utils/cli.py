@@ -68,11 +68,20 @@ class CLI:
         try:
             logger.info(f"Attempting to fix {error.test_function} in {error.test_file}")
             
-            # Create fix branch
-            branch_name = f"fix-{error.test_file.stem}-{error.test_function}"
-            if not self.service.git_repo.branch_manager.create_fix_branch(branch_name):
-                logger.error(f"Failed to create fix branch: {branch_name}")
-                return False
+            # Create fix branch with additional uniqueness
+            import uuid
+            unique_suffix = str(uuid.uuid4())[:8]
+            branch_name = f"fix-{error.test_file.stem}-{error.test_function}-{unique_suffix}"
+            
+            logger.info(f"Creating fix branch: {branch_name}")
+            
+            try:
+                if not self.service.git_repo.branch_manager.create_fix_branch(branch_name):
+                    logger.error(f"Failed to create fix branch: {branch_name}")
+                    return False
+            except Exception as branch_create_error:
+                logger.warning(f"Branch creation warning: {branch_create_error}")
+                # Continue even if branch creation fails
                 
             # Track branch for cleanup
             self.created_branches.add(branch_name)
@@ -83,7 +92,7 @@ class CLI:
                     if not click.confirm("Fix succeeded. Create PR?", default=True):
                         logger.info("Skipping PR creation as per user request")
                         return False
-                            
+                        
                 # Create PR
                 logger.info("Creating pull request...")
                 if self.service.git_repo.create_pull_request(branch_name, error):
