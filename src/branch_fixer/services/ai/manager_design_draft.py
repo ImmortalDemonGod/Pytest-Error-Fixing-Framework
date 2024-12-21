@@ -17,8 +17,8 @@ from branch_fixer.storage.state_manager import StateManager
 from branch_fixer.storage.recovery import RecoveryManager
 from branch_fixer.storage.session_store import SessionStore
 from pydantic import BaseModel, Field
-import asyncio
 import logging
+import time
 
 # Change Operation Types
 class ChangeAction(str, Enum):
@@ -148,7 +148,7 @@ class FileManager:
         self.backup_dir = self.base_dir / ".ai_manager_backups"
         self.backup_dir.mkdir(exist_ok=True)
         
-    async def create_backup(self, file_path: str) -> str:
+    def create_backup(self, file_path: str) -> str:
         """Create backup of a file before modification"""
         src = self.base_dir / file_path
         if not src.exists():
@@ -163,36 +163,36 @@ class FileManager:
         except Exception as e:
             raise BackupError(f"Failed to create backup: {str(e)}")
             
-    async def apply_changes(self, changes: List[FileChange]) -> None:
+    def apply_changes(self, changes: List[FileChange]) -> None:
         """Apply changes atomically with pre-validation, backup, and partial rollback"""
         successful_changes = []
         
         # Add pre-validation
         for change in changes:
-            if not await self._validate_file_operation(change):
+            if not self._validate_file_operation(change):
                 raise ValidationError(f"Invalid change for file: {change.file_path}")
         
         try:
             for change in changes:
-                backup_path = await self.create_backup(change.file_path)
+                backup_path = self.create_backup(change.file_path)
                 change.backup_path = backup_path
-                await self._apply_file_changes(change)
+                self._apply_file_changes(change)
                 successful_changes.append(change)
                 
         except Exception as e:
             # Rollback only successful changes
             if successful_changes:
-                await self._rollback_changes({
+                self._rollback_changes({
                     change.file_path: change.backup_path 
                     for change in successful_changes
                 })
             raise FileOperationError(f"Partial failure applying changes: {str(e)}")
                 
-    async def _apply_file_changes(self, change: FileChange) -> None:
+    def _apply_file_changes(self, change: FileChange) -> None:
         """Apply changes to a single file"""
         file_path = self.base_dir / change.file_path
         
-        with open(file_path) as f:
+        with open(file_path, 'r') as f:
             lines = f.readlines()
             
         # Sort changes in reverse order
@@ -214,8 +214,8 @@ class FileManager:
         # Write changes
         with open(file_path, 'w') as f:
             f.writelines(lines)
-            
-    async def _rollback_changes(self, backups: Dict[str, str]) -> None:
+                
+    def _rollback_changes(self, backups: Dict[str, str]) -> None:
         """Rollback changes using backups"""
         for file_path, backup_path in backups.items():
             try:
@@ -223,7 +223,7 @@ class FileManager:
             except Exception as e:
                 raise BackupError(f"Failed to rollback {file_path}: {str(e)}")
                 
-    async def _validate_file_operation(self, change: FileChange) -> bool:
+    def _validate_file_operation(self, change: FileChange) -> bool:
         """
         Placeholder for file operation validation logic.
         Implement necessary validation checks here.
@@ -237,7 +237,7 @@ class FileManager:
         return True
 
 # Test Infrastructure
-# TODO: Intergate into our existing system
+# TODO: Integrate into our existing system
 class TestRunner:
     """Manages test execution in isolated environment"""
     
@@ -245,7 +245,7 @@ class TestRunner:
         self.base_dir = Path(base_dir)
         self.test_env = os.environ.copy()
         
-    async def setup_docker(self, image: str) -> None:
+    def setup_docker(self, image: str) -> None:
         """Setup Docker test environment"""
         cmd = ["docker", "pull", image]
         try:
@@ -253,7 +253,7 @@ class TestRunner:
         except subprocess.CalledProcessError as e:
             raise TestExecutionError(f"Failed to setup Docker: {str(e)}")
             
-    async def run_tests(
+    def run_tests(
         self,
         suite: TestSuite,
         timeout: Optional[int] = None
@@ -269,16 +269,13 @@ class TestRunner:
                 
             try:
                 start_time = datetime.now()
-                proc = await asyncio.create_subprocess_exec(
-                    *cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                    env=suite.env_vars
-                )
-                
-                stdout, stderr = await asyncio.wait_for(
-                    proc.communicate(), 
-                    timeout=timeout
+                proc = subprocess.run(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    env=suite.env_vars,
+                    timeout=timeout,
+                    text=True
                 )
                 
                 duration = (datetime.now() - start_time).total_seconds()
@@ -287,11 +284,11 @@ class TestRunner:
                     test_name=test_file,
                     passed=proc.returncode == 0,
                     duration=duration,
-                    output=stdout.decode(),
-                    error=stderr.decode() if stderr else None
+                    output=proc.stdout,
+                    error=proc.stderr if proc.stderr else None
                 ))
                 
-            except asyncio.TimeoutError:
+            except subprocess.TimeoutExpired:
                 results.append(TestResult(
                     test_name=test_file,
                     passed=False,
@@ -311,7 +308,7 @@ class TestRunner:
                 
         return results
         
-    async def detect_flaky_tests(
+    def detect_flaky_tests(
         self,
         suite: TestSuite,
         runs: int = 3
@@ -321,7 +318,7 @@ class TestRunner:
         test_results = {test: [] for test in suite.test_names or []}
         
         for _ in range(runs):
-            results = await self.run_tests(suite)
+            results = self.run_tests(suite)
             for result in results:
                 if result.test_name in test_results:
                     test_results[result.test_name].append(result.passed)
@@ -331,8 +328,6 @@ class TestRunner:
                 flaky_tests.add(test)
                 
         return flaky_tests
-
-
 
 class AIManager:
     """
@@ -389,22 +384,22 @@ class AIManager:
         # Initialize thread
         self.thread = Thread()
 
-    async def __aenter__(self):
+    def __enter__(self):
         """Initialize resources when used as context manager"""
         if self.docker_image:
-            await self.test_runner.setup_docker(self.docker_image)
+            self.test_runner.setup_docker(self.docker_image)
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         """Cleanup resources when exiting context"""
         try:
-            await self.recovery_manager.cleanup()
-            await self.session_store.cleanup()
+            self.recovery_manager.cleanup()
+            self.session_store.cleanup()
         except Exception as e:
             logging.error(f"Cleanup error: {str(e)}")
         finally:
             if self.thread and self.thread.id:
-                await self.thread.delete()
+                self.thread.delete()
 
     @marvin.fn
     def _analyze_error(self, error: TestError) -> Dict[str, Any]:
@@ -427,7 +422,7 @@ class AIManager:
         Uses error details, analysis, and optional intent to create targeted instructions.
         """
 
-    async def _validate_syntax(self, code: str) -> bool:
+    def _validate_syntax(self, code: str) -> bool:
         """Validate Python syntax of proposed fix"""
         try:
             compile(code, '<string>', 'exec')
@@ -436,7 +431,7 @@ class AIManager:
             return False
 
     @marvin.fn
-    async def _check_style(self, code: str) -> Dict[str, Any]:
+    def _check_style(self, code: str) -> Dict[str, Any]:
         """
         Check code style and quality of proposed fix.
         Returns dict with:
@@ -445,7 +440,7 @@ class AIManager:
         - suggestions: List[str]
         """
 
-    async def _validate_fix(self, changes: CodeChanges, error: TestError) -> bool:
+    def _validate_fix(self, changes: CodeChanges, error: TestError) -> bool:
         """
         Validate a proposed fix through multiple steps:
         1. Check syntax
@@ -461,7 +456,7 @@ class AIManager:
         )
         
         # Use existing runner
-        results = await self.test_runner.run_tests(test_suite)
+        results = self.test_runner.run_tests(test_suite)
         
         # Parse results using error_processor
         if errors := parse_pytest_errors("\n".join([result.output for result in results])):
@@ -479,7 +474,7 @@ class AIManager:
         # In a real scenario, this might analyze dependencies or use a test mapping
         return list(changes.file_changes.keys())
 
-    async def _adapt_strategy(
+    def _adapt_strategy(
         self,
         error: TestError,
         previous_attempt: Optional[FixAttempt],
@@ -504,7 +499,7 @@ class AIManager:
 
         return current_temp  # No change if none of the above conditions met
 
-    async def _attempt_fix(
+    def _attempt_fix(
         self,
         error: TestError,
         temperature: float,
@@ -519,11 +514,11 @@ class AIManager:
             prompt = self._generate_fix_prompt(error, analysis, intent)
             
             # Add to thread and run assistant
-            await self.thread.add(prompt)
-            await self.thread.run(self.assistant)
+            self.thread.add(prompt)
+            self.thread.run(self.assistant)
             
             # Get response and parse as CodeChanges
-            messages = await self.thread.get_messages()
+            messages = self.thread.get_messages()
             response = messages[-1].content[0].text.value
             
             return marvin.cast(response, CodeChanges)
@@ -531,14 +526,14 @@ class AIManager:
         except Exception as e:
             raise CompletionError(f"Error generating fix: {str(e)}") from e
 
-    async def _handle_fix_attempt(self, error: TestError, attempt: int, fix: CodeChanges, changed_files: List[str]) -> bool:
+    def _handle_fix_attempt(self, error: TestError, attempt: int, fix: CodeChanges, changed_files: List[str]) -> bool:
         """Handle the fix attempt by managing Git operations"""
         branch_name = f"fix-{Path(error.file_path).stem}-{error.test_name}"
         
         try:
-            await self.git_repo.branch_manager.create_fix_branch(branch_name)
-            await self.apply_fix(fix)
-            await self.git_repo.pr_manager.create_pr(
+            self.git_repo.branch_manager.create_fix_branch(branch_name)
+            self.apply_fix(fix)
+            self.git_repo.pr_manager.create_pr(
                 title=f"Fix {error.test_name}",
                 description=f"Fixes {error.message}",
                 branch_name=branch_name,
@@ -546,12 +541,12 @@ class AIManager:
             )
             return True
         except Exception as e:
-            await self.git_repo.branch_manager.cleanup_fix_branch(branch_name)
+            self.git_repo.branch_manager.cleanup_fix_branch(branch_name)
             raise AIManagerError(
                 f"Failed to handle fix attempt {attempt} for {error.test_name} ({error.file_path}): {str(e)}"
             ) from e
 
-    async def generate_fix(
+    def generate_fix(
         self, 
         error: TestError,
         intent: Optional[str] = None,
@@ -569,14 +564,14 @@ class AIManager:
             temperature: Optional starting temperature (uses base_temperature if not provided)
         """
         # Create session state
-        session = await self.state_manager.create_session(error)
+        session = self.state_manager.create_session(error)
         
         try:
             # Transition to INITIALIZING
-            await self.state_manager.transition_state(session, "INITIALIZING")
+            self.state_manager.transition_state(session, "INITIALIZING")
             
             # Create recovery point
-            recovery_point = await self.recovery_manager.create_checkpoint(
+            recovery_point = self.recovery_manager.create_checkpoint(
                 session, 
                 metadata={"temperature": temperature or self.base_temperature}
             )
@@ -587,23 +582,23 @@ class AIManager:
             for attempt in range(self.max_attempts):
                 try:
                     # Update session state
-                    await self.state_manager.transition_state(
+                    self.state_manager.transition_state(
                         session, 
                         "RUNNING"
                     )
                     
                     # Adapt temperature based on previous attempt
-                    temperature = await self._adapt_strategy(
+                    temperature = self._adapt_strategy(
                         error,
                         self.state.fix_attempts[-1] if self.state.fix_attempts else None,
                         temperature
                     )
                     
                     # Generate fix
-                    fix = await self._attempt_fix(error, temperature, intent)
+                    fix = self._attempt_fix(error, temperature, intent)
                     
                     # Validate fix
-                    is_valid = await self._validate_fix(fix, error)
+                    is_valid = self._validate_fix(fix, error)
                     
                     # Record attempt
                     self.state.fix_attempts.append(
@@ -619,7 +614,7 @@ class AIManager:
                     if is_valid:
                         # Handle Git operations
                         changed_files = list(fix.file_changes.keys())
-                        await self._handle_fix_attempt(error, attempt, fix, changed_files)
+                        self._handle_fix_attempt(error, attempt, fix, changed_files)
                         return fix
                         
                 except (CompletionError, ValidationError) as e:
@@ -642,28 +637,27 @@ class AIManager:
                     )
                     
                     # Try to recover
-                    if not await self.recovery_manager.handle_failure(e, session, {}):
+                    if not self.recovery_manager.handle_failure(e, session, {}):
                         raise
 
             # Transition to FAILED after all attempts
-            await self.state_manager.transition_state(session, "FAILED")
+            self.state_manager.transition_state(session, "FAILED")
             raise AIManagerError(f"Failed to generate valid fix after {self.max_attempts} attempts")
         
         except Exception as e:
             # Transition to FAILED on exception
-            await self.state_manager.transition_state(session, "FAILED")
+            self.state_manager.transition_state(session, "FAILED")
             raise
         finally:
             # Save session state
-            await self.session_store.save_session(session)
+            self.session_store.save_session(session)
     
 
-
-    async def verify_fix(self, changes: CodeChanges, error: TestError) -> bool:
+    def verify_fix(self, changes: CodeChanges, error: TestError) -> bool:
         """Verify a generated fix meets all requirements"""
-        return await self._validate_fix(changes, error)
+        return self._validate_fix(changes, error)
     
-    async def apply_fix(self, changes: CodeChanges) -> None:
+    def apply_fix(self, changes: CodeChanges) -> None:
         """Apply a validated fix to the codebase"""
         try:
             # Convert CodeChanges to FileChange format
@@ -682,11 +676,11 @@ class AIManager:
             ]
             
             # Use existing FileManager
-            await self.file_manager.apply_changes(file_changes)
+            self.file_manager.apply_changes(file_changes)
         except (FileOperationError, BackupError) as e:
             raise AIManagerError(f"Failed to apply fix: {str(e)}") from e
             
-    async def run_tests(
+    def run_tests(
         self,
         suite: TestSuite,
         check_flaky: bool = True
@@ -699,7 +693,7 @@ class AIManager:
         """
         flaky_tests = set()
         if check_flaky:
-            flaky_tests = await self.test_runner.detect_flaky_tests(suite)
+            flaky_tests = self.test_runner.detect_flaky_tests(suite)
             
-        results = await self.test_runner.run_tests(suite)
+        results = self.test_runner.run_tests(suite)
         return results, flaky_tests

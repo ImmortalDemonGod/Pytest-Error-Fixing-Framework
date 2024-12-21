@@ -55,7 +55,7 @@ class FixService:
         self.initial_temp = initial_temp
         self.temp_increment = temp_increment
     
-    async def attempt_fix(self, error: TestError) -> bool:
+    def attempt_fix(self, error: TestError) -> bool:
         """Attempt to fix failing test.
         
         Args:
@@ -71,8 +71,8 @@ class FixService:
         try:
             # Validate workspace before attempting fix
             try:
-                await self.validator.validate_workspace(error.test_file.parent)
-                await self.validator.check_dependencies()
+                self.validator.validate_workspace(error.test_file.parent)
+                self.validator.check_dependencies()
             except Exception as e:
                 raise FixServiceError(f"Workspace validation failed: {str(e)}") from e
 
@@ -81,7 +81,7 @@ class FixService:
             
             try:
                 # Generate fix using AI
-                changes = await self.ai_manager.generate_fix(error, attempt.temperature)
+                changes = self.ai_manager.generate_fix(error, attempt.temperature)
                 
                 # Apply changes
                 if not self.change_applier.apply_changes(error.test_file, changes):
@@ -89,7 +89,7 @@ class FixService:
                     return False
                     
                 # Verify fix
-                if not await self._verify_fix(error, attempt):
+                if not self._verify_fix(error, attempt):
                     self._handle_failed_attempt(error, attempt)
                     return False
                     
@@ -105,14 +105,7 @@ class FixService:
             # Get the root cause, not the FixServiceError wrapper
             root_cause = getattr(e, '__cause__', e)
             raise FixServiceError(str(root_cause)) from e
-        finally:
-            # Clean up regardless
-            try:
-                branch_name = f"fix-{error.test_file.stem}-{error.test_function}"
-                await self.git_repo.branch_manager.cleanup_fix_branch(branch_name)
-            except Exception as cleanup_error:
-                logger.error(f"Failed to cleanup branch {branch_name}: {cleanup_error}")
-            
+    snoop()        
     def _handle_failed_attempt(self, 
                              error: TestError,
                              attempt: FixAttempt) -> None:
