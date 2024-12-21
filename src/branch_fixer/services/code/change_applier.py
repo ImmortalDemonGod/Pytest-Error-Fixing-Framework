@@ -2,6 +2,9 @@
 from pathlib import Path
 from typing import Optional
 import shutil
+from logging import getLogger
+
+logger = getLogger(__name__)
 
 from branch_fixer.core.models import CodeChanges
 
@@ -31,7 +34,25 @@ class ChangeApplier:
             ChangeApplicationError: If changes cannot be applied
             FileNotFoundError: If test file doesn't exist
         """
-        raise NotImplementedError()
+        try:
+            # Create backup
+            backup_path = self._backup_file(test_file)
+            if not backup_path:
+                raise BackupError("Failed to create backup)")
+            
+            # Write changes 
+            test_file.write_text(changes.modified_code)
+
+            # Verify changes are valid
+            if not self._verify_changes(test_file):
+                self._restore_backup(test_file)
+                return False
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to apply changes: {str(e)}")
+            return False
     
     def _backup_file(self, file_path: Path) -> Path:
         """Create backup copy of file.
