@@ -1,10 +1,8 @@
 # branch_fixer/services/ai/manager.py
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pathlib import Path
-import requests  # Changed from aiohttp to requests
+from litellm import completion
 from branch_fixer.core.models import TestError, CodeChanges
-from typing import Dict, Any
-from marvin.client import MarvinClient  # or AsyncMarvinClient if you prefer async
 
 
 class AIManagerError(Exception):
@@ -24,54 +22,49 @@ class CompletionError(AIManagerError):
 
 class AIManager:
     """
-    Manages interactions with an AI service for generating test fixes.
-
-    This version works with Marvin's client, which can be configured
-    to talk to Ollama or OpenAI (or another LLM service) depending
-    on your needs. For Ollama, you typically set 'base_url' to your
-    local server endpoint, e.g. 'http://192.168.4.20:11434'.
-
+    Manages interactions with AI services for generating test fixes.
+    Uses LiteLLM to support multiple providers including OpenAI and Ollama.
+    
+    Example usage with OpenAI:
+        manager = AIManager(
+            api_key="sk-...",
+            model="openai/gpt-4"
+        )
+    
     Example usage with Ollama:
         manager = AIManager(
-            api_key="",  # If needed, or you can pass None
-            model="qwen2.5-coder:3b",
-            base_url="http://192.168.4.20:11434/api"
+            api_key=None,  # Not needed for Ollama
+            model="ollama/codellama"
         )
-        fix = manager.generate_fix(error, temperature=0.0)
     """
 
     def __init__(
         self,
-        api_key: str,
-        model: str = "qwen2.5-coder:3b",
-        base_url: str = "http://192.168.4.20:11434/api"
+        api_key: Optional[str],
+        model: str = "openai/gpt-4o-mini",
+        base_temperature: float = 0.4,
     ):
         """
-        Initialize AI manager with API credentials or local server.
+        Initialize AI manager.
 
         Args:
-            api_key: For OpenAI usage you can provide an API key. 
-                     If talking to Ollama on a local server, 
-                     an API key is typically not needed.
-            model: Model identifier (for Ollama, something like 'qwen2.5-coder:3b').
-            base_url: The API endpoint for your LLM server.
+            api_key: API key (optional for some providers like Ollama)
+            model: Model identifier in format "provider/model" 
+            base_temperature: Default temperature for generations
         """
-        # Some local checks, feel free to adapt:
-        if api_key is None:
-            api_key = ""  # Usually not needed for Ollama
-
         self.api_key = api_key
         self.model = model
-        self.base_url = base_url
+        self.base_temperature = base_temperature
 
-        # Create a Marvin client.
-        # If you need to call asynchronously, use AsyncMarvinClient.
-        self.client = MarvinClient(
-            api_key=self.api_key,
-            base_url=self.base_url,
-            # If you'd like a default model, set it here:
-            model=self.model
-        )
+        # Set API key for providers that need it
+        if api_key:
+            import os
+            provider = model.split('/')[0].lower()
+            if provider == 'openai':
+                os.environ["OPENAI_API_KEY"] = api_key
+            elif provider == 'anthropic':
+                os.environ["ANTHROPIC_API_KEY"] = api_key
+            # Add other providers as needed
 
     def generate_fix(self, error: TestError, temperature: float) -> CodeChanges:
         """
@@ -91,74 +84,78 @@ class AIManager:
         """
         if not 0 <= temperature <= 1:
             raise ValueError("Temperature must be between 0 and 1")
-            
-            
-        # Create prompt and get completion
 
-        # Create prompt and get completion
-        prompt = self._construct_prompt(error)
-        completion_text = self._get_completion(prompt, temperature)
-        return self._parse_response(completion_text)
+        try:
+            # Create messages for chat completion
+            messages = self._construct_messages(error)
+            
+            # Get completion using LiteLLM
+            response = completion(
+                model=self.model,
+                messages=messages,
+                temperature=temperature
+            )
+            
+            # Extract completion text
+            completion_text = response.choices[0].message.content
+            return self._parse_response(completion_text)
+            
+        except Exception as e:
+            raise CompletionError(f"AI request failed: {str(e)}") from e
 
-    def _construct_prompt(self, error: TestError) -> Dict[str, Any]:
+    def _construct_messages(self, error: TestError) -> List[Dict[str, str]]:
         """
-        Construct AI prompt from error information.
+        Construct messages for chat completion.
 
-        Returns a dict with 'messages' that Marvin can pass
-        to the 'generate_chat' method, or Ollama's /chat endpoint.
+        Args:
+            error: TestError containing error details
+
+        Returns:
+            List of message dictionaries for the chat completion API
+
+        Raises:
+            PromptGenerationError: If message construction fails
         """
         try:
-            return {
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a Python testing expert. Fix the failing test "
-                            "while maintaining the test's intent."
-                        ),
-                    },
-                    {
-                        "role": "user",
-                        "content": f"""
+            return [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a Python testing expert. Fix the failing test "
+                        "while maintaining the test's intent. Provide your response "
+                        "in the following format:\n"
+                        "Original code: [original test code]\n"
+                        "Modified code: [fixed test code]"
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": f"""
 Fix this failing test:
+
 Test Function: {error.test_function}
 Test File: {error.test_file}
 Error Type: {error.error_details.error_type}
 Error Message: {error.error_details.message}
 Stack Trace: {error.error_details.stack_trace or 'None'}
 """
-                    },
-                ]
-            }
+                }
+            ]
         except Exception as e:
-            raise PromptGenerationError(f"Failed to construct prompt: {str(e)}") from e
-
-    def _get_completion(self, prompt: Dict[str, Any], temperature: float) -> str:
-        """
-        Make a request to Marvin (which can talk to Ollama or other LLMs) to get completion.
-        """
-        try:
-            # For a single-turn completion. 
-            # If you want to stream responses, set stream=True and handle partial chunks.
-            response = self.client.generate_chat(
-                messages=prompt["messages"],
-                model=self.model,       # override if needed
-                temperature=temperature,
-                stream=False
-            )
-
-            # Typical Marvin response is an OpenAI-style ChatCompletion:
-            #   response.choices[0].message.content
-            return response.choices[0].message.content
-
-        except Exception as e:
-            raise CompletionError(f"AI request failed: {str(e)}") from e
+            raise PromptGenerationError(f"Failed to construct messages: {str(e)}") from e
 
     def _parse_response(self, response: str) -> CodeChanges:
         """
         Parse the AI response into a CodeChanges object.
-        We expect the text to contain 'Original code:' 
-        followed by 'Modified code:' in some shape.
+        
+        Args:
+            response: Raw response text from AI
+            
+        Returns:
+            CodeChanges object with original and modified code
+            
+        Raises:
+            ValueError: If response cannot be parsed
         """
         try:
             original_code = response.split("Original code:")[1].split("Modified code:")[0].strip()
