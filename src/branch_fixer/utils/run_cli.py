@@ -50,6 +50,7 @@ def fix(api_key: str,
     
     # Setup components
     if not cli.setup_components(api_key, max_retries, initial_temp, temp_increment):
+        logger.error("Failed to setup components")
         return 1
         
     # Run cleanup if requested
@@ -64,15 +65,21 @@ def fix(api_key: str,
         test_function=test_function
     )
 
-    if test_result.exit_code == 0:
+    # Inform about test run results
+    total_tests = test_result.total_collected
+    failed_tests = test_result.failed
+    logger.info(f"Test run complete. Total tests: {total_tests}, Failed tests: {failed_tests}")
+
+    # Always proceed, even if tests fail
+    if failed_tests == 0:
         logger.info("All tests passed - no fixes needed!")
         return 0
 
-    # Parse errors using the function from error_processor
+    # Parse errors
     logger.info("Analyzing test failures...")
     errors = parse_pytest_errors(test_result.output)
     if not errors:
-        logger.error("Tests failed but no fixable errors were found")
+        logger.warning("Tests failed but no parsable test failures found")
         return 1
 
     logger.info(f"Found {len(errors)} test failures to fix")
