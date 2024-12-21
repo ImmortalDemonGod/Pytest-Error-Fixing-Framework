@@ -1,4 +1,5 @@
 # src/branch_fixer/utils/cli.py
+
 import click
 import logging
 from pathlib import Path
@@ -62,6 +63,7 @@ class CLI:
                 print(f"- {error}")
         else:
             print("Cleanup completed successfully")
+
     @snoop
     def run_fix_workflow(self, error: TestError, interactive: bool) -> bool:
         """Run the fix workflow for a single error."""
@@ -167,11 +169,12 @@ class CLI:
         
         choices = {'y': 'y', 'n': 'n', 'q': 'q'}
         while True:
-            choice = input("Your choice [Y/n/q]: ").strip().lower() or 'y'
+            choice = (input("Your choice [Y/n/q]: ").strip() or 'y').lower()
             if choice in choices:
                 return choice
             print("Please enter one of: Y, n, Q")
 
+    @snoop
     def process_errors(self, errors: List[TestError], interactive: bool) -> int:
         """Process all found errors."""
         success_count = 0
