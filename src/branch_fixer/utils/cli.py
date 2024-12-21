@@ -24,7 +24,7 @@ class CLI:
     """CLI interface for pytest-fixer"""
     
     def __init__(self):
-        self.service = None
+        self.service: Optional[FixService] = None
         self.created_branches = set()  # Track branches we create
         self._exit_requested = False
         
@@ -34,28 +34,40 @@ class CLI:
             print("\nReceived exit signal. Starting cleanup...")
             self._exit_requested = True
             
-        signal.signal(signal.SIGINT, handle_exit)
-        signal.signal(signal.SIGTERM, handle_exit)
+        # Optionally re-enable signals:
+        # signal.signal(signal.SIGINT, handle_exit)
+        # signal.signal(signal.SIGTERM, handle_exit)
 
     def cleanup(self):
-        """Cleanup resources before exit"""
+        """
+        Cleanup resources before exit:
+        1) Cleanup fix branches if any
+        2) Checkout back to main branch
+        """
         if not self.service:
             return
             
         print("\nCleaning up resources...")
         errors = []
         
-        # Cleanup branches
+        # 1) Cleanup branches
         for branch in self.created_branches:
             try:
                 print(f"Cleaning up branch: {branch}")
-                self.service.git_repo.branch_manager.cleanup_fix_branch(
-                    branch, force=True
-                )
+                self.service.git_repo.branch_manager.cleanup_fix_branch(branch, force=True)
             except Exception as e:
                 errors.append(f"Failed to cleanup branch {branch}: {str(e)}")
                 logger.error(f"Cleanup error for branch {branch}: {str(e)}")
                 
+        # 2) Checkout main
+        try:
+            main_branch = self.service.git_repo.main_branch
+            self.service.git_repo.run_command(["checkout", main_branch])
+            logger.info(f"Checked out main branch: {main_branch}")
+        except Exception as e:
+            errors.append(f"Failed to checkout main branch: {str(e)}")
+            logger.warning(f"Unable to checkout main branch: {e}")
+
         # Report any errors
         if errors:
             print("\nEncountered errors during cleanup:")
@@ -66,17 +78,18 @@ class CLI:
 
 
     def run_fix_workflow(self, error: TestError, interactive: bool) -> bool:
-        """Run the fix workflow for a single error."""
+        """
+        Run the fix workflow for a single error (create branch, attempt fix, revert if needed, etc.)
+        """
         try:
             logger.info(f"Attempting to fix {error.test_function} in {error.test_file}")
             
-            # Create fix branch with additional uniqueness
+            # 1) Create fix branch with additional uniqueness
             import uuid
             unique_suffix = str(uuid.uuid4())[:8]
             branch_name = f"fix-{error.test_file.stem}-{error.test_function}-{unique_suffix}"
             
             logger.info(f"Creating fix branch: {branch_name}")
-            
             try:
                 if not self.service.git_repo.branch_manager.create_fix_branch(branch_name):
                     logger.error(f"Failed to create fix branch: {branch_name}")
@@ -85,17 +98,19 @@ class CLI:
                 logger.warning(f"Branch creation warning: {branch_create_error}")
                 # Continue even if branch creation fails
                 
-            # Track branch for cleanup
+            # Track the created branch
             self.created_branches.add(branch_name)
                 
+            # 2) Attempt to generate and apply fix
             logger.info("Attempting to generate and apply fix...")
             if self.service.attempt_fix(error):
+                # If in interactive mode, optionally create PR
                 if interactive:
                     if not click.confirm("Fix succeeded. Create PR?", default=True):
                         logger.info("Skipping PR creation as per user request")
                         return False
-                        
-                # Create PR
+
+                # 3) Create PR if desired
                 logger.info("Creating pull request...")
                 if self.service.git_repo.create_pull_request(branch_name, error):
                     logger.info("Created pull request successfully")
@@ -113,9 +128,16 @@ class CLI:
                 logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
             return False
 
-    def setup_components(self, api_key: str, max_retries: int, 
-                        initial_temp: float, temp_increment: float) -> bool:
-        """Initialize all required components."""
+    def setup_components(
+        self,
+        api_key: str,
+        max_retries: int,
+        initial_temp: float,
+        temp_increment: float
+    ) -> bool:
+        """
+        Initialize all required components.
+        """
         try:
             logger.info("Initializing AI Manager...")
             ai_manager = AIManager(api_key)
@@ -155,12 +177,10 @@ class CLI:
             if DEBUG:
                 logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
             return False
-    
 
     def _prompt_for_fix(self, error: TestError) -> Optional[str]:
         """
-        Prompt user on how to handle a failing test in interactive mode.
-        Uses click.prompt() to handle the user input.
+        Prompt user how to handle a failing test in interactive mode. 
         """
         click.echo("\nFix this failing test?")
         click.echo(f"Test: {error.test_function}")
@@ -180,7 +200,9 @@ class CLI:
         return choice.lower()
     
     def process_errors(self, errors: List[TestError], interactive: bool) -> int:
-        """Process all found errors."""
+        """
+        Process all found errors: either interactive or automatic fix attempts.
+        """
         success_count = 0
         total_processed = 0
         
@@ -212,7 +234,7 @@ class CLI:
                         logger.info("Skipping test per user request")
                         total_processed += 1
                         continue
-                    elif choice == 'y':  # Only run workflow on explicit yes
+                    elif choice == 'y':
                         if self.run_fix_workflow(error, interactive):
                             success_count += 1
                             print(f"✓ Successfully fixed {error.test_function}\n")
