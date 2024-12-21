@@ -1,6 +1,6 @@
 # branch_fixer/services/git/branch_manager.py
 from dataclasses import dataclass
-from typing import List, Optional, Set, TYPE_CHECKING
+from typing import List, Optional, Set
 import re
 from pathlib import Path
 from branch_fixer.services.git.models import BranchStatus, BranchMetadata
@@ -51,9 +51,9 @@ class BranchManager:
             changes=changes
         )
 
-    async def create_fix_branch(self, 
-                            branch_name: str,
-                            from_branch: Optional[str] = None) -> bool:
+    def create_fix_branch(self, 
+                          branch_name: str,
+                          from_branch: Optional[str] = None) -> bool:
         """Create and switch to a fix branch.
 
         Args:
@@ -70,18 +70,18 @@ class BranchManager:
         """
         try:
             # Validate branch name
-            if not await self.validate_branch_name(branch_name):
+            if not self.validate_branch_name(branch_name):
                 raise BranchNameError(f"Invalid branch name: {branch_name}")
 
             # Check if branch exists
-            if await self.repository.branch_exists(branch_name):
+            if self.repository.branch_exists(branch_name):
                 raise BranchCreationError(f"Branch {branch_name} already exists")
                 
             # Get base branch
             from_branch = from_branch or self.repository.main_branch
 
             # Create new branch from base
-            result = await self.repository.run_command(
+            result = self.repository.run_command(
                 ['checkout', '-b', branch_name, from_branch]
             )
             
@@ -98,9 +98,9 @@ class BranchManager:
                 raise e
             raise GitError(f"Failed to create branch {branch_name}: {str(e)}")
         
-    async def cleanup_fix_branch(self,
-                            branch_name: str,
-                            force: bool = False) -> bool:
+    def cleanup_fix_branch(self,
+                           branch_name: str,
+                           force: bool = False) -> bool:
         """Clean up a fix branch after merging.
 
         Args:
@@ -115,18 +115,18 @@ class BranchManager:
         """
         try:
             # Check if branch exists
-            if not await self.repository.branch_exists(branch_name):
+            if not self.repository.branch_exists(branch_name):
                 # Branch doesn't exist - consider cleanup successful
                 return True
 
             # Switch back to main branch if needed
-            current_branch = await self.repository.get_current_branch()
+            current_branch = self.repository.get_current_branch()
             if current_branch == branch_name:
-                await self.repository.run_command(['checkout', self.repository.main_branch])
+                self.repository.run_command(['checkout', self.repository.main_branch])
 
             # Delete the branch
             delete_args = ['branch', '-D' if force else '-d', branch_name]
-            result = await self.repository.run_command(delete_args)
+            result = self.repository.run_command(delete_args)
             
             return result.returncode == 0
 
@@ -136,7 +136,7 @@ class BranchManager:
                 raise GitError(f"Failed to clean up branch {branch_name}: {str(e)}")
             return True
 
-    async def get_branch_metadata(self, branch_name: str) -> BranchMetadata:
+    def get_branch_metadata(self, branch_name: str) -> BranchMetadata:
         """
         Get detailed metadata about a branch.
 
@@ -151,7 +151,7 @@ class BranchManager:
         """
         raise NotImplementedError()
 
-    async def validate_branch_name(self, branch_name: str) -> bool:
+    def validate_branch_name(self, branch_name: str) -> bool:
         """Validate branch name follows conventions.
 
         Args:
@@ -187,9 +187,9 @@ class BranchManager:
                 raise e
             raise BranchNameError(f"Failed to validate branch name: {str(e)}") from e
 
-    async def is_branch_merged(self, 
-                             branch_name: str,
-                             target_branch: Optional[str] = None) -> bool:
+    def is_branch_merged(self, 
+                         branch_name: str,
+                         target_branch: Optional[str] = None) -> bool:
         """
         Check if a branch is fully merged.
 
