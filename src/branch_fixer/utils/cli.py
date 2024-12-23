@@ -35,8 +35,8 @@ class CLI:
             self._exit_requested = True
             
         # Optionally re-enable signals:
-        # signal.signal(signal.SIGINT, handle_exit)
-        # signal.signal(signal.SIGTERM, handle_exit)
+        signal.signal(signal.SIGINT, handle_exit)
+        signal.signal(signal.SIGTERM, handle_exit)
 
     def cleanup(self):
         """
@@ -91,7 +91,7 @@ class CLI:
             
             logger.info(f"Creating fix branch: {branch_name}")
             try:
-                if not self.service.git_repo.branch_manager.create_fix_branch(branch_name):
+                if self.service and not self.service.git_repo.branch_manager.create_fix_branch(branch_name):
                     logger.error(f"Failed to create fix branch: {branch_name}")
                     return False
             except Exception as branch_create_error:
@@ -103,7 +103,7 @@ class CLI:
                 
             # 2) Attempt to generate and apply fix
             logger.info("Attempting to generate and apply fix...")
-            if self.service.attempt_fix(error):
+            if self.service and self.service.attempt_fix(error):
                 # If in interactive mode, optionally create PR
                 if interactive:
                     if not click.confirm("Fix succeeded. Create PR?", default=True):
@@ -112,9 +112,16 @@ class CLI:
 
                 # 3) Create PR if desired
                 logger.info("Creating pull request...")
-                if self.service.git_repo.create_pull_request(branch_name, error):
+                if self.service and self.service.git_repo.create_pull_request_sync(branch_name, error):
                     logger.info("Created pull request successfully")
-                    return True
+                    
+                    # 4) Try to push changes to remote
+                    if self.service.git_repo.push(branch_name):
+                        logger.info(f"Successfully pushed branch {branch_name} to remote")
+                        return True
+                    else:
+                        logger.error(f"Failed to push branch {branch_name} to remote")
+                        return False
                 else:
                     logger.error("Failed to create pull request")
                     return False

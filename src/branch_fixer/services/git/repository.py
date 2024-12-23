@@ -289,8 +289,6 @@ class GitRepository:
         """
         Push commits to the remote repository.
 
-        Currently not implemented (placeholder).
-
         Args:
             branch (Optional[str]): The branch to push. If None, pushes the current branch.
 
@@ -300,7 +298,25 @@ class GitRepository:
         Raises:
             GitError: If the push operation fails.
         """
-        raise NotImplementedError("push method is not implemented yet.")
+        try:
+            # Get branch to push (current branch if none specified)
+            push_branch = branch or self.get_current_branch()
+            
+            # Run push command
+            logger.info(f"Pushing branch {push_branch} to remote")
+            result = self.run_command(['push', 'origin', push_branch])
+            
+            success = result.returncode == 0
+            if success:
+                logger.info(f"Successfully pushed {push_branch} to remote")
+            else:
+                logger.error(f"Failed to push {push_branch}: {result.stderr}")
+                
+            return success
+                
+        except Exception as e:
+            logger.error(f"Push operation failed: {str(e)}")
+            return False
 
     def pull(self, branch: Optional[str] = None) -> bool:
         """
@@ -485,6 +501,26 @@ class GitRepository:
         except Exception as e:
             # Wrap unexpected errors
             raise GitError(f"Unexpected error creating branch {branch_name}: {str(e)}") from e
+
+    def validate_branch_name(self, branch_name: str) -> bool:
+        """
+        Validate the branch name against Git's branch naming rules.
+
+        Args:
+            branch_name (str): The name of the branch to validate.
+
+        Returns:
+            bool: True if the branch name is valid, False otherwise.
+        """
+        # Git branch names cannot contain these characters
+        invalid_chars = [' ', '~', '^', ':', '?', '*', '[', '\\']
+        if any(char in branch_name for char in invalid_chars):
+            return False
+        if branch_name.endswith('/') or branch_name.startswith('/'):
+            return False
+        if '..' in branch_name or branch_name == '@':
+            return False
+        return True
 
     def cleanup_fix_branch(self, branch_name: str, force: bool = False) -> bool:
         """
