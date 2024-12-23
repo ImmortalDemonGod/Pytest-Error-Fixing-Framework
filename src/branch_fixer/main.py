@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 from branch_fixer.config.logging_config import setup_logging
 from branch_fixer.utils.run_cli import cli
 import snoop
+import logging
 
 snoop.install(python=snoop({"output": lambda msg: logging.getLogger('snoop').info(msg)}))
 
