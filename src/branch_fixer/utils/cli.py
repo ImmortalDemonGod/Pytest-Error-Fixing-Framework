@@ -194,10 +194,7 @@ class CLI:
             click.echo("[Q]uit: Stop fixing tests and exit")
 
             # Use click.getchar() instead of prompt for more direct input
-            choice = click.getchar(
-                "\nYour choice (y/n/q) [y]: ",
-                echo=True
-            ).lower()
+            choice = click.getchar("\nYour choice (y/n/q) [y]: ").lower()
 
             # Handle empty input (Enter key) as default 'y'
             if choice == '\r' or choice == '\n':
