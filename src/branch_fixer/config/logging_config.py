@@ -19,3 +19,14 @@ def setup_logging():
             logging.FileHandler(str(log_file))  # File handler with explicit string path
         ]
     )
+
+    # Create a dedicated logger for snoop
+    snoop_logger = logging.getLogger('snoop')
+    snoop_logger.setLevel(logging.INFO)
+
+    # Create a handler for snoop
+    snoop_handler = logging.FileHandler(str(log_file))
+    snoop_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+
+    # Add the handler to the snoop logger
+    snoop_logger.addHandler(snoop_handler)
