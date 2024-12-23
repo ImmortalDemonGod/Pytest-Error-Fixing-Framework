@@ -8,7 +8,7 @@ from branch_fixer.services.pytest.error_info import ErrorInfo
 from branch_fixer.core.models import TestError, ErrorDetails
 import re 
 
-@snoop
+
 def parse_pytest_errors(output: str) -> List[TestError]:
     """Parse pytest output and convert to TestError objects."""
     failed_test_pattern = r'FAILED (.*?)::(.+?)\n((?:.*?\n)*?(?=FAILED|\Z))'

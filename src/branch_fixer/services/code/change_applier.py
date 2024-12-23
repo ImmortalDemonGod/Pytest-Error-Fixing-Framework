@@ -28,7 +28,6 @@ class ChangeApplier:
 
     BACKUP_DIRNAME = ".backups"
 
-    @snoop
     def apply_changes_with_backup(self, test_file: Path, changes: CodeChanges) -> (bool, Path):
         """
         Apply code changes with backup. Returns (success, backup_path).
@@ -59,7 +58,6 @@ class ChangeApplier:
         """
         return self._restore_backup(file_path, backup_path)
 
-    @snoop
     def _apply_changes_core(self, test_file: Path, changes: CodeChanges, backup_path: Path) -> bool:
         """
         Internal helper that:

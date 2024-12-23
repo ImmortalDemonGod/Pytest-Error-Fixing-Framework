@@ -7,7 +7,7 @@ from branch_fixer.services.pytest.runner import PytestRunner
 from branch_fixer.services.pytest.models import SessionResult
 from _pytest.main import ExitCode
 
-@snoop
+
 def test_fix_workflow(tmp_path: Path):
     """
     Test the workflow of fixing a failing test to pass using PytestRunner.

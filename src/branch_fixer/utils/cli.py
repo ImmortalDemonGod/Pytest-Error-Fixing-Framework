@@ -177,7 +177,7 @@ class CLI:
             if DEBUG:
                 logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
             return False
-    @snoop
+    
     def _prompt_for_fix(self, error: TestError) -> Optional[str]:
         """
         Prompt user how to handle a failing test in interactive mode. 
@@ -207,7 +207,7 @@ class CLI:
             # Invalid input - show error and loop
             click.echo("\nInvalid choice. Please enter y, n, or q.")
     
-    @snoop
+    
     def process_errors(self, errors: List[TestError], interactive: bool) -> int:
         """
         Process all found errors: either interactive or automatic fix attempts.
