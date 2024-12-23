@@ -9,12 +9,12 @@ from branch_fixer.utils.run_cli import cli
 import snoop
 import logging
 
-snoop.install(python=snoop({"output": lambda msg: logging.getLogger('snoop').info(msg)}))
-
 def main():
     """Main entry point for the application"""
     setup_logging()
+    snoop.install(python={"output": lambda msg: logging.getLogger('snoop').info(msg)})
     return cli()  # Call the click CLI group instead of run_cli
+
 
 if __name__ == "__main__":
     sys.exit(main())
