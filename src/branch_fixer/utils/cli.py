@@ -177,28 +177,40 @@ class CLI:
             if DEBUG:
                 logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
             return False
-
+    @snoop
     def _prompt_for_fix(self, error: TestError) -> Optional[str]:
         """
         Prompt user how to handle a failing test in interactive mode. 
+        Returns 'y', 'n', 'q' or None if input is invalid.
         """
-        click.echo("\nFix this failing test?")
-        click.echo(f"Test: {error.test_function}")
-        click.echo(f"Error: {error.error_details.error_type}: {error.error_details.message}")
-        click.echo("\nOptions:")
-        click.echo("[Y]es: Attempt to fix this test")
-        click.echo("[N]o:  Skip this test")
-        click.echo("[Q]uit: Stop fixing tests and exit")
+        while True:
+            click.clear()  # Clear the screen for better visibility
+            click.echo("\nFix this failing test?")
+            click.echo(f"Test: {error.test_function}")
+            click.echo(f"Error: {error.error_details.error_type}: {error.error_details.message}")
+            click.echo("\nOptions:")
+            click.echo("[Y]es: Attempt to fix this test")
+            click.echo("[N]o:  Skip this test") 
+            click.echo("[Q]uit: Stop fixing tests and exit")
 
-        choice = click.prompt(
-            "Your choice",
-            type=click.Choice(["y", "n", "q"], case_sensitive=False),
-            default="y",
-            show_default=True
-        )
-        
-        return choice.lower()
+            # Use click.getchar() instead of prompt for more direct input
+            choice = click.getchar(
+                "\nYour choice (y/n/q) [y]: ",
+                echo=True
+            ).lower()
+
+            # Handle empty input (Enter key) as default 'y'
+            if choice == '\r' or choice == '\n':
+                choice = 'y'
+                
+            # Only accept valid choices
+            if choice in ['y', 'n', 'q']:
+                return choice
+                
+            # Invalid input - show error and loop
+            click.echo("\nInvalid choice. Please enter y, n, or q.")
     
+    @snoop
     def process_errors(self, errors: List[TestError], interactive: bool) -> int:
         """
         Process all found errors: either interactive or automatic fix attempts.
