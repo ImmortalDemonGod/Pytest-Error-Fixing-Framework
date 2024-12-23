@@ -133,7 +133,8 @@ class CLI:
         api_key: str,
         max_retries: int,
         initial_temp: float,
-        temp_increment: float
+        temp_increment: float,
+        dev_force_success: bool
     ) -> bool:
         """
         Initialize all required components.
@@ -159,7 +160,8 @@ class CLI:
                 git_repo=git_repo,
                 max_retries=max_retries,
                 initial_temp=initial_temp,
-                temp_increment=temp_increment
+                temp_increment=temp_increment,
+                dev_force_success=dev_force_success
             )
             
             # Run workspace validation
@@ -227,9 +229,9 @@ class CLI:
                     logger.info("Exit requested, stopping fix attempts")
                     break
                     
-                logger.info(f"\nProcessing error {i}/{total_errors}:")
-                logger.info(f"Test: {error.test_function}")
-                logger.info(f"Error: {error.error_details.error_type}: {error.error_details.message}")
+                logger.info(f"\nProcessing error {i}/{total_errors}:\n")
+                logger.info(f"Test: {error.test_function}\n")
+                logger.info(f"Error: {error.error_details.error_type}: {error.error_details.message}\n")
 
                 if interactive:
                     choice = self._prompt_for_fix(error)

@@ -35,6 +35,8 @@ def cli():
               help='Specific test function to fix')
 @click.option('--cleanup-only', is_flag=True,
               help='Only cleanup leftover fix branches')
+@click.option('--dev-force-success', is_flag=True,
+              help='Force all fix attempts to be marked successful (for dev testing)')
 def fix(api_key: str,
         max_retries: int,
         initial_temp: float,
@@ -43,7 +45,8 @@ def fix(api_key: str,
         fast_run: bool,
         test_path: Optional[Path],
         test_function: Optional[str],
-        cleanup_only: bool):
+        cleanup_only: bool,
+        dev_force_success: bool):
     """
     Fix failing pytest tests automatically.
     """
@@ -57,7 +60,13 @@ def fix(api_key: str,
     cli = CLI()
     
     # Setup components
-    if not cli.setup_components(api_key, max_retries, initial_temp, temp_increment):
+    if not cli.setup_components(
+        api_key=api_key,
+        max_retries=max_retries,
+        initial_temp=initial_temp,
+        temp_increment=temp_increment,
+        dev_force_success=dev_force_success
+    ):
         logger.error("Failed to setup components")
         return 1
         

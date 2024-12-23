@@ -24,7 +24,8 @@ class FixService:
                  git_repo: GitRepository,
                  max_retries: int = 3,
                  initial_temp: float = 0.4,
-                 temp_increment: float = 0.1):
+                 temp_increment: float = 0.1,
+                 dev_force_success: bool = False):
         """Initialize fix service with components.
         
         Args:
@@ -35,7 +36,8 @@ class FixService:
             max_retries: Maximum fix attempts
             initial_temp: Starting temperature
             temp_increment: Temperature increase per retry
-            
+            dev_force_success: If True, skip actual fix logic and force success
+                        
         Raises:
             ValueError: If invalid parameters provided
         """
@@ -54,6 +56,7 @@ class FixService:
         self.max_retries = max_retries
         self.initial_temp = initial_temp
         self.temp_increment = temp_increment
+        self.dev_force_success = dev_force_success
     
     @snoop
     def attempt_fix(self, error: TestError) -> bool:
@@ -61,7 +64,7 @@ class FixService:
         Attempt to fix failing test.
         
         1) Validate workspace
-        2) Generate fix
+        2) Generate fix (unless dev_force_success is True)
         3) Apply fix (with backup)
         4) If syntax fails, revert automatically (handled in apply_changes).
         5) If functional test fails, revert changes here.
@@ -85,6 +88,12 @@ class FixService:
             # Start fix attempt with current temperature
             attempt = error.start_fix_attempt(self.initial_temp)
             
+            # If dev_force_success is set, skip actual fix generation
+            if self.dev_force_success:
+                logger.info("Dev force success enabled: skipping actual fix logic and marking success.")
+                error.mark_fixed(attempt)
+                return True
+
             try:
                 # Generate fix using AI
                 changes = self.ai_manager.generate_fix(error, attempt.temperature)
