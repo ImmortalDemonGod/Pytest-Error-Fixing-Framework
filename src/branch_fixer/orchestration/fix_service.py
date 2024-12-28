@@ -1,3 +1,4 @@
+# src/branch_fixer/orchestration/fix_service.py
 from typing import Optional, Tuple
 from branch_fixer.core.models import TestError, FixAttempt, CodeChanges
 from branch_fixer.utils.workspace import WorkspaceValidator
@@ -74,9 +75,9 @@ class FixService:
         self.session = session  # We'll assume the session is created or loaded elsewhere
 
     @snoop
-    def attempt_fix(self, error: TestError) -> bool:
+    def attempt_fix(self, error: TestError, temperature: float) -> bool:
         """
-        Attempt to fix failing test.
+        Attempt to fix failing test in a single shot (no internal loop).
         
         1) Validate workspace
         2) Generate fix (unless dev_force_success is True)
@@ -84,6 +85,9 @@ class FixService:
         4) If syntax fails, revert automatically (handled in apply_changes).
         5) If functional test fails, revert changes here.
         6) Mark error as fixed if successful, else handle failure.
+
+        The 'temperature' parameter is passed in from the orchestrator, which
+        handles multi-retry loops and increments if needed.
 
         Returns:
             bool indicating if fix succeeded
@@ -100,8 +104,8 @@ class FixService:
             except Exception as e:
                 raise FixServiceError(f"Workspace validation failed: {str(e)}") from e
 
-            # Start fix attempt with current temperature
-            attempt = error.start_fix_attempt(self.initial_temp)
+            # Start fix attempt with the given temperature
+            attempt = error.start_fix_attempt(temperature)
             
             # If dev_force_success is set, skip actual fix generation
             if self.dev_force_success:
