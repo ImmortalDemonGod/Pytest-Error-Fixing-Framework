@@ -1,5 +1,3 @@
-# branch_fixer/orchestration/fix_service.py
-
 from typing import Optional, Tuple
 from branch_fixer.core.models import TestError, FixAttempt, CodeChanges
 from branch_fixer.utils.workspace import WorkspaceValidator
@@ -11,6 +9,11 @@ from branch_fixer.orchestration.exceptions import FixServiceError
 import asyncio
 import snoop
 import logging
+
+# NEW: Imports for storing session or orchestrating
+from branch_fixer.orchestration.orchestrator import FixSession, FixSessionState
+from branch_fixer.storage.session_store import SessionStore
+from branch_fixer.storage.state_manager import StateManager, StateTransitionError, StateValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +28,12 @@ class FixService:
                  max_retries: int = 3,
                  initial_temp: float = 0.4,
                  temp_increment: float = 0.1,
-                 dev_force_success: bool = False):
-        """Initialize fix service with components.
+                 dev_force_success: bool = False,
+                 session_store: Optional[SessionStore] = None,
+                 state_manager: Optional[StateManager] = None,
+                 session: Optional[FixSession] = None):
+        """
+        Initialize fix service with components.
         
         Args:
             ai_manager: AI service for generating fixes
@@ -37,6 +44,9 @@ class FixService:
             initial_temp: Starting temperature
             temp_increment: Temperature increase per retry
             dev_force_success: If True, skip actual fix logic and force success
+            session_store: Optional session store for persisting fix session
+            state_manager: Optional manager for validating state transitions
+            session: Optional FixSession to track fix state
                         
         Raises:
             ValueError: If invalid parameters provided
@@ -57,7 +67,12 @@ class FixService:
         self.initial_temp = initial_temp
         self.temp_increment = temp_increment
         self.dev_force_success = dev_force_success
-    
+
+        # NEW: Optionally store session, session_store, and state_manager
+        self.session_store = session_store
+        self.state_manager = state_manager
+        self.session = session  # We'll assume the session is created or loaded elsewhere
+
     @snoop
     def attempt_fix(self, error: TestError) -> bool:
         """
@@ -92,6 +107,7 @@ class FixService:
             if self.dev_force_success:
                 logger.info("Dev force success enabled: skipping actual fix logic and marking success.")
                 error.mark_fixed(attempt)
+                self._update_session_if_present(error)
                 return True
 
             try:
@@ -123,6 +139,7 @@ class FixService:
                     
                 # If we get here, the fix is good. Mark as fixed
                 error.mark_fixed(attempt)
+                self._update_session_if_present(error)
                 return True
                 
             except Exception as e:
@@ -157,7 +174,14 @@ class FixService:
             raise FixServiceError(f"Workspace validation failed (manual fix): {str(e)}") from e
 
         # Run the test to see if the issue is resolved
-        return self.test_runner.verify_fix(error.test_file, error.test_function)
+        success = self.test_runner.verify_fix(error.test_file, error.test_function)
+        if success:
+            # Mark as fixed if test passes
+            # We still want to create a fix attempt for tracking (with 0.0 temperature if you like)
+            attempt = error.start_fix_attempt(0.0)
+            error.mark_fixed(attempt)
+            self._update_session_if_present(error)
+        return success
 
     snoop()
     def _handle_failed_attempt(self, error: TestError, attempt: FixAttempt) -> None:
@@ -168,6 +192,7 @@ class FixService:
         """
         try:
             error.mark_attempt_failed(attempt)
+            self._update_session_if_present(error)
         except Exception as e:
             raise FixServiceError(f"Failed to handle failed attempt: {str(e)}") from e
     
@@ -185,3 +210,33 @@ class FixService:
             return self.test_runner.verify_fix(error.test_file, error.test_function)
         except Exception as e:
             raise FixServiceError(f"Fix verification failed: {str(e)}") from e
+
+    # NEW: optional helper to update session state or persist session
+    def _update_session_if_present(self, error: TestError) -> None:
+        """
+        If a session is attached, update it with the new error state.
+        Optionally persist via session_store and handle state transitions via state_manager.
+        """
+        if not self.session:
+            return
+
+        # If this error is part of the session’s errors, see if it’s fixed
+        # We do not know if the orchestrator has a deeper error-tracking approach,
+        # but as an example:
+        if error in self.session.errors:
+            if error.status == "fixed" and error not in self.session.completed_errors:
+                self.session.completed_errors.append(error)
+            if self.state_manager:
+                try:
+                    # For example, if the session is still RUNNING, check if all errors are fixed
+                    if len(self.session.completed_errors) == len(self.session.errors):
+                        self.state_manager.transition_state(self.session, "FixSessionState.COMPLETED")
+                    else:
+                        # Keep session as RUNNING if not completed
+                        pass
+                except (StateTransitionError, StateValidationError) as ex:
+                    logger.warning(f"Failed to transition session state: {ex}")
+
+            # Persist session changes if store is provided
+            if self.session_store:
+                self.session_store.save_session(self.session)
