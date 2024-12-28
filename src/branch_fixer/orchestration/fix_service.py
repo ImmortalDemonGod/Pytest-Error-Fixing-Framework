@@ -145,8 +145,7 @@ class FixService:
         """
         Handle cleanup after failed fix attempt.
         
-        We mark the attempt as failed. Additional cleanup can be added here if needed.
-        """
+         """
         try:
             error.mark_attempt_failed(attempt)
         except Exception as e:
