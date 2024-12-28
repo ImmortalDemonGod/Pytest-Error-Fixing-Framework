@@ -117,7 +117,7 @@ class CLI:
                 
             # 2) Attempt to generate and apply fix
             logger.info("Attempting to generate and apply fix...")
-            if self.service and self.service.attempt_fix(error):
+            if self.service and self.service.attempt_fix(error, self.service.initial_temp):
                 logger.info(f"Fix attempt for {error.test_function} succeeded.")
                 
                 # If in interactive mode, optionally create PR

@@ -75,6 +75,7 @@ class FixService:
         self.session = session  # We'll assume the session is created or loaded elsewhere
 
     @snoop
+    @snoop
     def attempt_fix(self, error: TestError, temperature: float) -> bool:
         """
         Attempt to fix failing test in a single shot (no internal loop).
