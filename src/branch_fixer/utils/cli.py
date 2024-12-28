@@ -87,7 +87,7 @@ class CLI:
                 print(f"- {err}")
         else:
             print("Cleanup completed successfully.")
-    
+
     @snoop
     def run_fix_workflow(self, error: TestError, interactive: bool) -> bool:
         """
@@ -155,12 +155,16 @@ class CLI:
             if DEBUG:
                 logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
             return False
-
     @snoop
     def run_manual_fix_workflow(self, error: TestError) -> str:
         """
         Let the user manually fix the test, then check if it passes:
-         - Loop until user either succeeds, skips, or quits
+         - Loop until user either *succeeds*, *skips*, or *quits*.
+         
+        Return values:
+         - "fixed" => The test now passes after user edits
+         - "skip"  => The user pressed 's' to skip
+         - "quit"  => The user pressed 'q' to stop manual fix mode entirely
         """
         while True:
             click.echo("\n--- MANUAL FIX MODE ---")
@@ -172,10 +176,10 @@ class CLI:
             )
 
             if user_input.lower() == 's':
-                # User wants to skip
+                # user chooses skip
                 return "skip"
             elif user_input.lower() == 'q':
-                # User wants to quit manual fix mode
+                # user chooses quit
                 click.echo("Exiting manual fix mode.")
                 return "quit"
 
@@ -193,7 +197,7 @@ class CLI:
                 elif choice.lower() == 'q':
                     click.echo("Exiting manual fix mode.")
                     return "quit"
-                # else user typed 'y', loop continues
+
     @snoop
     def setup_components(
         self,
