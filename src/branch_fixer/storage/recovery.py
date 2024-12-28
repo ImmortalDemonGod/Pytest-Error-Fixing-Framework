@@ -7,6 +7,7 @@ import hashlib
 import time
 import json
 import shutil
+import os
 
 if TYPE_CHECKING:
     from src.branch_fixer.storage.session_store import SessionStore
