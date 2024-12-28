@@ -128,10 +128,7 @@ class FixService:
             except Exception as e:
                 # If something unexpected breaks, let's also revert if we can
                 # But we only have a backup if apply_changes_with_backup got that far
-                # So let's do a careful attempt
                 logger.warning("Error occurred after changes might have been applied. Attempting revert.")
-                # We can do a local variable or track it in attempt
-                # For simplicity: no revert here if changes not applied yet
                 self._handle_failed_attempt(error, attempt)
                 raise FixServiceError(str(e)) from e
 
@@ -140,12 +137,35 @@ class FixService:
             root_cause = getattr(e, '__cause__', e)
             raise FixServiceError(str(root_cause)) from e
 
+    @snoop
+    def attempt_manual_fix(self, error: TestError) -> bool:
+        """
+        Check if a user's manual code edits have fixed the failing test.
+
+        1) Validate workspace
+        2) Re-run the test via test_runner to see if it now passes
+        3) Return True if it passes, else False
+
+        This method does not modify code or revert changes—it's purely a test verification
+        step to see if the user's manual edits have resolved the issue.
+        """
+        try:
+            # Validate workspace before re-testing
+            self.validator.validate_workspace(error.test_file.parent)
+            self.validator.check_dependencies()
+        except Exception as e:
+            raise FixServiceError(f"Workspace validation failed (manual fix): {str(e)}") from e
+
+        # Run the test to see if the issue is resolved
+        return self.test_runner.verify_fix(error.test_file, error.test_function)
+
     snoop()
     def _handle_failed_attempt(self, error: TestError, attempt: FixAttempt) -> None:
         """
         Handle cleanup after failed fix attempt.
         
-         """
+        This marks the attempt as failed. Additional cleanup or revert logic can be added here if needed.
+        """
         try:
             error.mark_attempt_failed(attempt)
         except Exception as e:

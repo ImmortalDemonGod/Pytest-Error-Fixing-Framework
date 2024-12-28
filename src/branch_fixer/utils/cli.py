@@ -79,7 +79,7 @@ class CLI:
 
     def run_fix_workflow(self, error: TestError, interactive: bool) -> bool:
         """
-        Run the fix workflow for a single error (create branch, attempt fix, revert if needed, etc.)
+        Run the fix workflow for a single error using AI (create branch, attempt fix, revert if needed, etc.)
         """
         try:
             logger.info(f"Attempting to fix {error.test_function} in {error.test_file}")
@@ -134,6 +134,33 @@ class CLI:
             if DEBUG:
                 logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
             return False
+
+    def run_manual_fix_workflow(self, error: TestError) -> bool:
+        """
+        Let the user manually fix the test, then verify the fix with a test run.
+        If the test is still failing, prompt user again until they skip or succeed.
+        """
+        while True:
+            click.echo("\n--- MANUAL FIX MODE ---")
+            click.echo(f"Open {error.test_file} and fix the issue for test {error.test_function}.")
+            click.echo("Press Enter when you're done to rerun the test, or 's' to skip.")
+            user_input = click.prompt("", default="", show_default=False)
+
+            if user_input.lower() == 's':
+                # user wants to skip manual fixes
+                return False
+
+            # Re-run the test to see if it's now passing
+            if self.service and self.service.attempt_manual_fix(error):
+                # If passing, mark success
+                click.echo(f"✓ Test {error.test_function} now passes!")
+                return True
+            else:
+                # If still failing, ask user if they want to fix again or skip
+                click.echo(f"✗ Test {error.test_function} is still failing.")
+                choice = click.prompt("Try again? (y)es / (s)kip", default="y")
+                if choice.lower() == 's':
+                    return False
 
     def setup_components(
         self,
@@ -190,7 +217,7 @@ class CLI:
     def _prompt_for_fix(self, error: TestError) -> Optional[str]:
         """
         Prompt user how to handle a failing test in interactive mode. 
-        Returns 'y', 'n', 'q' or None if input is invalid.
+        Returns 'y', 'm', 'n', 'q' or None if input is invalid.
         """
         while True:
             click.clear()  # Clear the screen for better visibility
@@ -198,23 +225,23 @@ class CLI:
             click.echo(f"Test: {error.test_function}")
             click.echo(f"Error: {error.error_details.error_type}: {error.error_details.message}")
             click.echo("\nOptions:")
-            click.echo("[Y]es: Attempt to fix this test")
-            click.echo("[N]o:  Skip this test") 
-            click.echo("[Q]uit: Stop fixing tests and exit")
+            click.echo("[Y] AI fix the test")
+            click.echo("[M] Manually fix the code")
+            click.echo("[N] Skip this test") 
+            click.echo("[Q] Quit: Stop fixing tests and exit")
 
-            # Use click.getchar() instead of prompt for more direct input
-            choice = click.getchar("\nYour choice (y/n/q) [y]: ").lower()
+            choice = click.getchar("\nYour choice (y/m/n/q) [y]: ").lower()
 
             # Handle empty input (Enter key) as default 'y'
             if choice == '\r' or choice == '\n':
                 choice = 'y'
                 
             # Only accept valid choices
-            if choice in ['y', 'n', 'q']:
+            if choice in ['y', 'm', 'n', 'q']:
                 return choice
                 
             # Invalid input - show error and loop
-            click.echo("\nInvalid choice. Please enter y, n, or q.")
+            click.echo("\nInvalid choice. Please enter y, m, n, or q.")
     
     
     def process_errors(self, errors: List[TestError], interactive: bool) -> int:
@@ -252,7 +279,16 @@ class CLI:
                         logger.info("Skipping test per user request")
                         total_processed += 1
                         continue
-                    elif choice == 'y':
+                    elif choice == 'm':
+                        # Manual fix path
+                        if self.run_manual_fix_workflow(error):
+                            success_count += 1
+                            print(f"✓ Successfully fixed {error.test_function}\n")
+                        else:
+                            print(f"✗ {error.test_function} not fixed manually.\n")
+                        total_processed += 1
+                    else:
+                        # Default or 'y' => AI fix path
                         if self.run_fix_workflow(error, interactive):
                             success_count += 1
                             print(f"✓ Successfully fixed {error.test_function}\n")
@@ -260,7 +296,7 @@ class CLI:
                             print(f"✗ Failed to fix {error.test_function}\n")
                         total_processed += 1
                 else:
-                    # Non-interactive mode always attempts fixes
+                    # Non-interactive mode always attempts AI-based fixes
                     if self.run_fix_workflow(error, interactive):
                         success_count += 1
                         print(f"✓ Successfully fixed {error.test_function}\n")
