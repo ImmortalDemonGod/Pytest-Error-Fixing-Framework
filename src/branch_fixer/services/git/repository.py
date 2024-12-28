@@ -14,7 +14,7 @@ from branch_fixer.services.git.exceptions import (
 from branch_fixer.services.git.pr_manager import PRManager
 from branch_fixer.services.git.safety_manager import SafetyManager
 from branch_fixer.services.git.branch_manager import BranchManager
-from branch_fixer.services.git.models import CommandResult, TestError
+from branch_fixer.services.git.models import CommandResult, GitErrorDetails
 import logging
 
 logger = logging.getLogger(__name__)
