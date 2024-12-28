@@ -12,7 +12,6 @@ from branch_fixer.services.git.exceptions import (
     BranchCreationError
 )
 from branch_fixer.services.git.pr_manager import PRManager
-from branch_fixer.services.git.safety_manager import SafetyManager
 from branch_fixer.services.git.branch_manager import BranchManager
 from branch_fixer.services.git.models import CommandResult, GitErrorDetails
 import logging
@@ -53,8 +52,6 @@ class GitRepository:
             # Initialize managers for PRs, branches, and safety (backup/restore)
             self.pr_manager = PRManager(self)
             self.branch_manager = BranchManager(self)
-            self.safety_manager = SafetyManager(self)
-            
         except (InvalidGitRepositoryError, NoSuchPathError) as e:
             raise NotAGitRepositoryError(f"Not a git repository: {root}") from e
         except GitCommandError as e:
@@ -421,34 +418,6 @@ class GitRepository:
         """
         raise NotImplementedError("Old create_pull_request method is not used.")
 
-    def backup_state(self) -> str:
-        """
-        Create a backup of the current repository state.
-
-        Uses the SafetyManager to create a backup, which can be restored later.
-
-        Returns:
-            str: A backup identifier string.
-
-        Raises:
-            GitError: If backup creation fails.
-        """
-        return self.safety_manager.create_backup()
-
-    def restore_state(self, backup_id: str) -> bool:
-        """
-        Restore repository state from a previously created backup.
-
-        Args:
-            backup_id (str): Identifier of the backup to restore.
-
-        Returns:
-            bool: True if the restore succeeded, False otherwise.
-
-        Raises:
-            GitError: If restore fails.
-        """
-        return self.safety_manager.restore_backup(backup_id)
 
     def create_fix_branch(self, 
                           branch_name: str,
