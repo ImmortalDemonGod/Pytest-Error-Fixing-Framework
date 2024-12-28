@@ -186,10 +186,10 @@ class CLI:
                 # If still failing
                 click.echo(f"✗ Test '{error.test_function}' is still failing.")
                 choice = click.prompt("Try manual fix again? (y)es / (s)kip / (q)uit", default="y")
-                if choice.lower() == 'q':
-                    click.echo("Exiting manual fix mode.")
-                    return False
                 if choice.lower() == 's':
+                    return False
+                elif choice.lower() == 'q':
+                    click.echo("Exiting manual fix mode.")
                     return False
 
     def setup_components(
