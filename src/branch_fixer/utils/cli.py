@@ -155,10 +155,10 @@ class CLI:
                 logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
             return False
 
-    def run_manual_fix_workflow(self, error: TestError) -> bool:
+    def run_manual_fix_workflow(self, error: TestError) -> str:
         """
         Let the user manually fix the test, then check if it passes:
-         - Loop until user either succeeds or skips
+         - Loop until user either succeeds, skips, or quits
         """
         while True:
             click.echo("\n--- MANUAL FIX MODE ---")
@@ -171,26 +171,27 @@ class CLI:
 
             if user_input.lower() == 's':
                 # User wants to skip
-                return False
+                return "skip"
             elif user_input.lower() == 'q':
                 # User wants to quit manual fix mode
                 click.echo("Exiting manual fix mode.")
-                return False
+                return "quit"
 
             # Attempt verifying the fix
             if self.service and self.service.attempt_manual_fix(error):
                 # If passing, mark success
                 click.echo(f"✓ Test '{error.test_function}' now passes!")
-                return True
+                return "fixed"
             else:
                 # If still failing
                 click.echo(f"✗ Test '{error.test_function}' is still failing.")
                 choice = click.prompt("Try manual fix again? (y)es / (s)kip / (q)uit", default="y")
                 if choice.lower() == 's':
-                    return False
+                    return "skip"
                 elif choice.lower() == 'q':
                     click.echo("Exiting manual fix mode.")
-                    return False
+                    return "quit"
+                # else user typed 'y', loop continues
 
     def setup_components(
         self,
@@ -274,7 +275,7 @@ class CLI:
             click.echo("\nOptions:")
             click.echo("[Y] Attempt AI-based fix")
             click.echo("[M] Perform manual fix")
-            click.echo("[N] Skip this test") 
+            click.echo("[N] Skip this test")
             click.echo("[Q] Quit fixing tests entirely")
 
             choice = click.getchar("\nYour choice (y/m/n/q) [y]: ").lower()
@@ -328,11 +329,16 @@ class CLI:
                     elif choice == 'm':
                         # Manual fix path
                         click.echo("Switching to manual fix mode...\n")
-                        if self.run_manual_fix_workflow(error):
+                        manual_result = self.run_manual_fix_workflow(error)
+                        if manual_result == "fixed":
                             success_count += 1
                             click.echo(f"✓ Successfully fixed '{error.test_function}' via manual fix.\n")
-                        else:
+                        elif manual_result == "skip":
                             click.echo(f"✗ '{error.test_function}' not fixed in manual fix mode.\n")
+                        elif manual_result == "quit":
+                            click.echo("\nQuitting as requested.")
+                            logger.info("User chose to quit manual fix mode entirely.")
+                            break
                         total_processed += 1
                     else:
                         # 'y' => Attempt AI-based fix
