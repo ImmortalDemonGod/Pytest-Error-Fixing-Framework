@@ -19,13 +19,11 @@ logger = logging.getLogger(__name__)
 class FixSessionState(Enum):
     """Possible states for a fix session"""
     INITIALIZING = "initializing"
-    RUNNING = "running" 
+    RUNNING = "running"
     PAUSED = "paused"
     FAILED = "failed"
     COMPLETED = "completed"
     ERROR = "error"
-
-
 
 @dataclass
 class FixProgress:
@@ -44,7 +42,7 @@ class FixSession:
     state: FixSessionState = FixSessionState.INITIALIZING
     start_time: datetime = field(default_factory=datetime.now)
     errors: List[TestError] = field(default_factory=list)
-    completed_errors: List[TestError] = field(default_factory=list) 
+    completed_errors: List[TestError] = field(default_factory=list)
     current_error: Optional[TestError] = None
     retry_count: int = 0
     error_count: int = 0
@@ -52,15 +50,45 @@ class FixSession:
     git_branch: Optional[str] = None
 
     def create_snapshot(self) -> Dict[str, Any]:
-        """Create serializable snapshot of current state"""
+        """Create serializable snapshot of current state (legacy placeholder)."""
         raise NotImplementedError()
+
+    def to_dict(self) -> dict:
+        return {
+            "id": str(self.id),
+            "state": self.state.value,
+            "start_time": self.start_time.isoformat(),
+            "errors": [e.to_dict() for e in self.errors],
+            "completed_errors": [ce.to_dict() for ce in self.completed_errors],
+            "current_error": self.current_error.to_dict() if self.current_error else None,
+            "retry_count": self.retry_count,
+            "error_count": self.error_count,
+            "modified_files": [str(f) for f in self.modified_files],
+            "git_branch": self.git_branch,
+        }
+
+    @staticmethod
+    def from_dict(data: dict) -> "FixSession":
+        fs = FixSession(
+            id=UUID(data["id"]),
+            state=FixSessionState(data["state"]),
+            start_time=datetime.fromisoformat(data["start_time"]),
+            errors=[TestError.from_dict(e) for e in data.get("errors", [])],
+            completed_errors=[TestError.from_dict(ce) for ce in data.get("completed_errors", [])],
+            current_error=TestError.from_dict(data["current_error"]) if data.get("current_error") else None,
+            retry_count=data.get("retry_count", 0),
+            error_count=data.get("error_count", 0),
+            modified_files=[Path(p) for p in data.get("modified_files", [])],
+            git_branch=data.get("git_branch"),
+        )
+        return fs
 
 class FixOrchestrator:
     """Orchestrates test fixing workflow with state management and error handling"""
-    
+
     def __init__(self,
                  ai_manager: AIManager,
-                 test_runner: TestRunner, 
+                 test_runner: TestRunner,
                  change_applier: ChangeApplier,
                  git_repo: GitRepository,
                  *,
