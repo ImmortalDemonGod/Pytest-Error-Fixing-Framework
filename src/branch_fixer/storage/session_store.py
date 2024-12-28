@@ -5,20 +5,16 @@ from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 from tinydb import TinyDB, Query
-from branch_fixer.orchestration.orchestrator import FixSession, FixSessionState
 
+from branch_fixer.orchestration.orchestrator import FixSession, FixSessionState
 
 class StorageError(Exception):
     """Base exception for storage errors."""
-
     pass
-
 
 class SessionPersistenceError(StorageError):
     """Raised when session persistence operations fail."""
-
     pass
-
 
 class SessionStore:
     """
@@ -73,9 +69,7 @@ class SessionStore:
                 "git_branch": session.git_branch,
                 "modified_files": [str(p) for p in session.modified_files],
                 "completed_errors": [str(err.id) for err in session.completed_errors],
-                "current_error": str(session.current_error.id)
-                if session.current_error
-                else None,
+                "current_error": str(session.current_error.id) if session.current_error else None,
                 # Additional fields as needed
             }
 
@@ -84,6 +78,7 @@ class SessionStore:
                 self.sessions.update(session_data, Session.id == str(session.id))
             else:
                 self.sessions.insert(session_data)
+
         except Exception as e:
             raise SessionPersistenceError(
                 f"Failed to save session {session.id}: {e}"
