@@ -87,7 +87,8 @@ class CLI:
                 print(f"- {err}")
         else:
             print("Cleanup completed successfully.")
-
+    
+    @snoop
     def run_fix_workflow(self, error: TestError, interactive: bool) -> bool:
         """
         Run the fix workflow for a single error using AI:
@@ -155,6 +156,7 @@ class CLI:
                 logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
             return False
 
+    @snoop
     def run_manual_fix_workflow(self, error: TestError) -> str:
         """
         Let the user manually fix the test, then check if it passes:
@@ -192,7 +194,7 @@ class CLI:
                     click.echo("Exiting manual fix mode.")
                     return "quit"
                 # else user typed 'y', loop continues
-
+    @snoop
     def setup_components(
         self,
         api_key: str,
@@ -257,7 +259,7 @@ class CLI:
             if DEBUG:
                 logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
             return False
-    
+    @snoop
     def _prompt_for_fix(self, error: TestError) -> Optional[str]:
         """
         Prompt user how to handle a failing test in interactive mode. 
