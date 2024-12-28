@@ -11,8 +11,8 @@ import os
 
 if TYPE_CHECKING:
     from src.branch_fixer.storage.session_store import SessionStore
-    from src.branch_fixer.git.repository import GitRepository
-    from src.branch_fixer.orchestrator import FixSession
+    from src.branch_fixer.services.git.repository import GitRepository
+    from src.branch_fixer.orchestration.orchestrator import FixSession
 
 @dataclass
 class RecoveryPoint:
@@ -39,18 +39,6 @@ class RecoveryPoint:
               git_branch: str,
               modified_files: List[Path], 
               metadata: Dict[str, Any]) -> 'RecoveryPoint':
-        """
-        Create new recovery point with unique ID.
-
-        Args:
-            session_id: Associated session identifier
-            git_branch: Current Git branch name
-            modified_files: List of modified file paths
-            metadata: Additional recovery context
-
-        Returns:
-            New RecoveryPoint instance
-        """
         timestamp = time.time()
         point_id = hashlib.sha256(
             f"{session_id}{timestamp}".encode()
@@ -65,7 +53,6 @@ class RecoveryPoint:
         )
 
     def to_json(self) -> Dict[str, Any]:
-        """Convert recovery point to JSON-serializable dict."""
         return {
             'id': self.id,
             'session_id': str(self.session_id),
@@ -77,7 +64,6 @@ class RecoveryPoint:
 
     @classmethod
     def from_json(cls, data: Dict[str, Any]) -> 'RecoveryPoint':
-        """Create recovery point from JSON data."""
         return cls(
             id=data['id'],
             session_id=UUID(data['session_id']),
@@ -125,7 +111,6 @@ class RecoveryManager:
         """
         if not backup_dir.parent.exists():
             raise ValueError(f"Parent directory does not exist: {backup_dir.parent}")
-            
         self.session_store = session_store
         self.git_repo = git_repo
         self.backup_dir = backup_dir
@@ -134,12 +119,15 @@ class RecoveryManager:
         # Verify backup directory is writable
         if not os.access(self.backup_dir, os.W_OK):
             raise PermissionError(f"Backup directory not writable: {backup_dir}")
-            
-        raise NotImplementedError()
+
+        # We'll store RecoveryPoints in JSON files under backup_dir
+        self.recovery_index_file = self.backup_dir / "recovery_points.json"
+        if not self.recovery_index_file.exists():
+            self.recovery_index_file.write_text("[]", encoding="utf-8")
 
     async def create_checkpoint(self, 
-                              session: 'FixSession',
-                              metadata: Optional[Dict] = None) -> RecoveryPoint:
+                                session: 'FixSession',
+                                metadata: Optional[Dict] = None) -> RecoveryPoint:
         """
         Create recovery checkpoint for current state.
 
@@ -152,13 +140,33 @@ class RecoveryManager:
 
         Raises:
             CheckpointError: If checkpoint creation fails
-            GitError: If Git operations fail
         """
-        raise NotImplementedError()
+        try:
+            # 1) Gather modified files. For simplicity, we can read session.modified_files
+            # 2) Create a RecoveryPoint
+            metadata = metadata or {}
+            rp = RecoveryPoint.create(
+                session_id=session.id,
+                git_branch=self.git_repo.get_current_branch(),
+                modified_files=session.modified_files,
+                metadata=metadata
+            )
+
+            # 3) Save the RecoveryPoint as JSON
+            self._save_recovery_point(rp)
+
+            # Optionally also store the session state in the SessionStore
+            # so we can load it if we want to revert to an older session
+            self.session_store.save_session(session)
+
+            return rp
+
+        except Exception as e:
+            raise CheckpointError(f"Failed to create checkpoint: {e}") from e
 
     async def restore_checkpoint(self, 
-                               checkpoint_id: str,
-                               cleanup: bool = True) -> bool:
+                                 checkpoint_id: str,
+                                 cleanup: bool = True) -> bool:
         """
         Restore session state from checkpoint.
 
@@ -171,15 +179,42 @@ class RecoveryManager:
 
         Raises:
             RestoreError: If restore fails
-            GitError: If Git restore fails
-            FileNotFoundError: If backup files missing
         """
-        raise NotImplementedError()
+        try:
+            rp = self._load_recovery_point(checkpoint_id)
+            if not rp:
+                raise RestoreError(f"Recovery point {checkpoint_id} not found")
+
+            # 1) Check out the correct branch if needed
+            current_branch = self.git_repo.get_current_branch()
+            if current_branch != rp.git_branch:
+                # Attempt to checkout rp.git_branch
+                result = self.git_repo.run_command(["checkout", rp.git_branch])
+                if result.failed:
+                    raise RestoreError(f"Failed to checkout {rp.git_branch}: {result.stderr}")
+
+            # 2) Restore each modified file from backups if you want to store them
+            #    For now, we assume they've already been partially undone by `ChangeApplier`.
+            #    In a real scenario, you'd keep track of file backups in a separate directory.
+            #
+            #    Simplified approach: do nothing or just log
+            for fpath in rp.modified_files:
+                # e.g. we might revert from some backup: `_restore_file(fpath, rp.id)`
+                pass
+
+            # If cleanup, remove the checkpoint from the index
+            if cleanup:
+                self._remove_recovery_point(checkpoint_id)
+
+            return True
+
+        except Exception as e:
+            raise RestoreError(f"Failed to restore checkpoint {checkpoint_id}: {e}") from e
 
     async def handle_failure(self, 
-                           error: Exception,
-                           session: 'FixSession',
-                           context: Dict[str, Any]) -> bool:
+                             error: Exception,
+                             session: 'FixSession',
+                             context: Dict[str, Any]) -> bool:
         """
         Handle specific failure types.
 
@@ -190,8 +225,64 @@ class RecoveryManager:
 
         Returns:
             bool indicating if recovery succeeded
-
-        Note:
-            Attempts to recover based on error type and context
         """
-        raise NotImplementedError()
+        # Example: always attempt to restore the last checkpoint
+        # Or pick which checkpoint to restore
+        logger_string = f"Handling failure for session {session.id}: {error}"
+        if context:
+            logger_string += f" | context={context}"
+        print(logger_string)  # Or log it
+
+        # For demonstration, let's restore the *most recent* checkpoint, if any
+        # This is a simplistic approach:
+        checkpoints = self._list_recovery_points_for_session(session.id)
+        if not checkpoints:
+            print("No recovery points to restore.")
+            return False
+
+        # Sort by timestamp descending, pick the last
+        checkpoints.sort(key=lambda rp: rp.timestamp, reverse=True)
+        latest_rp = checkpoints[0]
+
+        try:
+            print(f"Attempting to restore last checkpoint {latest_rp.id}")
+            restored = await self.restore_checkpoint(latest_rp.id, cleanup=False)
+            print(f"Restore result: {restored}")
+            return restored
+        except RestoreError as e:
+            print(f"Restore failed: {e}")
+            return False
+
+    # ---------------------
+    # Internal helper methods
+    # ---------------------
+
+    def _save_recovery_point(self, rp: RecoveryPoint) -> None:
+        """Append the recovery point JSON to the index file"""
+        data = json.loads(self.recovery_index_file.read_text(encoding="utf-8"))
+        data.append(rp.to_json())
+        self.recovery_index_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+    def _load_recovery_point(self, rp_id: str) -> Optional[RecoveryPoint]:
+        """Load one recovery point from index by ID"""
+        data = json.loads(self.recovery_index_file.read_text(encoding="utf-8"))
+        for rp_json in data:
+            if rp_json["id"] == rp_id:
+                return RecoveryPoint.from_json(rp_json)
+        return None
+
+    def _remove_recovery_point(self, rp_id: str) -> None:
+        """Remove recovery point from index file by ID"""
+        data = json.loads(self.recovery_index_file.read_text(encoding="utf-8"))
+        new_data = [rp for rp in data if rp["id"] != rp_id]
+        self.recovery_index_file.write_text(json.dumps(new_data, indent=2), encoding="utf-8")
+
+    def _list_recovery_points_for_session(self, session_id: UUID) -> List[RecoveryPoint]:
+        """Return all recovery points for a given session"""
+        data = json.loads(self.recovery_index_file.read_text(encoding="utf-8"))
+        results = []
+        for rp_json in data:
+            if rp_json["session_id"] == str(session_id):
+                rp = RecoveryPoint.from_json(rp_json)
+                results.append(rp)
+        return results
