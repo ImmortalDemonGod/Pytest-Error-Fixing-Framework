@@ -164,13 +164,17 @@ class CLI:
             click.echo("\n--- MANUAL FIX MODE ---")
             click.echo(f"Please open '{error.test_file}' and fix the issue for test '{error.test_function}'.")
             user_input = click.prompt(
-                "Press Enter to re-run the test or type 's' to skip manual fixing",
+                "Press Enter to re-run the test, type 's' to skip manual fixing, or 'q' to quit manual fix mode",
                 default="",
                 show_default=False
             )
 
             if user_input.lower() == 's':
                 # User wants to skip
+                return False
+            elif user_input.lower() == 'q':
+                # User wants to quit manual fix mode
+                click.echo("Exiting manual fix mode.")
                 return False
 
             # Attempt verifying the fix
@@ -181,7 +185,10 @@ class CLI:
             else:
                 # If still failing
                 click.echo(f"✗ Test '{error.test_function}' is still failing.")
-                choice = click.prompt("Try manual fix again? (y)es / (s)kip", default="y")
+                choice = click.prompt("Try manual fix again? (y)es / (s)kip / (q)uit", default="y")
+                if choice.lower() == 'q':
+                    click.echo("Exiting manual fix mode.")
+                    return False
                 if choice.lower() == 's':
                     return False
 
