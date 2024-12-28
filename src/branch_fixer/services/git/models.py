@@ -13,8 +13,13 @@ class ErrorDetails:
     message: Optional[str] = None
 
 @dataclass
-class TestError:
-    """Class to store details of a test error."""
+class GitErrorDetails:
+    """
+    Class to store details of a Git-related error or metadata.
+
+    Previously named 'TestError'—now renamed to avoid confusion 
+    with the core.models.TestError used for test failures.
+    """
     test_function: str
     test_file: str
     error_details: ErrorDetails

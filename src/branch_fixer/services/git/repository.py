@@ -544,7 +544,7 @@ class GitRepository:
         except Exception as e:
             raise GitError(f"Failed to cleanup branch {branch_name}: {str(e)}")
 
-    def create_pull_request_sync(self, branch_name: str, error: TestError) -> bool:
+    def create_pull_request_sync(self, branch_name: str, error: GitErrorDetails) -> bool:
         """
         Create a pull request for a fix synchronously.
 
