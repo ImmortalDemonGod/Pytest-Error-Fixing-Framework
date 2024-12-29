@@ -159,14 +159,18 @@ class CLI:
     def run_manual_fix_workflow(self, error: TestError) -> str:
         """
         Let the user manually fix the test, then check if it passes:
-         - Loop until user either *succeeds*, *skips*, or *quits*.
-         
+        - Loop until user either *succeeds*, *skips*, or *quits*.
+        - Limit the number of retries to avoid infinite loops.
+
         Return values:
-         - "fixed" => The test now passes after user edits
-         - "skip"  => The user pressed 's' to skip
-         - "quit"  => The user pressed 'q' to stop manual fix mode entirely
+        - "fixed" => The test now passes after user edits
+        - "skip"  => The user pressed 's' to skip
+        - "quit"  => The user pressed 'q' to stop manual fix mode entirely
         """
-        while True:
+        retry_limit = 3  # Limit the number of retries for manual fixes.
+        retries = 0
+
+        while retries < retry_limit:
             click.echo("\n--- MANUAL FIX MODE ---")
             click.echo(f"Please open '{error.test_file}' and fix the issue for test '{error.test_function}'.")
             user_input = click.prompt(
@@ -190,13 +194,13 @@ class CLI:
                 return "fixed"
             else:
                 # If still failing
-                click.echo(f"✗ Test '{error.test_function}' is still failing.")
-                choice = click.prompt("Try manual fix again? (y)es / (s)kip / (q)uit", default="y")
-                if choice.lower() == 's':
-                    return "skip"
-                elif choice.lower() == 'q':
-                    click.echo("Exiting manual fix mode.")
-                    return "quit"
+                retries += 1
+                click.echo(f"✗ Test '{error.test_function}' is still failing. ({retries}/{retry_limit} retries used)")
+
+        # If retry limit is reached, exit manual fix mode
+        click.echo("Retry limit reached. Exiting manual fix mode.")
+        return "quit"
+
 
     @snoop
     def setup_components(
