@@ -4,6 +4,7 @@ import logging
 import signal
 import traceback
 import uuid
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
@@ -21,6 +22,18 @@ from branch_fixer.services.git.repository import GitRepository
 from branch_fixer.services.pytest.runner import TestRunner
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ComponentSettings:
+    """
+    Encapsulate setup parameters for easier handling and future extensions.
+    """
+    api_key: str
+    max_retries: int
+    initial_temp: float
+    temp_increment: float
+    dev_force_success: bool
 
 
 class CLI:
@@ -57,6 +70,23 @@ class CLI:
         errors = []
 
         # 1) Cleanup branches
+        self._cleanup_branches(errors)
+
+        # 2) Checkout main
+        self._checkout_main(errors)
+
+        # Report any errors
+        if errors:
+            print("\nEncountered errors during cleanup:")
+            for err in errors:
+                print(f"- {err}")
+        else:
+            print("Cleanup completed successfully.")
+
+    def _cleanup_branches(self, errors: List[str]) -> None:
+        """
+        Helper to clean up fix branches, logging any errors.
+        """
         for branch in self.created_branches:
             try:
                 print(f"Cleaning up branch: {branch}")
@@ -67,7 +97,10 @@ class CLI:
                 errors.append(f"Failed to cleanup branch {branch}: {str(e)}")
                 logger.error(f"Cleanup error for branch {branch}: {str(e)}")
 
-        # 2) Checkout main
+    def _checkout_main(self, errors: List[str]) -> None:
+        """
+        Helper to checkout the main branch and log errors.
+        """
         try:
             main_branch = self.service.git_repo.main_branch
             self.service.git_repo.run_command(["checkout", main_branch])
@@ -76,31 +109,19 @@ class CLI:
             errors.append(f"Failed to checkout main branch: {str(e)}")
             logger.warning(f"Unable to checkout main branch: {e}")
 
-        # Report any errors
-        if errors:
-            print("\nEncountered errors during cleanup:")
-            for err in errors:
-                print(f"- {err}")
-        else:
-            print("Cleanup completed successfully.")
-
     def _create_fix_branch(self, error: TestError) -> Optional[str]:
         """
         Helper to create a new fix branch with a unique suffix.
         Returns the branch name or None on failure.
         """
         unique_suffix = str(uuid.uuid4())[:8]
-        branch_name = (
-            f"fix-{error.test_file.stem}-{error.test_function}-{unique_suffix}"
-        )
+        branch_name = f"fix-{error.test_file.stem}-{error.test_function}-{unique_suffix}"
 
         logger.info(f"Creating fix branch: {branch_name}")
         try:
             if (
                 self.service
-                and not self.service.git_repo.branch_manager.create_fix_branch(
-                    branch_name
-                )
+                and not self.service.git_repo.branch_manager.create_fix_branch(branch_name)
             ):
                 logger.error(f"Failed to create fix branch: {branch_name}")
                 return None
@@ -108,6 +129,7 @@ class CLI:
             logger.warning(f"Branch creation warning: {branch_err}")
             # Continue even if branch creation fails
             # but return the branch name to keep logic consistent
+
         self.created_branches.add(branch_name)
         return branch_name
 
@@ -130,57 +152,61 @@ class CLI:
                 return False
 
             # 2) Attempt to generate and apply fix
-            logger.info("Attempting to generate and apply fix...")
-            if self.service and self.service.attempt_fix(
-                error, self.service.initial_temp
-            ):
-                logger.info(f"Fix attempt for {error.test_function} succeeded.")
-
-                # If in interactive mode, optionally create PR
-                if interactive:
-                    pr_confirm = click.confirm(
-                        "Fix succeeded. Would you like to open a Pull Request?",
-                        default=True,
-                    )
-                    if not pr_confirm:
-                        logger.info("Skipping PR creation at user request.")
-                        return True  # We still succeeded in the fix
-
-                # 3) Create PR if desired
-                logger.info("Creating pull request...")
-                if self.service and self.service.git_repo.create_pull_request_sync(
-                    branch_name, error
-                ):
-                    logger.info("Created pull request successfully.")
-
-                    # 4) Try pushing to remote
-                    if self.service.git_repo.push(branch_name):
-                        logger.info(
-                            f"Successfully pushed branch '{branch_name}' to remote."
-                        )
-                        return True
-                    else:
-                        logger.error(
-                            f"Failed to push branch '{branch_name}' to remote."
-                        )
-                        return False
-                else:
-                    logger.error(
-                        "Failed to create pull request (or no repo configured)."
-                    )
-                    # We consider fix successful, but PR creation failed
-                    return True
-            else:
-                logger.warning(f"Fix attempt for {error.test_function} failed.")
+            if not self._generate_and_apply_fix(error):
                 return False
+
+            if interactive:
+                # If in interactive mode, optionally create PR
+                pr_confirm = click.confirm(
+                    "Fix succeeded. Would you like to open a Pull Request?",
+                    default=True,
+                )
+                if not pr_confirm:
+                    logger.info("Skipping PR creation at user request.")
+                    return True  # We still succeeded in the fix
+
+            # 3) Create PR if desired
+            return self._create_and_push_pr(branch_name, error)
 
         except Exception as e:
             logger.error(f"Fix workflow encountered an error: {str(e)}")
             if DEBUG:
-                logger.error(
-                    f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}"
-                )
+                logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
             return False
+
+    def _generate_and_apply_fix(self, error: TestError) -> bool:
+        """
+        Attempt to generate/apply a fix via AI; return True if successful, False otherwise.
+        """
+        logger.info("Attempting to generate and apply fix...")
+        if self.service and self.service.attempt_fix(error, self.service.initial_temp):
+            logger.info(f"Fix attempt for {error.test_function} succeeded.")
+            return True
+        else:
+            logger.warning(f"Fix attempt for {error.test_function} failed.")
+            return False
+
+    def _create_and_push_pr(self, branch_name: str, error: TestError) -> bool:
+        """
+        Create a pull request for the given branch and push to remote.
+        Return True if successful or if PR creation fails but the fix was still okay.
+        Return False if push fails.
+        """
+        logger.info("Creating pull request...")
+        if self.service and self.service.git_repo.create_pull_request_sync(branch_name, error):
+            logger.info("Created pull request successfully.")
+
+            # 4) Try pushing to remote
+            if self.service.git_repo.push(branch_name):
+                logger.info(f"Successfully pushed branch '{branch_name}' to remote.")
+                return True
+            else:
+                logger.error(f"Failed to push branch '{branch_name}' to remote.")
+                return False
+        else:
+            logger.error("Failed to create pull request (or no repo configured).")
+            # We consider fix successful, but PR creation failed
+            return True
 
     # @snoop
     def run_manual_fix_workflow(self, error: TestError) -> str:
@@ -239,18 +265,6 @@ class CLI:
         click.echo("Retry limit reached. Exiting manual fix mode.")
         return "quit"
 
-    # Here we define a small container to reduce argument count.
-    # You might replace it later with a proper dataclass or similar.
-    class _ComponentSettings:
-        def __init__(
-            self, api_key, max_retries, initial_temp, temp_increment, dev_force_success
-        ):
-            self.api_key = api_key
-            self.max_retries = max_retries
-            self.initial_temp = initial_temp
-            self.temp_increment = temp_increment
-            self.dev_force_success = dev_force_success
-
     # @snoop
     def setup_components(
         self,
@@ -261,12 +275,16 @@ class CLI:
         dev_force_success: bool,
     ) -> bool:
         """
-        Initialize AI, Test Runner, ChangeApplier, GitRepo, FixService, & Orchestrator.
+        Initialize AI, Test Runner, Change Applier, GitRepo, FixService, & Orchestrator.
         """
         try:
-            # Minimal refactoring using a small container to reduce direct arguments
-            config = self._ComponentSettings(
-                api_key, max_retries, initial_temp, temp_increment, dev_force_success
+            # Use our dataclass to reduce direct arguments
+            config = ComponentSettings(
+                api_key=api_key,
+                max_retries=max_retries,
+                initial_temp=initial_temp,
+                temp_increment=temp_increment,
+                dev_force_success=dev_force_success,
             )
 
             logger.info("Initializing AI Manager...")
@@ -319,9 +337,7 @@ class CLI:
         except Exception as e:
             logger.error(f"Component initialization failed: {str(e)}")
             if DEBUG:
-                logger.error(
-                    f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}"
-                )
+                logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
             return False
 
     def _process_interactive_error(self, error: TestError) -> bool:
@@ -343,9 +359,7 @@ class CLI:
             click.echo("Switching to manual fix mode...\n")
             manual_result = self.run_manual_fix_workflow(error)
             if manual_result == "fixed":
-                click.echo(
-                    f"✓ Successfully fixed '{error.test_function}' via manual fix.\n"
-                )
+                click.echo(f"✓ Successfully fixed '{error.test_function}' via manual fix.\n")
             elif manual_result == "skip":
                 click.echo(f"✗ '{error.test_function}' not fixed in manual fix mode.\n")
             elif manual_result == "quit":
