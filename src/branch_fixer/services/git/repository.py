@@ -37,7 +37,7 @@ class GitRepository:
     and leverages GitPython's `Repo` class for local repository state.
     """
 
-    def __init__(self, root: Optional[Path] = None):
+    def __init__(self, root: Optional[Path] = None) -> None:
         """Initialize a GitRepository instance.
 
         Args:
@@ -48,13 +48,13 @@ class GitRepository:
             GitError: If other git operations fail (e.g., unable to initialize the repo).
         """
         try:
-            self.root = self._find_git_root(root or Path.cwd())
-            self.repo = Repo(self.root)
-            self.main_branch = self._get_main_branch()
+            self.root: Path = self._find_git_root(root or Path.cwd())
+            self.repo: Repo = Repo(self.root)
+            self.main_branch: str = self._get_main_branch()
 
             # Initialize managers for PRs, branches, and safety (backup/restore)
-            self.pr_manager = PRManager(self)
-            self.branch_manager = BranchManager(self)
+            self.pr_manager: PRManager = PRManager(self)
+            self.branch_manager: BranchManager = BranchManager(self)
         except (InvalidGitRepositoryError, NoSuchPathError) as e:
             raise NotAGitRepositoryError(f"Not a git repository: {root}") from e
         except GitCommandError as e:
@@ -123,6 +123,9 @@ class GitRepository:
         except (OSError, IOError) as e:
             raise GitError(f"Unable to read HEAD file: {e}")
 
+    # ------------------------
+    #  Refactored: run_command
+    # ------------------------
     def run_command(self, cmd: List[str]) -> CommandResult:
         """
         Execute a Git command synchronously within the repository and return a `CommandResult`.
@@ -141,41 +144,10 @@ class GitRepository:
             GitError: If the command execution fails or if the Git command is unknown.
         """
         try:
-            logger.debug(f"Running command: {' '.join(cmd)} in {self.root}")
-            # First element should be 'git', remove it if present
-            if cmd[0] == "git":
-                cmd = cmd[1:]
-
-            # Prepare full command
-            full_cmd = ["git"] + cmd
-
-            # Run the command
-            process = subprocess.run(
-                full_cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                cwd=str(self.root),
-                text=True,
-            )
-
-            # Create result object
-            result = CommandResult(
-                returncode=process.returncode,
-                stdout=process.stdout,
-                stderr=process.stderr,
-                command=full_cmd,
-            )
-
-            # Log result for debugging
-            logger.debug(f"Command result: {result}")
-
-            if result.returncode != 0:
-                raise GitError(
-                    f"Git command failed with return code {result.returncode}: {result.stderr}"
-                )
-
+            full_cmd = self._prepare_git_command(cmd)
+            result = self._execute_subprocess(full_cmd)
+            self._check_command_error(result)
             return result
-
         except subprocess.CalledProcessError as e:
             raise GitError(f"Git command failed: {e.stderr}") from e
         except FileNotFoundError:
@@ -184,6 +156,47 @@ class GitRepository:
             if "'nonexistent' is not a git command" in str(e):
                 raise GitError("unknown git command")
             raise GitError(f"Git command failed: {str(e)}") from e
+
+    def _prepare_git_command(self, cmd: List[str]) -> List[str]:
+        """
+        Prepare the full Git command by inserting 'git' and removing the first element if it is 'git'.
+        """
+        logger.debug(f"Initial command list: {cmd}")
+        if cmd and cmd[0] == "git":
+            cmd = cmd[1:]
+        full_cmd = ["git"] + cmd
+        logger.debug(f"Prepared git command: {full_cmd}")
+        return full_cmd
+
+    def _execute_subprocess(self, full_cmd: List[str]) -> CommandResult:
+        """
+        Execute the subprocess with the prepared command and return a CommandResult object.
+        """
+        logger.debug(f"Running command: {' '.join(full_cmd)} in {self.root}")
+        process = subprocess.run(
+            full_cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=str(self.root),
+            text=True,
+        )
+        result = CommandResult(
+            returncode=process.returncode,
+            stdout=process.stdout,
+            stderr=process.stderr,
+            command=full_cmd,
+        )
+        logger.debug(f"Command result: {result}")
+        return result
+
+    def _check_command_error(self, result: CommandResult) -> None:
+        """
+        Check if the command resulted in a non-zero exit code and raise a GitError if so.
+        """
+        if result.returncode != 0:
+            raise GitError(
+                f"Git command failed with return code {result.returncode}: {result.stderr}"
+            )
 
     def is_clean(self) -> bool:
         """
@@ -423,6 +436,9 @@ class GitRepository:
         """
         raise NotImplementedError("Old create_pull_request method is not used.")
 
+    # ------------------------------------
+    #  Refactored: create_fix_branch logic
+    # ------------------------------------
     def create_fix_branch(
         self, branch_name: str, from_branch: Optional[str] = None
     ) -> bool:
@@ -442,27 +458,14 @@ class GitRepository:
         """
         try:
             logger.debug(f"Creating fix branch: {branch_name}")
+            self._validate_fix_branch_request(branch_name)
 
-            # Validate branch name
-            if not self.validate_branch_name(branch_name):
-                raise BranchNameError(f"Invalid branch name: {branch_name}")
-
-            # Check if branch exists
-            exists = self.branch_exists(branch_name)
-            if exists:
-                raise BranchCreationError(f"Branch {branch_name} already exists")
-
-            # Get base branch
-            from_branch = from_branch or self.main_branch
+            # Decide base branch
+            actual_base = from_branch or self.main_branch
+            logger.debug(f"Using base branch: {actual_base}")
 
             # Create new branch from base
-            result = self.run_command(["checkout", "-b", branch_name, from_branch])
-
-            if result.returncode != 0:
-                raise BranchCreationError(
-                    f"Failed to create branch {branch_name}: {result.stderr}"
-                )
-
+            self._create_fix_branch_from_base(branch_name, actual_base)
             logger.info(f"Successfully created branch: {branch_name}")
             return True
 
@@ -474,6 +477,26 @@ class GitRepository:
             raise GitError(
                 f"Unexpected error creating branch {branch_name}: {str(e)}"
             ) from e
+
+    def _validate_fix_branch_request(self, branch_name: str) -> None:
+        """
+        Validate the requested branch name and ensure it doesn't already exist.
+        """
+        if not self.validate_branch_name(branch_name):
+            raise BranchNameError(f"Invalid branch name: {branch_name}")
+
+        if self.branch_exists(branch_name):
+            raise BranchCreationError(f"Branch {branch_name} already exists")
+
+    def _create_fix_branch_from_base(self, branch_name: str, from_branch: str) -> None:
+        """
+        Create the new fix branch from the specified base branch, raising BranchCreationError on failure.
+        """
+        result = self.run_command(["checkout", "-b", branch_name, from_branch])
+        if result.returncode != 0:
+            raise BranchCreationError(
+                f"Failed to create branch {branch_name}: {result.stderr}"
+            )
 
     def validate_branch_name(self, branch_name: str) -> bool:
         """
@@ -529,8 +552,8 @@ class GitRepository:
 
         Args:
             branch_name (str): The fix branch to create a PR from.
-            error (TestError): An error object containing details about the test failure
-                               that prompted the fix.
+            error (GitErrorDetails): An error object containing details about the test failure
+                                     that prompted the fix.
 
         Returns:
             bool: True if the PR creation succeeded, False otherwise.
