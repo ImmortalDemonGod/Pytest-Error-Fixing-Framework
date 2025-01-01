@@ -1,11 +1,13 @@
 from dataclasses import dataclass, field
-from uuid import UUID, uuid4
 from pathlib import Path
 from typing import List, Optional
+from uuid import UUID, uuid4
+
 
 @dataclass(frozen=True)
 class ErrorDetails:
     """Value object representing the details of a test error"""
+
     error_type: str
     message: str
     stack_trace: Optional[str] = None
@@ -25,9 +27,11 @@ class ErrorDetails:
             stack_trace=data.get("stack_trace"),
         )
 
+
 @dataclass
 class FixAttempt:
     """Entity representing a single attempt to fix a test error"""
+
     temperature: float
     status: str = "in_progress"  # in_progress, success, failed
     id: UUID = field(default_factory=uuid4)
@@ -47,9 +51,11 @@ class FixAttempt:
             id=UUID(data["id"]),
         )
 
+
 @dataclass
 class TestError:
     """Aggregate root representing a failing test"""
+
     test_file: Path
     test_function: str
     error_details: ErrorDetails
@@ -100,8 +106,10 @@ class TestError:
             fix_attempts=[FixAttempt.from_dict(fa) for fa in data["fix_attempts"]],
         )
 
+
 @dataclass
 class CodeChanges:
     """Represents code changes suggested by AI."""
+
     original_code: str
     modified_code: str
