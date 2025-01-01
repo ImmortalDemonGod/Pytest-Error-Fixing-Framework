@@ -6,6 +6,7 @@ import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
+from threading import RLock
 from typing import List, Optional
 
 import pytest
@@ -92,6 +93,9 @@ class PytestRunner:
         self.working_dir: Path = working_dir or Path.cwd()
         self._current_session: Optional[SessionResult] = None
         self.temp_dirs: List[Path] = []  # Track temporary directories for cleanup
+        # Added a lock to guard operations where concurrency could be an issue:
+        self._lock = RLock()
+
         logger.debug(
             f"PytestRunner initialized with working directory: {self.working_dir}"
         )
@@ -149,22 +153,30 @@ class PytestRunner:
         """
         if not self._current_session:
             return
-        for result in self._current_session.test_results.values():
-            if result.passed and not result.xfailed and not result.xpassed:
-                self._current_session.passed += 1
-            elif result.failed:
-                self._current_session.failed += 1
-            elif result.skipped:
-                self._current_session.skipped += 1
 
-            if result.xfailed:
-                self._current_session.xfailed += 1
-            if result.xpassed:
-                self._current_session.xpassed += 1
+        # Extracted smaller function to handle counting for each test result:
+        for result in self._current_session.test_results.values():
+            self._count_individual_result(result)
 
         self._current_session.total_collected = len(self._current_session.test_results)
         self._current_session.errors = len(self._current_session.collection_errors)
         logger.debug(f"Session results: {self._current_session}")
+
+    def _count_individual_result(self, result: TestResult) -> None:
+        """
+        Increment the appropriate counters for a single TestResult.
+        """
+        if result.passed and not result.xfailed and not result.xpassed:
+            self._current_session.passed += 1
+        elif result.failed:
+            self._current_session.failed += 1
+        elif result.skipped:
+            self._current_session.skipped += 1
+
+        if result.xfailed:
+            self._current_session.xfailed += 1
+        if result.xpassed:
+            self._current_session.xpassed += 1
 
     def format_collection_errors(self) -> List[str]:
         """
@@ -227,74 +239,84 @@ class PytestRunner:
         Returns:
             SessionResult: The result of the test session.
         """
-        start_time = datetime.now()
-        logger.info(f"Starting test run at {start_time}")
+        with self._lock:
+            start_time = datetime.now()
+            logger.info(f"Starting test run at {start_time}")
 
-        # Initialize session
-        self._current_session = SessionResult(
-            start_time=start_time,
-            end_time=start_time,
-            duration=0.0,
-            exit_code=ExitCode.OK,
-        )
+            # Initialize session
+            self._current_session = SessionResult(
+                start_time=start_time,
+                end_time=start_time,
+                duration=0.0,
+                exit_code=ExitCode.OK,
+            )
 
-        try:
-            # Register plugin
-            plugin = PytestPlugin(self)
+            try:
+                # Register plugin
+                plugin = PytestPlugin(self)
 
-            # Build arguments
-            args = self.build_pytest_args(test_path, test_function)
-            logger.debug(f"Running pytest with arguments: {args}")
+                # Build arguments
+                args = self.build_pytest_args(test_path, test_function)
+                logger.debug(f"Running pytest with arguments: {args}")
 
-            # Run pytest
-            exit_code_val = pytest.main(args, plugins=[plugin])
+                # Run pytest
+                exit_code_val = pytest.main(args, plugins=[plugin])
 
-            # Finalize session
-            self.finalize_session(start_time, exit_code_val)
+                # Finalize session
+                self.finalize_session(start_time, exit_code_val)
 
-            # Update session counts
-            self.update_session_counts()
+                # Update session counts
+                self.update_session_counts()
 
-            # Capture and format test output
-            self._current_session.output = self.capture_test_output()
+                # Capture and format test output
+                self._current_session.output = self.capture_test_output()
 
-            return self._current_session
+                return self._current_session
 
-        finally:
-            logger.debug("Cleaning up after test run.")
-            self.cleanup()
+            finally:
+                logger.debug("Cleaning up after test run.")
+                self.cleanup()
 
     def pytest_runtest_logreport(self, report: TestReport) -> None:
         """
         Hook to capture comprehensive test information during test execution.
 
         This method is called by pytest after each test phase (setup, call, teardown).
-
-        Args:
-            report (TestReport): The report object containing test execution details.
         """
-        if not self._current_session:
-            logger.warning("No active session to log test report.")
-            return
+        with self._lock:
+            if not self._current_session:
+                logger.warning("No active session to log test report.")
+                return
 
-        result = self._current_session.test_results.get(report.nodeid)
-        if not result:
-            # Safely extract test_path and test_function with defaults
-            test_path = Path(report.fspath) if report.fspath else Path("unknown")
-            test_function = (
-                report.function.__name__ if hasattr(report, "function") else "unknown"
-            )
+            # Retrieve or create the TestResult object for this nodeid.
+            result = self._current_session.test_results.get(report.nodeid)
+            if not result:
+                # Safely extract test_path and test_function with defaults
+                test_path = Path(report.fspath) if report.fspath else Path("unknown")
+                test_function = (
+                    report.function.__name__
+                    if hasattr(report, "function")
+                    else "unknown"
+                )
 
-            result = TestResult(
-                nodeid=report.nodeid,
-                test_file=test_path,
-                test_function=test_function,
-                error_message=None,
-                longrepr=None,
-            )
-            self._current_session.test_results[report.nodeid] = result
-            logger.debug(f"Created TestResult for {report.nodeid}")
+                result = TestResult(
+                    nodeid=report.nodeid,
+                    test_file=test_path,
+                    test_function=test_function,
+                    error_message=None,
+                    longrepr=None,
+                )
+                self._current_session.test_results[report.nodeid] = result
+                logger.debug(f"Created TestResult for {report.nodeid}")
 
+            self._update_test_result_outcomes(result, report)
+
+    def _update_test_result_outcomes(
+        self, result: TestResult, report: TestReport
+    ) -> None:
+        """
+        Smaller helper method to update the test outcomes and handle nested conditionals.
+        """
         # Update phase results
         if report.when == "setup":
             result.setup_outcome = report.outcome
@@ -332,7 +354,15 @@ class PytestRunner:
         result.duration = report.duration
         logger.debug(f"Captured duration for {report.nodeid}: {result.duration}s")
 
-        # Update outcome flags based on all phases
+        # Handle pass/xfail logic
+        self._handle_outcome_logic(result, report)
+
+    def _handle_outcome_logic(self, result: TestResult, report: TestReport) -> None:
+        """
+        Extracted method to handle all pass/fail/xfail logic for each reported outcome.
+        """
+        # A test is considered 'passed' if setup and teardown pass,
+        # and the call is either passed or skipped.
         result.passed = (
             result.setup_outcome == "passed"
             and (result.call_outcome == "passed" or result.call_outcome == "skipped")
@@ -478,14 +508,15 @@ class PytestRunner:
         Args:
             report (CollectReport): The report object containing collection details.
         """
-        if not self._current_session:
-            logger.warning("No active session to log collect report.")
-            return
+        with self._lock:
+            if not self._current_session:
+                logger.warning("No active session to log collect report.")
+                return
 
-        if report.outcome == "failed":
-            error_message = str(report.longrepr)
-            self._current_session.collection_errors.append(error_message)
-            logger.error(f"Collection failed: {error_message}")
+            if report.outcome == "failed":
+                error_message = str(report.longrepr)
+                self._current_session.collection_errors.append(error_message)
+                logger.error(f"Collection failed: {error_message}")
 
     def pytest_warning_recorded(self, warning_message: Warning) -> None:
         """
@@ -496,9 +527,12 @@ class PytestRunner:
         Args:
             warning_message (Warning): The warning message object.
         """
-        if self._current_session:
-            self._current_session.warnings.append(str(warning_message))
-            logger.warning(f"Warning recorded during test execution: {warning_message}")
+        with self._lock:
+            if self._current_session:
+                self._current_session.warnings.append(str(warning_message))
+                logger.warning(
+                    f"Warning recorded during test execution: {warning_message}"
+                )
 
     def cleanup(self) -> None:
         """
