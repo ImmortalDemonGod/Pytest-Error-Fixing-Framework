@@ -139,7 +139,6 @@ class CLI:
         self.created_branches.add(branch_name)
         return branch_name
 
-    # @snoop
     def run_fix_workflow(self, error: TestError, interactive: bool) -> bool:
         """
         Run the fix workflow for a single error using AI:
@@ -218,7 +217,6 @@ class CLI:
             # We consider fix successful, but PR creation failed
             return True
 
-    # @snoop
     def run_manual_fix_workflow(self, error: TestError) -> str:
         """
         Let the user manually fix the test, then check if it passes:
@@ -275,30 +273,13 @@ class CLI:
         click.echo("Retry limit reached. Exiting manual fix mode.")
         return "quit"
 
-    # @snoop
-    def setup_components(
-        self,
-        api_key: str,
-        max_retries: int = 3,
-        initial_temp: float = 0.5,
-        temp_increment: float = 0.1,
-        dev_force_success: bool = False,
-    ) -> bool:
+    def setup_components(self, config: ComponentSettings) -> bool:
         """
         Initialize AI, Test Runner, Change Applier, GitRepo, FixService, & Orchestrator.
-        Now includes default values for all arguments except api_key,
-        addressing the 'excess function arguments' complaint by making them optional.
+        Now uses a single `config` object to address the 'excess function arguments' complaint
+        while preserving existing comments and features.
         """
         try:
-            # Use our dataclass with potential defaults
-            config = ComponentSettings(
-                api_key=api_key,
-                max_retries=max_retries,
-                initial_temp=initial_temp,
-                temp_increment=temp_increment,
-                dev_force_success=dev_force_success,
-            )
-
             logger.info("Initializing AI Manager...")
             ai_manager = AIManager(config.api_key)
 
@@ -395,35 +376,6 @@ class CLI:
 
     # -- END: Extracted user-choice handlers for interactive error --
 
-    def _process_interactive_error(self, error: TestError) -> bool:
-        """
-        Handles interactive error processing logic.
-        Returns True if user chooses to continue, False if user quits.
-        """
-        choice = self._prompt_for_fix(error)
-        # Map each choice to a separate helper to reduce nesting & complexity
-        handlers = {
-            "q": self._handle_quit_choice,
-            "n": self._handle_skip_choice,
-            "m": self._handle_manual_fix_choice,
-            "y": self._handle_ai_fix_choice,
-        }
-
-        handler = handlers.get(choice)
-        if handler:
-            return handler(error)
-        else:
-            # If somehow not recognized, default to AI fix
-            return self._handle_ai_fix_choice(error)
-
-    def _process_non_interactive_error(self, error: TestError):
-        """Handles non-interactive error processing logic."""
-        if self.run_fix_workflow(error, interactive=False):
-            click.echo(f"✓ AI fix for '{error.test_function}' succeeded.")
-        else:
-            click.echo(f"✗ AI fix for '{error.test_function}' failed.")
-
-    # @snoop
     def _prompt_for_fix(self, error: TestError) -> Optional[str]:
         """
         Prompt user how to handle a failing test in interactive mode.
@@ -457,80 +409,12 @@ class CLI:
             # Else re-prompt
             click.echo("\nInvalid choice. Enter 'y', 'm', 'n', or 'q'.")
 
-    def process_errors(self, errors: List[TestError], interactive: bool) -> int:
-        """
-        Process all discovered failing errors.
-         - In interactive mode, prompt for fix path
-         - In non-interactive, always attempt AI-based fix
-         - Summarize the results at the end
-        """
-        success_count = 0
-        total_processed = 0
-
-        try:
-            self.setup_signal_handlers()
-
-            total_errors = len(errors)
-            click.echo(f"Starting fix attempts for {total_errors} failing tests.\n")
-            logger.info(f"Starting fix attempts for {total_errors} errors.")
-
-            # Use a helper to reduce nesting:
-            total_processed, success_count = self._process_all_errors(
-                errors, interactive
-            )
-
-            # Summarize if any were processed
-            if total_processed > 0:
-                self._summarize_results(total_processed, total_errors, success_count)
-
-        finally:
-            click.echo("Starting cleanup...")
-            self.cleanup()
-            click.echo("Cleanup complete.")
-
-        # If you want to tie success_count to actual fix results, incorporate it in the interactive checks.
-        # For now we assume success_count remains a placeholder for further logic.
-        return 0 if success_count == total_processed else 1
-
-    def _process_all_errors(
-        self, errors: List[TestError], interactive: bool
-    ) -> Tuple[int, int]:
-        """
-        Extracted helper that loops over all errors, handling interactive
-        vs. non-interactive flows. Returns total_processed, success_count.
-        """
-        total_processed = 0
-        success_count = 0
-
-        for i, error in enumerate(errors, 1):
-            # Early return if user requested exit
-            if self._exit_requested:
-                logger.info("Exit requested; stopping fix attempts.")
-                break
-
-            logger.info(
-                f"\nProcessing error {i}/{len(errors)}: {error.test_function}\n"
-            )
-
-            if interactive:
-                if not self._process_interactive_error(error):
-                    # Means user chose to quit
-                    break
-            else:
-                self._process_non_interactive_error(error)
-
-            # If you track actual success/fail logic, you can increment success_count here.
-            total_processed += 1
-
-        return total_processed, success_count
-
     def _process_interactive_error(self, error: TestError) -> bool:
         """
         Handles interactive error processing logic.
         Returns True if user chooses to continue, False if user quits.
         """
         choice = self._prompt_for_fix(error)
-        # Map each choice to a separate helper to reduce nesting & complexity
         handlers = {
             "q": self._handle_quit_choice,
             "n": self._handle_skip_choice,
@@ -554,9 +438,67 @@ class CLI:
         else:
             click.echo(f"✗ AI fix for '{error.test_function}' failed.")
 
-    def _summarize_results(
-        self, total_processed: int, total_errors: int, success_count: int
-    ) -> None:
+    def process_errors(self, errors: List[TestError], interactive: bool) -> int:
+        """
+        Process all discovered failing errors.
+         - In interactive mode, prompt for fix path
+         - In non-interactive, always attempt AI-based fix
+         - Summarize the results at the end
+        """
+        success_count = 0
+        total_processed = 0
+
+        try:
+            self.setup_signal_handlers()
+
+            total_errors = len(errors)
+            click.echo(f"Starting fix attempts for {total_errors} failing tests.\n")
+            logger.info(f"Starting fix attempts for {total_errors} errors.")
+
+            total_processed, success_count = self._process_all_errors(errors, interactive)
+
+            # Summarize if any were processed
+            if total_processed > 0:
+                self._summarize_results(total_processed, total_errors, success_count)
+
+        finally:
+            click.echo("Starting cleanup...")
+            self.cleanup()
+            click.echo("Cleanup complete.")
+
+        # If you want to tie success_count to actual fix results, incorporate it in the interactive checks.
+        # For now we assume success_count remains a placeholder for further logic.
+        return 0 if success_count == total_processed else 1
+
+    def _process_all_errors(self, errors: List[TestError], interactive: bool) -> Tuple[int, int]:
+        """
+        Extracted helper that loops over all errors, handling interactive
+        vs. non-interactive flows. Returns total_processed, success_count.
+        """
+        total_processed = 0
+        success_count = 0
+
+        for i, error in enumerate(errors, 1):
+            # Early return if user requested exit
+            if self._exit_requested:
+                logger.info("Exit requested; stopping fix attempts.")
+                break
+
+            logger.info(f"\nProcessing error {i}/{len(errors)}: {error.test_function}\n")
+
+            if interactive:
+                # If the user chooses to quit in interactive mode, we break out
+                if not self._process_interactive_error(error):
+                    break
+            else:
+                self._process_non_interactive_error(error)
+
+            # If you track actual success/fail logic, you can increment success_count here.
+            total_processed += 1
+
+        return total_processed, success_count
+
+    def _summarize_results(self, total_processed: int, total_errors: int, success_count: int) -> None:
         """
         Helper to summarize the final fix attempts result.
         """
