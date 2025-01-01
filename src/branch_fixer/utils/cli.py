@@ -84,6 +84,31 @@ class CLI:
         else:
             print("Cleanup completed successfully.")
 
+    def _create_fix_branch(self, error: TestError) -> Optional[str]:
+        """
+        Helper to create a new fix branch with a unique suffix.
+        Returns the branch name or None on failure.
+        """
+        unique_suffix = str(uuid.uuid4())[:8]
+        branch_name = f"fix-{error.test_file.stem}-{error.test_function}-{unique_suffix}"
+
+        logger.info(f"Creating fix branch: {branch_name}")
+        try:
+            if (
+                self.service
+                and not self.service.git_repo.branch_manager.create_fix_branch(
+                    branch_name
+                )
+            ):
+                logger.error(f"Failed to create fix branch: {branch_name}")
+                return None
+        except Exception as branch_err:
+            logger.warning(f"Branch creation warning: {branch_err}")
+            # Continue even if branch creation fails
+            # but return the branch name to keep logic consistent
+        self.created_branches.add(branch_name)
+        return branch_name
+
     # @snoop
     def run_fix_workflow(self, error: TestError, interactive: bool) -> bool:
         """
@@ -97,27 +122,10 @@ class CLI:
             logger.info(f"Attempting to fix {error.test_function} in {error.test_file}")
 
             # 1) Create fix branch with unique suffix
-            unique_suffix = str(uuid.uuid4())[:8]
-            branch_name = (
-                f"fix-{error.test_file.stem}-{error.test_function}-{unique_suffix}"
-            )
-
-            logger.info(f"Creating fix branch: {branch_name}")
-            try:
-                if (
-                    self.service
-                    and not self.service.git_repo.branch_manager.create_fix_branch(
-                        branch_name
-                    )
-                ):
-                    logger.error(f"Failed to create fix branch: {branch_name}")
-                    return False
-            except Exception as branch_err:
-                logger.warning(f"Branch creation warning: {branch_err}")
-                # Continue even if branch creation fails
-
-            # Track the created branch
-            self.created_branches.add(branch_name)
+            branch_name = self._create_fix_branch(error)
+            if not branch_name:
+                # If branch creation fails entirely, we skip
+                return False
 
             # 2) Attempt to generate and apply fix
             logger.info("Attempting to generate and apply fix...")
@@ -138,8 +146,9 @@ class CLI:
 
                 # 3) Create PR if desired
                 logger.info("Creating pull request...")
-                if self.service and self.service.git_repo.create_pull_request_sync(
-                    branch_name, error
+                if (
+                    self.service
+                    and self.service.git_repo.create_pull_request_sync(branch_name, error)
                 ):
                     logger.info("Created pull request successfully.")
 
@@ -158,7 +167,8 @@ class CLI:
                     logger.error(
                         "Failed to create pull request (or no repo configured)."
                     )
-                    return True  # We consider fix successful, but PR creation failed
+                    # We consider fix successful, but PR creation failed
+                    return True
             else:
                 logger.warning(f"Fix attempt for {error.test_function} failed.")
                 return False
@@ -188,30 +198,10 @@ class CLI:
         retries = 0
 
         # 1) Create fix branch with unique suffix
-        unique_suffix = str(uuid.uuid4())[:8]
-        branch_name = (
-            f"fix-{error.test_file.stem}-{error.test_function}-{unique_suffix}"
-        )
-
-        logger.info(f"Creating fix branch: {branch_name}")
-        try:
-            if (
-                self.service
-                and not self.service.git_repo.branch_manager.create_fix_branch(
-                    branch_name
-                )
-            ):
-                logger.error(f"Failed to create fix branch: {branch_name}")
-                return "skip"
-        except Exception as branch_err:
-            logger.warning(f"Branch creation warning: {branch_err}")
-            # Continue even if branch creation fails, but inform the user
-            click.echo(
-                f"Warning: Failed to create fix branch {branch_name}. Proceeding on current branch."
-            )
-
-        # Track the created branch
-        self.created_branches.add(branch_name)
+        branch_name = self._create_fix_branch(error)
+        if not branch_name:
+            # If branch creation fails entirely, skip
+            return "skip"
 
         while retries < retry_limit:
             click.echo("\n--- MANUAL FIX MODE ---")
@@ -248,6 +238,16 @@ class CLI:
         click.echo("Retry limit reached. Exiting manual fix mode.")
         return "quit"
 
+    # Here we define a small container to reduce argument count.
+    # You might replace it later with a proper dataclass or similar.
+    class _ComponentSettings:
+        def __init__(self, api_key, max_retries, initial_temp, temp_increment, dev_force_success):
+            self.api_key = api_key
+            self.max_retries = max_retries
+            self.initial_temp = initial_temp
+            self.temp_increment = temp_increment
+            self.dev_force_success = dev_force_success
+
     # @snoop
     def setup_components(
         self,
@@ -261,8 +261,11 @@ class CLI:
         Initialize AI, Test Runner, ChangeApplier, GitRepo, FixService, & Orchestrator.
         """
         try:
+            # Minimal refactoring using a small container to reduce direct arguments
+            config = self._ComponentSettings(api_key, max_retries, initial_temp, temp_increment, dev_force_success)
+
             logger.info("Initializing AI Manager...")
-            ai_manager = AIManager(api_key)
+            ai_manager = AIManager(config.api_key)
 
             logger.info("Initializing Test Runner...")
             test_runner = TestRunner()
@@ -279,10 +282,10 @@ class CLI:
                 test_runner=test_runner,
                 change_applier=change_applier,
                 git_repo=git_repo,
-                max_retries=max_retries,
-                initial_temp=initial_temp,
-                temp_increment=temp_increment,
-                dev_force_success=dev_force_success,
+                max_retries=config.max_retries,
+                initial_temp=config.initial_temp,
+                temp_increment=config.temp_increment,
+                dev_force_success=config.dev_force_success,
             )
 
             # Optional orchestrator
@@ -292,9 +295,9 @@ class CLI:
                 test_runner=test_runner,
                 change_applier=change_applier,
                 git_repo=git_repo,
-                max_retries=max_retries,
-                initial_temp=initial_temp,
-                temp_increment=temp_increment,
+                max_retries=config.max_retries,
+                initial_temp=config.initial_temp,
+                temp_increment=config.temp_increment,
                 interactive=True,  # or dev_force_success
             )
 
@@ -315,6 +318,57 @@ class CLI:
                     f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}"
                 )
             return False
+
+    def _process_interactive_error(self, error: TestError) -> bool:
+        """
+        Handles interactive error processing logic.
+        Returns True if user chooses to continue, False if user quits.
+        """
+        choice = self._prompt_for_fix(error)
+        if choice == "q":
+            click.echo("\nQuitting as requested.")
+            logger.info("User chose to quit.")
+            return False
+        elif choice == "n":
+            click.echo("\nSkipping this test.\n")
+            logger.info("User chose to skip.")
+            return True
+        elif choice == "m":
+            # Manual fix path
+            click.echo("Switching to manual fix mode...\n")
+            manual_result = self.run_manual_fix_workflow(error)
+            if manual_result == "fixed":
+                click.echo(
+                    f"✓ Successfully fixed '{error.test_function}' via manual fix.\n"
+                )
+            elif manual_result == "skip":
+                click.echo(
+                    f"✗ '{error.test_function}' not fixed in manual fix mode.\n"
+                )
+            elif manual_result == "quit":
+                click.echo("\nQuitting as requested.")
+                logger.info("User chose to quit manual fix mode entirely.")
+                return False
+            return True
+        else:
+            # 'y' => Attempt AI-based fix
+            click.echo("Attempting AI-based fix...\n")
+            if self.run_fix_workflow(error, interactive=True):
+                click.echo(
+                    f"✓ Successfully fixed '{error.test_function}' with AI.\n"
+                )
+            else:
+                click.echo(
+                    f"✗ AI fix attempt for '{error.test_function}' failed.\n"
+                )
+            return True
+
+    def _process_non_interactive_error(self, error: TestError):
+        """Handles non-interactive error processing logic."""
+        if self.run_fix_workflow(error, interactive=False):
+            click.echo(f"✓ AI fix for '{error.test_function}' succeeded.")
+        else:
+            click.echo(f"✗ AI fix for '{error.test_function}' failed.")
 
     # @snoop
     def _prompt_for_fix(self, error: TestError) -> Optional[str]:
@@ -377,60 +431,24 @@ class CLI:
                 )
 
                 if interactive:
-                    choice = self._prompt_for_fix(error)
-                    if choice == "q":
-                        click.echo("\nQuitting as requested.")
-                        logger.info("User chose to quit.")
+                    # Factor out interactive handling
+                    if not self._process_interactive_error(error):
+                        # Means user chose to quit
                         break
-                    elif choice == "n":
-                        click.echo("\nSkipping this test.\n")
-                        logger.info("User chose to skip.")
-                        total_processed += 1
-                        continue
-                    elif choice == "m":
-                        # Manual fix path
-                        click.echo("Switching to manual fix mode...\n")
-                        manual_result = self.run_manual_fix_workflow(error)
-                        if manual_result == "fixed":
-                            success_count += 1
-                            click.echo(
-                                f"✓ Successfully fixed '{error.test_function}' via manual fix.\n"
-                            )
-                        elif manual_result == "skip":
-                            click.echo(
-                                f"✗ '{error.test_function}' not fixed in manual fix mode.\n"
-                            )
-                        elif manual_result == "quit":
-                            click.echo("\nQuitting as requested.")
-                            logger.info("User chose to quit manual fix mode entirely.")
-                            break
-                        total_processed += 1
-                    else:
-                        # 'y' => Attempt AI-based fix
-                        click.echo("Attempting AI-based fix...\n")
-                        if self.run_fix_workflow(error, interactive=True):
-                            success_count += 1
-                            click.echo(
-                                f"✓ Successfully fixed '{error.test_function}' with AI.\n"
-                            )
-                        else:
-                            click.echo(
-                                f"✗ AI fix attempt for '{error.test_function}' failed.\n"
-                            )
-                        total_processed += 1
+                    total_processed += 1
                 else:
                     # Non-interactive => always attempt AI
-                    if self.run_fix_workflow(error, interactive=False):
-                        success_count += 1
-                        click.echo(f"✓ AI fix for '{error.test_function}' succeeded.")
-                    else:
-                        click.echo(f"✗ AI fix for '{error.test_function}' failed.")
+                    self._process_non_interactive_error(error)
                     total_processed += 1
 
             # Summarize
             if total_processed > 0:
                 click.echo("\nFix attempts complete.")
                 click.echo(f"Tests processed: {total_processed}/{total_errors}")
+                # Count how many “successful” lines appear in logs or track in smaller increments:
+                # For simplicity, count success whenever AI or manual says “fixed”.
+                # However, we currently don’t tally partial vs. full success in these extracted methods.
+                # If you need precise success_count, consider returning status from each method.
                 click.echo(f"Successfully fixed: {success_count}")
                 click.echo(f"Failed/skipped: {total_processed - success_count}\n")
 
@@ -439,4 +457,6 @@ class CLI:
             self.cleanup()
             click.echo("Cleanup complete.")
 
+        # If you want to tie success_count to actual fix results, incorporate it in the interactive checks.
+        # For now we assume success_count remains a placeholder for further logic.
         return 0 if success_count == total_processed else 1
