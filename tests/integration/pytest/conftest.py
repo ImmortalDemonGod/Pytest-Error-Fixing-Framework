@@ -26,7 +26,7 @@ from branch_fixer.services.git.branch_manager import BranchManager
 def clean_repo():
     """Mock of a clean git repository."""
     repo = Mock(spec=GitRepository)
-    repo.has_uncommitted_changes.return_value = False
+    repo.is_clean.return_value = True
     repo.branch_exists.return_value = False
     repo.create_branch.return_value = True
     repo.merge_branch.return_value = True
