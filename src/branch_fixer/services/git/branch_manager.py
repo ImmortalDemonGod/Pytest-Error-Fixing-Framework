@@ -1,26 +1,24 @@
 # branch_fixer/services/git/branch_manager.py
-from dataclasses import dataclass
-from typing import List, Optional, Set
 import re
-from pathlib import Path
-from branch_fixer.services.git.models import BranchStatus, BranchMetadata
+from typing import Optional, Set
+
 from branch_fixer.services.git.exceptions import (
-    BranchCreationError, 
-    MergeConflictError, 
+    BranchCreationError,
+    BranchNameError,
     GitError,
-    BranchNameError
 )
+from branch_fixer.services.git.models import BranchMetadata, BranchStatus
 
 
 class BranchManager:
     """
     Manages Git branch operations with safety checks and error handling.
-    
+
     Handles branch creation, merging, and cleanup with proper
     validation and error recovery.
     """
-    
-    def __init__(self, repository: 'GitRepository'):
+
+    def __init__(self, repository: "GitRepository"):
         """
         Initialize with repository reference.
 
@@ -32,13 +30,13 @@ class BranchManager:
         """
         self.repository = repository
         # Branch name validation patterns
-        self.name_pattern = r'^[a-zA-Z0-9\-_\/]+$'
-        self.forbidden_names: Set[str] = {'master', 'main', 'develop'}
-    
+        self.name_pattern = r"^[a-zA-Z0-9\-_\/]+$"
+        self.forbidden_names: Set[str] = {"master", "main", "develop"}
+
     def get_status(self) -> BranchStatus:
         """
         Retrieve the current status of the Git repository.
-    
+
         Returns:
             BranchStatus: The current branch status.
         """
@@ -46,14 +44,12 @@ class BranchManager:
         has_changes = self.repository.is_clean()
         changes = [item.a_path for item in self.repository.repo.index.diff(None)]
         return BranchStatus(
-            current_branch=current_branch,
-            has_changes=not has_changes,
-            changes=changes
+            current_branch=current_branch, has_changes=not has_changes, changes=changes
         )
 
-    def create_fix_branch(self, 
-                          branch_name: str,
-                          from_branch: Optional[str] = None) -> bool:
+    def create_fix_branch(
+        self, branch_name: str, from_branch: Optional[str] = None
+    ) -> bool:
         """Create and switch to a fix branch.
 
         Args:
@@ -76,15 +72,15 @@ class BranchManager:
             # Check if branch exists
             if self.repository.branch_exists(branch_name):
                 raise BranchCreationError(f"Branch {branch_name} already exists")
-                
+
             # Get base branch
             from_branch = from_branch or self.repository.main_branch
 
             # Create new branch from base
             result = self.repository.run_command(
-                ['checkout', '-b', branch_name, from_branch]
+                ["checkout", "-b", branch_name, from_branch]
             )
-            
+
             if result.returncode != 0:
                 raise BranchCreationError(
                     f"Failed to create branch {branch_name}: {result.stderr}"
@@ -97,10 +93,8 @@ class BranchManager:
             if isinstance(e, (BranchNameError, BranchCreationError)):
                 raise e
             raise GitError(f"Failed to create branch {branch_name}: {str(e)}")
-        
-    def cleanup_fix_branch(self,
-                           branch_name: str,
-                           force: bool = False) -> bool:
+
+    def cleanup_fix_branch(self, branch_name: str, force: bool = False) -> bool:
         """Clean up a fix branch after merging.
 
         Args:
@@ -122,12 +116,12 @@ class BranchManager:
             # Switch back to main branch if needed
             current_branch = self.repository.get_current_branch()
             if current_branch == branch_name:
-                self.repository.run_command(['checkout', self.repository.main_branch])
+                self.repository.run_command(["checkout", self.repository.main_branch])
 
             # Delete the branch
-            delete_args = ['branch', '-D' if force else '-d', branch_name]
+            delete_args = ["branch", "-D" if force else "-d", branch_name]
             result = self.repository.run_command(delete_args)
-            
+
             return result.returncode == 0
 
         except Exception as e:
@@ -187,9 +181,9 @@ class BranchManager:
                 raise e
             raise BranchNameError(f"Failed to validate branch name: {str(e)}") from e
 
-    def is_branch_merged(self, 
-                         branch_name: str,
-                         target_branch: Optional[str] = None) -> bool:
+    def is_branch_merged(
+        self, branch_name: str, target_branch: Optional[str] = None
+    ) -> bool:
         """
         Check if a branch is fully merged.
 
