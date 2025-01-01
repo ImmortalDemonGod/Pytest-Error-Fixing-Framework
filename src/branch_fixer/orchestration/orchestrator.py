@@ -217,7 +217,7 @@ class FixOrchestrator:
         self._session.state = FixSessionState.COMPLETED
         return True
 
-    @snoop
+    #@snoop
     def fix_error(self, error: TestError) -> bool:
         """
         Attempt multiple fix attempts for a single error, 
