@@ -29,6 +29,7 @@ class ComponentSettings:
     """
     Encapsulate setup parameters for easier handling and future extensions.
     """
+
     api_key: str
     max_retries: int
     initial_temp: float
@@ -115,13 +116,17 @@ class CLI:
         Returns the branch name or None on failure.
         """
         unique_suffix = str(uuid.uuid4())[:8]
-        branch_name = f"fix-{error.test_file.stem}-{error.test_function}-{unique_suffix}"
+        branch_name = (
+            f"fix-{error.test_file.stem}-{error.test_function}-{unique_suffix}"
+        )
 
         logger.info(f"Creating fix branch: {branch_name}")
         try:
             if (
                 self.service
-                and not self.service.git_repo.branch_manager.create_fix_branch(branch_name)
+                and not self.service.git_repo.branch_manager.create_fix_branch(
+                    branch_name
+                )
             ):
                 logger.error(f"Failed to create fix branch: {branch_name}")
                 return None
@@ -171,7 +176,9 @@ class CLI:
         except Exception as e:
             logger.error(f"Fix workflow encountered an error: {str(e)}")
             if DEBUG:
-                logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
+                logger.error(
+                    f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}"
+                )
             return False
 
     def _generate_and_apply_fix(self, error: TestError) -> bool:
@@ -193,7 +200,9 @@ class CLI:
         Return False if push fails.
         """
         logger.info("Creating pull request...")
-        if self.service and self.service.git_repo.create_pull_request_sync(branch_name, error):
+        if self.service and self.service.git_repo.create_pull_request_sync(
+            branch_name, error
+        ):
             logger.info("Created pull request successfully.")
 
             # 4) Try pushing to remote
@@ -337,7 +346,9 @@ class CLI:
         except Exception as e:
             logger.error(f"Component initialization failed: {str(e)}")
             if DEBUG:
-                logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
+                logger.error(
+                    f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}"
+                )
             return False
 
     def _process_interactive_error(self, error: TestError) -> bool:
@@ -359,7 +370,9 @@ class CLI:
             click.echo("Switching to manual fix mode...\n")
             manual_result = self.run_manual_fix_workflow(error)
             if manual_result == "fixed":
-                click.echo(f"✓ Successfully fixed '{error.test_function}' via manual fix.\n")
+                click.echo(
+                    f"✓ Successfully fixed '{error.test_function}' via manual fix.\n"
+                )
             elif manual_result == "skip":
                 click.echo(f"✗ '{error.test_function}' not fixed in manual fix mode.\n")
             elif manual_result == "quit":
