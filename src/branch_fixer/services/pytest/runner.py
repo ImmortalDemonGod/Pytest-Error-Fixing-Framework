@@ -17,7 +17,7 @@ from branch_fixer.services.pytest.models import SessionResult, TestResult
 logger = logging.getLogger(__name__)
 
 
-def force_remove(path: Path, retries: int = 5, delay: int = 2):
+def force_remove(path: Path, retries: int = 5, delay: int = 2) -> None:
     """
     Forcefully remove a directory with retries.
 
@@ -48,24 +48,24 @@ def force_remove(path: Path, retries: int = 5, delay: int = 2):
 class PytestPlugin:
     """Plugin to capture pytest execution information."""
 
-    def __init__(self, runner):
+    def __init__(self, runner: "PytestRunner"):
         self.runner = runner
 
     @pytest.hookimpl
-    def pytest_collection_modifyitems(self, session, config, items):
+    def pytest_collection_modifyitems(self, session, config, items) -> None:
         """Print information about collected tests."""
         # print(f"Collected {len(items)} test items:")
         for item in items:
             print(f"  - {item.nodeid}")
 
     @pytest.hookimpl
-    def pytest_runtest_logreport(self, report):
+    def pytest_runtest_logreport(self, report: TestReport) -> None:
         """Handle test execution reports."""
         # print(f"Test report for {report.nodeid}: {report.outcome} in phase {report.when}")
         self.runner.pytest_runtest_logreport(report)
 
     @pytest.hookimpl
-    def pytest_collectreport(self, report):
+    def pytest_collectreport(self, report: CollectReport) -> None:
         """Handle collection reports."""
         if report.outcome == "failed":
             # print(f"Collection failed: {report.longrepr}")
@@ -73,7 +73,7 @@ class PytestPlugin:
         self.runner.pytest_collectreport(report)
 
     @pytest.hookimpl
-    def pytest_warning_recorded(self, warning_message, when, nodeid, location):
+    def pytest_warning_recorded(self, warning_message, when, nodeid, location) -> None:
         """Handle warnings during test execution."""
         # print(f"Warning recorded: {warning_message}")
         self.runner.pytest_warning_recorded(warning_message)
@@ -82,40 +82,136 @@ class PytestPlugin:
 class PytestRunner:
     """Pytest execution manager with comprehensive result capture."""
 
-    def __init__(self, working_dir: Optional[Path] = None):
+    def __init__(self, working_dir: Optional[Path] = None) -> None:
         """
         Initialize the PytestRunner.
 
         Args:
             working_dir (Optional[Path]): The working directory for pytest runs.
         """
-        self.working_dir = working_dir or Path.cwd()
+        self.working_dir: Path = working_dir or Path.cwd()
         self._current_session: Optional[SessionResult] = None
         self.temp_dirs: List[Path] = []  # Track temporary directories for cleanup
         logger.debug(
             f"PytestRunner initialized with working directory: {self.working_dir}"
         )
 
+    # ----------------------------------------------------------------------
+    # HELPER METHODS (Introduced to reduce nesting/complexity)
+    # ----------------------------------------------------------------------
+
+    def build_pytest_args(
+        self,
+        test_path: Optional[Path] = None,
+        test_function: Optional[str] = None,
+    ) -> List[str]:
+        """
+        Build the pytest command arguments based on provided test path/function.
+
+        Args:
+            test_path (Optional[Path]): The path to the test file or directory.
+            test_function (Optional[str]): The specific test function to run.
+
+        Returns:
+            List[str]: The list of arguments to pass to pytest.
+        """
+        args = ["--override-ini=addopts=", "-p", "no:terminal"]
+        if self.working_dir:
+            args.extend(["--rootdir", str(self.working_dir)])
+        if test_path:
+            if test_function:
+                args.append(f"{str(test_path)}::{test_function}")
+            else:
+                args.append(str(test_path))
+        return args
+
+    def finalize_session(self, start_time: datetime, exit_code_val: int) -> None:
+        """
+        Finalize the session with end time and exit code.
+
+        Args:
+            start_time (datetime): When the test run began.
+            exit_code_val (int): The integer exit code from pytest.
+        """
+        if not self._current_session:
+            return
+        end_time = datetime.now()
+        self._current_session.end_time = end_time
+        self._current_session.duration = (end_time - start_time).total_seconds()
+        self._current_session.exit_code = ExitCode(exit_code_val)
+
+        logger.info(f"Test run completed at {end_time} with exit code {exit_code_val}")
+        logger.debug(f"Session duration: {self._current_session.duration}s")
+
+    def update_session_counts(self) -> None:
+        """
+        Update pass/fail/skip counts on the current session based on test results.
+        """
+        if not self._current_session:
+            return
+        for result in self._current_session.test_results.values():
+            if result.passed and not result.xfailed and not result.xpassed:
+                self._current_session.passed += 1
+            elif result.failed:
+                self._current_session.failed += 1
+            elif result.skipped:
+                self._current_session.skipped += 1
+
+            if result.xfailed:
+                self._current_session.xfailed += 1
+            if result.xpassed:
+                self._current_session.xpassed += 1
+
+        self._current_session.total_collected = len(self._current_session.test_results)
+        self._current_session.errors = len(self._current_session.collection_errors)
+        logger.debug(f"Session results: {self._current_session}")
+
+    def format_collection_errors(self) -> List[str]:
+        """
+        Format collection errors into lines suitable for display.
+
+        Returns:
+            List[str]: The formatted lines describing collection errors.
+        """
+        if not self._current_session:
+            return []
+        return [
+            f"COLLECTION ERROR: {error}"
+            for error in self._current_session.collection_errors
+        ]
+
+    def format_test_failures(self) -> List[str]:
+        """
+        Format test failure info into lines suitable for display.
+
+        Returns:
+            List[str]: The formatted lines describing test failures.
+        """
+        lines: List[str] = []
+        if not self._current_session:
+            return lines
+
+        for test_id, result in self._current_session.test_results.items():
+            if result.failed:
+                file_path, test_name = test_id.split("::", 1)
+                lines.append(f"FAILED {file_path} {test_name}")
+                if result.error_message:
+                    lines.append(f"E   {result.error_message}")
+                if result.longrepr:
+                    lines.append(result.longrepr)
+        return lines
+
+    # ----------------------------------------------------------------------
+    # MAIN METHODS
+    # ----------------------------------------------------------------------
+
     def capture_test_output(self) -> str:
         """Returns formatted test output that our parsers can handle"""
         output_lines = []
-
         # Add test collection output
-        if self._current_session and self._current_session.collection_errors:
-            for error in self._current_session.collection_errors:
-                output_lines.append(f"COLLECTION ERROR: {error}")
-
+        output_lines.extend(self.format_collection_errors())
         # Add test failures
-        if self._current_session:
-            for test_id, result in self._current_session.test_results.items():
-                if result.failed:
-                    file_path, test_name = test_id.split("::", 1)
-                    output_lines.append(f"FAILED {file_path} {test_name}")
-                    if result.error_message:
-                        output_lines.append(f"E   {result.error_message}")
-                    if result.longrepr:
-                        output_lines.append(result.longrepr)
-
+        output_lines.extend(self.format_test_failures())
         return "\n".join(output_lines)
 
     def run_test(
@@ -146,69 +242,29 @@ class PytestRunner:
             # Register plugin
             plugin = PytestPlugin(self)
 
-            # Create base arguments
-            args = []
-
-            # Override addopts from ini file to prevent conflicts
-            args.append("--override-ini=addopts=")
-
-            # Set reporting options
-            args.extend(["-p", "no:terminal"])
-
-            # Add rootdir if specified
-            if self.working_dir:
-                args.extend(["--rootdir", str(self.working_dir)])
-
-            # Add test path and function if specified
-            if test_path:
-                if test_function:
-                    args.append(f"{str(test_path)}::{test_function}")
-                else:
-                    args.append(str(test_path))
+            # Build arguments
+            args = self.build_pytest_args(test_path, test_function)
+            logger.debug(f"Running pytest with arguments: {args}")
 
             # Run pytest
-            logger.debug(f"Running pytest with arguments: {args}")
-            exit_code = pytest.main(args, plugins=[plugin])
+            exit_code_val = pytest.main(args, plugins=[plugin])
 
-            # Update session info
-            end_time = datetime.now()
-            self._current_session.end_time = end_time
-            self._current_session.duration = (end_time - start_time).total_seconds()
-            self._current_session.exit_code = ExitCode(exit_code)
+            # Finalize session
+            self.finalize_session(start_time, exit_code_val)
 
-            logger.info(f"Test run completed at {end_time} with exit code {exit_code}")
-            logger.debug(f"Session duration: {self._current_session.duration}s")
+            # Update session counts
+            self.update_session_counts()
 
-            # Update result counts
-            for result in self._current_session.test_results.values():
-                if result.passed and not result.xfailed and not result.xpassed:
-                    self._current_session.passed += 1
-                elif result.failed:
-                    self._current_session.failed += 1
-                elif result.skipped:
-                    self._current_session.skipped += 1
-                if result.xfailed:
-                    self._current_session.xfailed += 1
-                if result.xpassed:
-                    self._current_session.xpassed += 1
-
-            self._current_session.total_collected = len(
-                self._current_session.test_results
-            )
-            self._current_session.errors = len(self._current_session.collection_errors)
-
-            logger.debug(f"Session results: {self._current_session}")
-
-            # **Updated Part: Capture and format test output**
+            # Capture and format test output
             self._current_session.output = self.capture_test_output()
 
             return self._current_session
+
         finally:
-            # Clean up
             logger.debug("Cleaning up after test run.")
             self.cleanup()
 
-    def pytest_runtest_logreport(self, report: TestReport):
+    def pytest_runtest_logreport(self, report: TestReport) -> None:
         """
         Hook to capture comprehensive test information during test execution.
 
@@ -267,7 +323,6 @@ class PytestRunner:
                 full_message = (
                     crash.message if hasattr(crash, "message") else str(crash)
                 )
-                # Split on newline and take just the first line to match expected output
                 result.error_message = full_message.split("\n")[0]
                 logger.debug(
                     f"Captured error message for {report.nodeid}: {result.error_message}"
@@ -414,7 +469,7 @@ class PytestRunner:
         logger.debug("Formatted test report generated.")
         return report
 
-    def pytest_collectreport(self, report: CollectReport):
+    def pytest_collectreport(self, report: CollectReport) -> None:
         """
         Hook to capture collection information during test discovery.
 
@@ -432,7 +487,7 @@ class PytestRunner:
             self._current_session.collection_errors.append(error_message)
             logger.error(f"Collection failed: {error_message}")
 
-    def pytest_warning_recorded(self, warning_message: Warning):
+    def pytest_warning_recorded(self, warning_message: Warning) -> None:
         """
         Hook to capture test warnings during test execution.
 
@@ -445,7 +500,7 @@ class PytestRunner:
             self._current_session.warnings.append(str(warning_message))
             logger.warning(f"Warning recorded during test execution: {warning_message}")
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """
         Clean up temporary directories and resources.
 
