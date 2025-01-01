@@ -74,8 +74,7 @@ class FixService:
         self.state_manager = state_manager
         self.session = session  # We'll assume the session is created or loaded elsewhere
 
-    @snoop
-    @snoop
+    #@snoop
     def attempt_fix(self, error: TestError, temperature: float) -> bool:
         """
         Attempt to fix failing test in a single shot (no internal loop).
@@ -159,7 +158,7 @@ class FixService:
             root_cause = getattr(e, '__cause__', e)
             raise FixServiceError(str(root_cause)) from e
 
-    @snoop
+    #@snoop
     def attempt_manual_fix(self, error: TestError) -> bool:
         """
         Check if a user's manual code edits have fixed the failing test.
