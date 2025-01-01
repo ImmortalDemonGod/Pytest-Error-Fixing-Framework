@@ -90,7 +90,9 @@ class CLI:
         Returns the branch name or None on failure.
         """
         unique_suffix = str(uuid.uuid4())[:8]
-        branch_name = f"fix-{error.test_file.stem}-{error.test_function}-{unique_suffix}"
+        branch_name = (
+            f"fix-{error.test_file.stem}-{error.test_function}-{unique_suffix}"
+        )
 
         logger.info(f"Creating fix branch: {branch_name}")
         try:
@@ -146,9 +148,8 @@ class CLI:
 
                 # 3) Create PR if desired
                 logger.info("Creating pull request...")
-                if (
-                    self.service
-                    and self.service.git_repo.create_pull_request_sync(branch_name, error)
+                if self.service and self.service.git_repo.create_pull_request_sync(
+                    branch_name, error
                 ):
                     logger.info("Created pull request successfully.")
 
@@ -241,7 +242,9 @@ class CLI:
     # Here we define a small container to reduce argument count.
     # You might replace it later with a proper dataclass or similar.
     class _ComponentSettings:
-        def __init__(self, api_key, max_retries, initial_temp, temp_increment, dev_force_success):
+        def __init__(
+            self, api_key, max_retries, initial_temp, temp_increment, dev_force_success
+        ):
             self.api_key = api_key
             self.max_retries = max_retries
             self.initial_temp = initial_temp
@@ -262,7 +265,9 @@ class CLI:
         """
         try:
             # Minimal refactoring using a small container to reduce direct arguments
-            config = self._ComponentSettings(api_key, max_retries, initial_temp, temp_increment, dev_force_success)
+            config = self._ComponentSettings(
+                api_key, max_retries, initial_temp, temp_increment, dev_force_success
+            )
 
             logger.info("Initializing AI Manager...")
             ai_manager = AIManager(config.api_key)
@@ -342,9 +347,7 @@ class CLI:
                     f"✓ Successfully fixed '{error.test_function}' via manual fix.\n"
                 )
             elif manual_result == "skip":
-                click.echo(
-                    f"✗ '{error.test_function}' not fixed in manual fix mode.\n"
-                )
+                click.echo(f"✗ '{error.test_function}' not fixed in manual fix mode.\n")
             elif manual_result == "quit":
                 click.echo("\nQuitting as requested.")
                 logger.info("User chose to quit manual fix mode entirely.")
@@ -354,13 +357,9 @@ class CLI:
             # 'y' => Attempt AI-based fix
             click.echo("Attempting AI-based fix...\n")
             if self.run_fix_workflow(error, interactive=True):
-                click.echo(
-                    f"✓ Successfully fixed '{error.test_function}' with AI.\n"
-                )
+                click.echo(f"✓ Successfully fixed '{error.test_function}' with AI.\n")
             else:
-                click.echo(
-                    f"✗ AI fix attempt for '{error.test_function}' failed.\n"
-                )
+                click.echo(f"✗ AI fix attempt for '{error.test_function}' failed.\n")
             return True
 
     def _process_non_interactive_error(self, error: TestError):
