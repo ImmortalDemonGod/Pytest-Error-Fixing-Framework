@@ -166,7 +166,8 @@ class PytestRunner:
         """
         Increment the appropriate counters for a single TestResult.
         """
-        if result.passed and not result.xfailed and not result.xpassed:
+        # Moved complex conditional into a separate helper:
+        if self._is_clean_pass(result):
             self._current_session.passed += 1
         elif result.failed:
             self._current_session.failed += 1
@@ -177,6 +178,12 @@ class PytestRunner:
             self._current_session.xfailed += 1
         if result.xpassed:
             self._current_session.xpassed += 1
+
+    def _is_clean_pass(self, result: TestResult) -> bool:
+        """
+        Determine if the test is a 'clean pass' (passed and not xfailed or xpassed).
+        """
+        return result.passed and not result.xfailed and not result.xpassed
 
     def format_collection_errors(self) -> List[str]:
         """
@@ -218,7 +225,7 @@ class PytestRunner:
     # ----------------------------------------------------------------------
 
     def capture_test_output(self) -> str:
-        """Returns formatted test output that our parsers can handle"""
+        """Returns formatted test output that our parsers can handle."""
         output_lines = []
         # Add test collection output
         output_lines.extend(self.format_collection_errors())
@@ -317,7 +324,16 @@ class PytestRunner:
         """
         Smaller helper method to update the test outcomes and handle nested conditionals.
         """
-        # Update phase results
+        self._capture_phase_outcome(result, report)
+        self._capture_std_output(result, report)
+        self._capture_error_info(result, report)
+        self._update_execution_duration(result, report)
+
+        # Handle pass/xfail logic
+        self._handle_outcome_logic(result, report)
+
+    def _capture_phase_outcome(self, result: TestResult, report: TestReport) -> None:
+        """Assign setup/call/teardown outcomes to the result object."""
         if report.when == "setup":
             result.setup_outcome = report.outcome
         elif report.when == "call":
@@ -325,7 +341,8 @@ class PytestRunner:
         elif report.when == "teardown":
             result.teardown_outcome = report.outcome
 
-        # Capture outputs
+    def _capture_std_output(self, result: TestResult, report: TestReport) -> None:
+        """Capture stdout, stderr, and log output."""
         if report.capstdout:
             result.stdout = report.capstdout
             logger.debug(f"Captured stdout for {report.nodeid}: {report.capstdout}")
@@ -336,7 +353,8 @@ class PytestRunner:
             result.log_output = report.caplog
             logger.debug(f"Captured log output for {report.nodeid}: {report.caplog}")
 
-        # Capture error information
+    def _capture_error_info(self, result: TestResult, report: TestReport) -> None:
+        """Capture and store error messages or longrepr from the test report."""
         if report.longrepr:
             result.longrepr = str(report.longrepr)
             crash = getattr(report.longrepr, "reprcrash", None)
@@ -350,12 +368,10 @@ class PytestRunner:
                     f"Captured error message for {report.nodeid}: {result.error_message}"
                 )
 
-        # Update execution info
+    def _update_execution_duration(self, result: TestResult, report: TestReport) -> None:
+        """Capture the duration of the test for reporting."""
         result.duration = report.duration
         logger.debug(f"Captured duration for {report.nodeid}: {result.duration}s")
-
-        # Handle pass/xfail logic
-        self._handle_outcome_logic(result, report)
 
     def _handle_outcome_logic(self, result: TestResult, report: TestReport) -> None:
         """
@@ -392,6 +408,10 @@ class PytestRunner:
         )
 
         # Capture test metadata
+        self._capture_test_metadata(result, report)
+
+    def _capture_test_metadata(self, result: TestResult, report: TestReport) -> None:
+        """Capture any markers or keywords from the pytest report."""
         if hasattr(report, "keywords"):
             result.markers = [
                 name
@@ -483,6 +503,17 @@ class PytestRunner:
             lines.extend(session.warnings)
             lines.append("")
 
+        # Slight extraction for clarity:
+        self._append_failed_tests(lines, session)
+
+        report = "\n".join(lines)
+        logger.debug("Formatted test report generated.")
+        return report
+
+    def _append_failed_tests(self, lines: List[str], session: SessionResult) -> None:
+        """
+        Append info for failed tests to the output lines.
+        """
         for nodeid, result in session.test_results.items():
             if result.failed:
                 lines.extend(
@@ -494,10 +525,6 @@ class PytestRunner:
                         "",
                     ]
                 )
-
-        report = "\n".join(lines)
-        logger.debug("Formatted test report generated.")
-        return report
 
     def pytest_collectreport(self, report: CollectReport) -> None:
         """
