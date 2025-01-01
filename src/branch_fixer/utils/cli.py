@@ -88,14 +88,14 @@ class CLI:
         else:
             print("Cleanup completed successfully.")
 
-    @snoop
+    #@snoop
     def run_fix_workflow(self, error: TestError, interactive: bool) -> bool:
         """
         Run the fix workflow for a single error using AI:
-         1) Create a unique fix branch
-         2) Attempt to generate/apply a fix
-         3) Optionally create a PR & push
-         4) Return success/failure
+        1) Create a unique fix branch
+        2) Attempt to generate/apply a fix
+        3) Optionally create a PR & push
+        4) Return success/failure
         """
         try:
             logger.info(f"Attempting to fix {error.test_function} in {error.test_file}")
@@ -155,10 +155,12 @@ class CLI:
             if DEBUG:
                 logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
             return False
-    @snoop
+
+    #@snoop
     def run_manual_fix_workflow(self, error: TestError) -> str:
         """
         Let the user manually fix the test, then check if it passes:
+        - Create a unique fix branch
         - Loop until user either *succeeds*, *skips*, or *quits*.
         - Limit the number of retries to avoid infinite loops.
 
@@ -167,8 +169,25 @@ class CLI:
         - "skip"  => The user pressed 's' to skip
         - "quit"  => The user pressed 'q' to stop manual fix mode entirely
         """
-        retry_limit = 3  # Limit the number of retries for manual fixes.
+        retry_limit = 5  # Limit the number of retries for manual fixes.
         retries = 0
+
+        # 1) Create fix branch with unique suffix
+        unique_suffix = str(uuid.uuid4())[:8]
+        branch_name = f"fix-{error.test_file.stem}-{error.test_function}-{unique_suffix}"
+        
+        logger.info(f"Creating fix branch: {branch_name}")
+        try:
+            if self.service and not self.service.git_repo.branch_manager.create_fix_branch(branch_name):
+                logger.error(f"Failed to create fix branch: {branch_name}")
+                return "skip"
+        except Exception as branch_err:
+            logger.warning(f"Branch creation warning: {branch_err}")
+            # Continue even if branch creation fails, but inform the user
+            click.echo(f"Warning: Failed to create fix branch {branch_name}. Proceeding on current branch.")
+        
+        # Track the created branch
+        self.created_branches.add(branch_name)
 
         while retries < retry_limit:
             click.echo("\n--- MANUAL FIX MODE ---")
@@ -202,7 +221,8 @@ class CLI:
         return "quit"
 
 
-    @snoop
+
+    #@snoop
     def setup_components(
         self,
         api_key: str,
@@ -267,7 +287,7 @@ class CLI:
             if DEBUG:
                 logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
             return False
-    @snoop
+    #@snoop
     def _prompt_for_fix(self, error: TestError) -> Optional[str]:
         """
         Prompt user how to handle a failing test in interactive mode. 
