@@ -591,3 +591,22 @@ class GitRepository:
             return True
         except GitError:
             return False
+
+    def merge_branch(self, branch_name: str, fast_forward: bool = True) -> bool:
+        """
+        Merge a branch into the current HEAD. By default, attempts a fast-forward merge.
+
+        Args:
+            branch_name (str): The branch name to merge.
+            fast_forward (bool): Whether to allow fast-forward merges.
+
+        Returns:
+            bool: True if merge was successful, False otherwise.
+        """
+        logger.debug(f"Merging branch: {branch_name}, fast_forward={fast_forward}")
+        # For demonstration, run a simplified command
+        merge_cmd = ["merge", branch_name]
+        if not fast_forward:
+            merge_cmd.append("--no-ff")
+        result = self.run_command(merge_cmd)
+        return result.returncode == 0
