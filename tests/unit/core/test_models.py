@@ -2,7 +2,6 @@
 import unittest
 from uuid import UUID
 from pathlib import Path
-from dataclasses import dataclass
 
 class TestErrorDomainModel(unittest.TestCase):
     def setUp(self):
@@ -79,7 +78,7 @@ class TestErrorDomainModel(unittest.TestCase):
 
     def test_mark_fixed_with_foreign_attempt(self):
         """Test that marking fixed with an attempt from another error raises ValueError."""
-        from src.branch_fixer.core.models import TestError, ErrorDetails, FixAttempt
+        from src.branch_fixer.core.models import TestError, ErrorDetails
         
         # Create another error instance
         other_error = TestError(
@@ -101,7 +100,7 @@ class TestErrorDomainModel(unittest.TestCase):
 
     def test_mark_failed_with_foreign_attempt(self):
         """Test that marking failed with an attempt from another error raises ValueError."""
-        from src.branch_fixer.core.models import TestError, ErrorDetails, FixAttempt
+        from src.branch_fixer.core.models import TestError, ErrorDetails
         
         # Create another error instance
         other_error = TestError(

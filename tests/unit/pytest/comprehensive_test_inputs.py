@@ -1,7 +1,7 @@
 # src/branch_fixer/services/pytest/comprehensive_test_inputs.py
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any, Dict, Optional, Set, Union
 import json
 import math
 

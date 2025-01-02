@@ -1,24 +1,19 @@
-from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 import os
 import shutil
 import subprocess
-import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 import marvin
 from marvin.beta.assistants import Assistant, Thread
 from branch_fixer.services.pytest.error_processor import parse_pytest_errors
-from branch_fixer.services.git.branch_manager import BranchManager
-from branch_fixer.services.git.pr_manager import PRManager
 from branch_fixer.services.git.repository import GitRepository
 from branch_fixer.storage.state_manager import StateManager
 from branch_fixer.storage.recovery import RecoveryManager
 from branch_fixer.storage.session_store import SessionStore
 from pydantic import BaseModel, Field
 import logging
-import time
 
 # Change Operation Types
 class ChangeAction(str, Enum):
@@ -644,7 +639,7 @@ class AIManager:
             self.state_manager.transition_state(session, "FAILED")
             raise AIManagerError(f"Failed to generate valid fix after {self.max_attempts} attempts")
         
-        except Exception as e:
+        except Exception:
             # Transition to FAILED on exception
             self.state_manager.transition_state(session, "FAILED")
             raise

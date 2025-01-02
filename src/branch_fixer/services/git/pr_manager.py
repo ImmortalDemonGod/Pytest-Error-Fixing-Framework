@@ -5,7 +5,7 @@ from pathlib import Path
 import logging
 
 from .models import PRDetails, PRStatus, PRChange
-from .exceptions import PRError, PRCreationError, PRUpdateError, PRValidationError
+from .exceptions import PRUpdateError
 
 logger = logging.getLogger(__name__)
 

@@ -1,13 +1,6 @@
 # tests/test_fix_workflow.py
 import pytest
-import asyncio
-from pathlib import Path
-from typing import List
-from unittest.mock import Mock, AsyncMock
-from src.branch_fixer.services.git.repository import GitRepository
 
-from src.branch_fixer.core.models import TestError, ErrorDetails, FixAttempt
-from src.branch_fixer.orchestration.fix_service import FixService
 
 # 1. Pre-Analysis Documentation
 """

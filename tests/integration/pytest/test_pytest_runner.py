@@ -5,8 +5,6 @@ from datetime import datetime
 from unittest.mock import Mock
 from _pytest.main import ExitCode
 from _pytest.reports import TestReport
-from textwrap import dedent
-from branch_fixer.services.pytest.runner import PytestRunner
 from branch_fixer.services.pytest.models import TestResult, SessionResult
 import shutil
 import time

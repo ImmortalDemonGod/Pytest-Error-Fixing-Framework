@@ -1,6 +1,5 @@
 # branch_fixer/services/ai/manager.py
-from typing import Optional, Dict, Any, List
-from pathlib import Path
+from typing import Optional, Dict, List
 from litellm import completion
 from branch_fixer.core.models import TestError, CodeChanges
 

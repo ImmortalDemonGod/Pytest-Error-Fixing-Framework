@@ -1,7 +1,5 @@
 # tests/git/test_repository.py
-from pathlib import Path
 import pytest
-from datetime import datetime
 from src.branch_fixer.services.git.exceptions import NotAGitRepositoryError, GitError
 from src.branch_fixer.services.git.repository import GitRepository
 class TestRepositoryInitialization:

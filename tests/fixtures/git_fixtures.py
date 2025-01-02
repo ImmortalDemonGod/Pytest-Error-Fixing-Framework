@@ -1,8 +1,6 @@
 import pytest
 from pathlib import Path
 from git import Repo
-from git.exc import InvalidGitRepositoryError, NoSuchPathError
-from branch_fixer.services.git.exceptions import NotAGitRepositoryError
 
 @pytest.fixture
 def empty_directory(tmp_path):
@@ -17,7 +15,6 @@ def temporary_directory(tmp_path):
 # We can also add a helper method to create git repositories
 def init_repository(path: Path) -> None:
     """Initialize a git repository with some basic setup."""
-    from git import Repo
     repo = Repo.init(path)
     
     # Create an initial commit so we have a master/main branch

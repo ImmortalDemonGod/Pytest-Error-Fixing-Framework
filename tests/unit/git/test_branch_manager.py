@@ -1,11 +1,8 @@
 # tests/branch_fixer/git/test_branch_manager.py
-from pathlib import Path
 import pytest
-from unittest.mock import Mock, MagicMock
-from dataclasses import dataclass
 
 from branch_fixer.services.git.branch_manager import BranchManager, BranchStatus
-from branch_fixer.services.git.exceptions import GitError, BranchCreationError, MergeConflictError
+from branch_fixer.services.git.exceptions import BranchCreationError, MergeConflictError
 
 
 class TestBranchStatus:

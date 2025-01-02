@@ -2,8 +2,7 @@
 from enum import Enum
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Any, Optional, List
-from dataclasses import dataclass
+from typing import Dict, Any, Optional, List
 from pathlib import Path
 
 @dataclass

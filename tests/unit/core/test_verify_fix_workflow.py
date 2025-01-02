@@ -1,10 +1,7 @@
 # src/branch_fixer/services/pytest/test_verify_fix_workflow.py
-import snoop
-import pytest
 from pathlib import Path
 from textwrap import dedent
 from branch_fixer.services.pytest.runner import PytestRunner
-from branch_fixer.services.pytest.models import SessionResult
 from _pytest.main import ExitCode
 
 

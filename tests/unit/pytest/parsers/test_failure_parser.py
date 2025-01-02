@@ -1,7 +1,5 @@
 # tests/pytest/error_parser/test_failure_parser.py
 import unittest
-from typing import Optional
-from pathlib import Path
 import re
 
 

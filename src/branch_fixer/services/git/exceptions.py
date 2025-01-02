@@ -63,4 +63,4 @@ class BranchNameError(GitError):
     pass
 
 if TYPE_CHECKING:
-    from branch_fixer.services.git.repository import GitRepository
+    pass

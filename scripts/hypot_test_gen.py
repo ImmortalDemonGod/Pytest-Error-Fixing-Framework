@@ -6,7 +6,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union, Literal, Any, get_type_hints
+from typing import Dict, List, Optional, Tuple, Union, Literal, Any
 
 import snoop  # type: ignore
 # Removed unused: from hypothesis import strategies as st

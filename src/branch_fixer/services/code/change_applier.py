@@ -1,9 +1,7 @@
 # branch_fixer/services/code/change_applier.py
 from pathlib import Path
-from typing import Optional
 import shutil
 from logging import getLogger
-import snoop
 from datetime import datetime
 from uuid import uuid4
 

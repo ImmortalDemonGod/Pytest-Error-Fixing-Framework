@@ -6,7 +6,6 @@ from uuid import UUID
 import hashlib
 import time
 import json
-import shutil
 import os
 
 if TYPE_CHECKING:

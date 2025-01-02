@@ -1,13 +1,7 @@
 # tests/integration/pytest/conftest.py
 import pytest
-import pytest_asyncio
-from pathlib import Path
-from datetime import datetime
 from unittest.mock import Mock
-from textwrap import dedent
 
-from _pytest.reports import TestReport
-from _pytest.main import ExitCode
 from branch_fixer.services.pytest.runner import PytestRunner
 
 @pytest.fixture
@@ -17,8 +11,6 @@ def runner(test_suite_dir):
 
 # tests/unit/git/conftest.py
 import pytest
-from unittest.mock import Mock, MagicMock
-from pathlib import Path
 from branch_fixer.services.git.repository import GitRepository
 from branch_fixer.services.git.branch_manager import BranchManager
 

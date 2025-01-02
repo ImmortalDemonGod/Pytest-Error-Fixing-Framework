@@ -1,6 +1,5 @@
 # tests/pytest/error_parser/test_failure_parser_debug.py
 import snoop
-from pathlib import Path
 
 def test_parse_import_error_debug():
     """Debugging version to understand function name extraction"""

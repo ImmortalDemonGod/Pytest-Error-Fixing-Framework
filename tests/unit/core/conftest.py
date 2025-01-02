@@ -1,12 +1,9 @@
 import pytest
 import pytest_asyncio
-from pathlib import Path
-from datetime import datetime
 from unittest.mock import Mock
 from textwrap import dedent
 
 from _pytest.reports import TestReport
-from _pytest.main import ExitCode
 
 
 @pytest.fixture

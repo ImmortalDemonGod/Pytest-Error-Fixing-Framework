@@ -1,12 +1,10 @@
 # tests/pytest/error_parser/test_failure_parser_compare.py
 import snoop
-from pathlib import Path
 import re
 
 def test_compare_parsers():
     """Compare original working parser with new implementation"""
     from branch_fixer.services.pytest.error_parser.failure_parser import FailureParser
-    from branch_fixer.services.pytest.error_info import ErrorInfo
 
     @snoop
     def debug_parsing():
@@ -58,7 +56,7 @@ tests/pytest/error_parser/test_failure_parser.py:10: ImportError"""
         print("\nNew implementation results:")
         errors = parser.parse_test_failures(pytest_output)
         for error in errors:
-            print(f"\nError details:")
+            print("\nError details:")
             print(f"  Function: {error.function}")
             print(f"  File: {error.test_file}")
             print(f"  Type: {error.error_type}")

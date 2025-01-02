@@ -1,6 +1,5 @@
 # tests/pytest/error_parser/test_collection_parser.py
 import unittest
-from pathlib import Path
 
 class TestCollectionParser(unittest.TestCase):
     def setUp(self):

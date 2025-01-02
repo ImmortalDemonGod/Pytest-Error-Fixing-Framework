@@ -1,7 +1,6 @@
 # tests/unit/git/conftest.py
 import pytest
-from unittest.mock import Mock, MagicMock, create_autospec
-from pathlib import Path
+from unittest.mock import MagicMock, create_autospec
 from branch_fixer.services.git.repository import GitRepository
 from branch_fixer.services.git.branch_manager import BranchManager
 

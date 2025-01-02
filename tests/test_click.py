@@ -1,5 +1,4 @@
 import click
-import snoop
 
 @click.command()
 def main():

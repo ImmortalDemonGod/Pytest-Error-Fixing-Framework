@@ -3,12 +3,10 @@
 Script to update imports after project reorganization.
 Run from the project root directory.
 """
-import ast
 import logging
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Tuple
 import shutil
-import os
 
 logger = logging.getLogger(__name__)
 
@@ -157,7 +155,7 @@ def main():
         
         logger.info(f"Import updates complete. Report saved to {report_file}")
         logger.info("Review the changes and run tests to verify everything works.")
-        logger.info(f"To restore from backup if needed: ")
+        logger.info("To restore from backup if needed: ")
         logger.info(f"  rm -rf {project_dir} && mv {backup_dir} {project_dir}")
         
     except Exception as e:

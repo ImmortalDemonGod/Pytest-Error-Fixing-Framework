@@ -1,10 +1,6 @@
 # src/branch_fixer/services/pytest/error_processor.py
-import snoop
 from typing import List
 from pathlib import Path
-from branch_fixer.services.pytest.parsers.collection_parser import CollectionParser
-from branch_fixer.services.pytest.parsers.failure_parser import FailureParser
-from branch_fixer.services.pytest.error_info import ErrorInfo
 from branch_fixer.core.models import TestError, ErrorDetails
 import re 
 

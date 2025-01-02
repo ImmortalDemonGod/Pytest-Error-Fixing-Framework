@@ -1,5 +1,4 @@
 # src/branch_fixer/services/pytest/test_simple.py
-import pytest
 from tests.unit.pytest.comprehensive_test_inputs import MathOperations
 
 def test_add_simple():
