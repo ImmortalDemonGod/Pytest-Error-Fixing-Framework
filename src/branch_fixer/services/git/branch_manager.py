@@ -2,6 +2,9 @@
 import re
 from typing import Optional, Set
 
+# Add the missing GitRepository import (adjust the path if needed)
+from branch_fixer.services.git.repository import GitRepository
+
 from branch_fixer.services.git.exceptions import (
     BranchCreationError,
     BranchNameError,
@@ -65,34 +68,49 @@ class BranchManager:
             GitError: For other Git errors
         """
         try:
-            # Validate branch name
-            if not self.validate_branch_name(branch_name):
-                raise BranchNameError(f"Invalid branch name: {branch_name}")
+            # Validate that the branch name is valid and does not already exist
+            self._check_valid_new_branch_name(branch_name)
 
-            # Check if branch exists
-            if self.repository.branch_exists(branch_name):
-                raise BranchCreationError(f"Branch {branch_name} already exists")
+            # Determine the base branch
+            base_branch = from_branch or self.repository.main_branch
 
-            # Get base branch
-            from_branch = from_branch or self.repository.main_branch
-
-            # Create new branch from base
-            result = self.repository.run_command(
-                ["checkout", "-b", branch_name, from_branch]
-            )
-
-            if result.returncode != 0:
-                raise BranchCreationError(
-                    f"Failed to create branch {branch_name}: {result.stderr}"
-                )
-
-            return True
+            # Create the new branch and checkout
+            return self._create_and_checkout_branch(branch_name, base_branch)
 
         except Exception as e:
             # Convert to appropriate error type
             if isinstance(e, (BranchNameError, BranchCreationError)):
                 raise e
             raise GitError(f"Failed to create branch {branch_name}: {str(e)}")
+
+    def _check_valid_new_branch_name(self, branch_name: str) -> None:
+        """
+        Check that the new branch name is valid, non-empty, matches pattern,
+        and does not already exist in the repository.
+
+        Raises:
+            BranchNameError: If branch name is invalid
+            BranchCreationError: If branch already exists
+        """
+        if not self.validate_branch_name(branch_name):
+            raise BranchNameError(f"Invalid branch name: {branch_name}")
+
+        if self.repository.branch_exists(branch_name):
+            raise BranchCreationError(f"Branch {branch_name} already exists")
+
+    def _create_and_checkout_branch(self, branch_name: str, base_branch: str) -> bool:
+        """
+        Create a new branch from the specified base branch and switch to it.
+
+        Raises:
+            BranchCreationError: If Git command fails
+        """
+        result = self.repository.run_command(["checkout", "-b", branch_name, base_branch])
+        if result.returncode != 0:
+            raise BranchCreationError(
+                f"Failed to create branch {branch_name}: {result.stderr}"
+            )
+        return True
 
     def cleanup_fix_branch(self, branch_name: str, force: bool = False) -> bool:
         """Clean up a fix branch after merging.
@@ -158,28 +176,30 @@ class BranchManager:
             BranchNameError: If name invalid
         """
         try:
-            # Check if branch name is empty
-            if not branch_name:
-                raise BranchNameError("Branch name cannot be empty")
-
-            # Check if name matches allowed pattern
-            if not re.match(self.name_pattern, branch_name):
-                raise BranchNameError(
-                    f"Branch name '{branch_name}' contains invalid characters"
-                )
-
-            # Check against forbidden names
-            if branch_name.lower() in self.forbidden_names:
-                raise BranchNameError(
-                    f"Cannot use reserved name '{branch_name}' for branch"
-                )
-
+            self._check_branch_name_not_empty(branch_name)
+            self._check_branch_name_pattern(branch_name)
+            self._check_forbidden_names(branch_name)
             return True
-
         except Exception as e:
             if isinstance(e, BranchNameError):
                 raise e
             raise BranchNameError(f"Failed to validate branch name: {str(e)}") from e
+
+    def _check_branch_name_not_empty(self, branch_name: str) -> None:
+        if not branch_name:
+            raise BranchNameError("Branch name cannot be empty")
+
+    def _check_branch_name_pattern(self, branch_name: str) -> None:
+        if not re.match(self.name_pattern, branch_name):
+            raise BranchNameError(
+                f"Branch name '{branch_name}' contains invalid characters"
+            )
+
+    def _check_forbidden_names(self, branch_name: str) -> None:
+        if branch_name.lower() in self.forbidden_names:
+            raise BranchNameError(
+                f"Cannot use reserved name '{branch_name}' for branch"
+            )
 
     def is_branch_merged(
         self, branch_name: str, target_branch: Optional[str] = None
