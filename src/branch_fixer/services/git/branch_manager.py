@@ -3,7 +3,9 @@ import re
 from typing import Optional, Set
 
 # Add the missing GitRepository import (adjust the path if needed)
-from branch_fixer.services.git.repository import GitRepository
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .repository import GitRepository
 
 from branch_fixer.services.git.exceptions import (
     BranchCreationError,
