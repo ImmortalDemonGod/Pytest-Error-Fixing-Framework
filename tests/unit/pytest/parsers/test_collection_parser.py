@@ -1,10 +1,12 @@
 # tests/pytest/error_parser/test_collection_parser.py
 import unittest
 
+
 class TestCollectionParser(unittest.TestCase):
     def setUp(self):
         """Set up common test data"""
-        from branch_fixer.services.pytest.error_processor import CollectionParser
+        from src.branch_fixer.services.pytest.parsers.collection_parser  import CollectionParser
+
         self.parser = CollectionParser()
 
     def test_parse_collection_errors_single_error(self):
@@ -23,9 +25,9 @@ class TestCollectionParser(unittest.TestCase):
         which is not the same as the test file we want to collect:
         /Users/dev/project/tests/test_example.py
         """
-        
+
         errors = self.parser.parse_collection_errors(pytest_output)
-        
+
         self.assertEqual(len(errors), 1)
         error = errors[0]
         self.assertEqual(error.test_file, "test_example.py")
@@ -54,9 +56,9 @@ class TestCollectionParser(unittest.TestCase):
         which is not the same as the test file we want to collect:
         /Users/dev/project/tests/test_two.py
         """
-        
+
         errors = self.parser.parse_collection_errors(pytest_output)
-        
+
         self.assertEqual(len(errors), 2)
         self.assertEqual(errors[0].test_file, "test_one.py")
         self.assertEqual(errors[1].test_file, "test_two.py")
@@ -71,15 +73,18 @@ class TestCollectionParser(unittest.TestCase):
         
         test_example.py .....                                                  [100%]
         """
-        
+
         errors = self.parser.parse_collection_errors(pytest_output)
         self.assertEqual(len(errors), 0)
 
     def test_extract_collection_match(self):
         """Should extract ErrorInfo from regex match"""
         import re
-        from branch_fixer.services.pytest.error_parser.collection_parser import COLLECTION_PATTERN
-        
+
+        from src.branch_fixer.services.pytest.parsers.collection_parser import (
+            COLLECTION_PATTERN,
+        )
+
         error_text = """
         ERROR collecting test_example.py
         imported module 'test_example' has __file__ attribute:
@@ -87,10 +92,10 @@ class TestCollectionParser(unittest.TestCase):
         which is not the same as the test file we want to collect:
         /Users/dev/project/tests/test_example.py
         """
-        
+
         match = re.search(COLLECTION_PATTERN, error_text, re.MULTILINE | re.DOTALL)
         self.assertIsNotNone(match, "Pattern should match the error text")
-        
+
         error = self.parser.extract_collection_match(match)
         self.assertEqual(error.test_file, "test_example.py")
         self.assertEqual(error.function, "collection")
@@ -99,21 +104,21 @@ class TestCollectionParser(unittest.TestCase):
 
     def test_validate_collection_error(self):
         """Should validate collection error details"""
-        from branch_fixer.services.pytest.error_info import ErrorInfo
-        
+        from src.branch_fixer.services.pytest.error_info import ErrorInfo
+
         error = ErrorInfo(
             test_file="test_example.py",
             function="collection",
             error_type="CollectionError",
             error_details="Import path mismatch",
         )
-        
+
         self.assertTrue(self.parser.validate_collection_error(error))
 
     def test_validate_collection_error_invalid(self):
         """Should reject invalid collection errors"""
-        from branch_fixer.services.pytest.error_info import ErrorInfo
-        
+        from src.branch_fixer.services.pytest.error_info import ErrorInfo
+
         # Wrong function name
         error1 = ErrorInfo(
             test_file="test_example.py",
@@ -122,7 +127,7 @@ class TestCollectionParser(unittest.TestCase):
             error_details="Import path mismatch",
         )
         self.assertFalse(self.parser.validate_collection_error(error1))
-        
+
         # Wrong error type
         error2 = ErrorInfo(
             test_file="test_example.py",
