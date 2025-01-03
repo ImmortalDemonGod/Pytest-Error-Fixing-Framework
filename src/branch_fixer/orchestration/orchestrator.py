@@ -1,3 +1,4 @@
+# src/branch_fixer/orchestration/orchestrator.py
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -46,6 +47,14 @@ class FixSession:
     modified_files: List[Path] = field(default_factory=list)
     git_branch: Optional[str] = None
 
+    # NEW numeric fields for test session counts
+    total_tests: int = 0
+    passed_tests: int = 0
+    failed_tests: int = 0
+
+    # Example for storing environment info or other metadata
+    environment_info: Dict[str, Any] = field(default_factory=dict)
+
     def create_snapshot(self) -> Dict[str, Any]:
         """
         Create serializable snapshot of current state (legacy placeholder).
@@ -71,6 +80,10 @@ class FixSession:
             "error_count": self.error_count,
             "modified_files": [str(f) for f in self.modified_files],
             "git_branch": self.git_branch,
+            "total_tests": self.total_tests,
+            "passed_tests": self.passed_tests,
+            "failed_tests": self.failed_tests,
+            "environment_info": self.environment_info,
         }
 
     @staticmethod
@@ -95,6 +108,10 @@ class FixSession:
             error_count=data.get("error_count", 0),
             modified_files=[Path(p) for p in data.get("modified_files", [])],
             git_branch=data.get("git_branch"),
+            total_tests=data.get("total_tests", 0),
+            passed_tests=data.get("passed_tests", 0),
+            failed_tests=data.get("failed_tests", 0),
+            environment_info=data.get("environment_info", {}),
         )
         return session
 
@@ -132,6 +149,7 @@ class FixOrchestrator:
         temp_increment: float = 0.1,
         interactive: bool = True,
         recovery_manager: Optional[RecoveryManager] = None,
+        session_store=None,  # NEW: optional session_store for saving
     ):
         """
         Initialize orchestrator with required components and settings.
@@ -146,6 +164,7 @@ class FixOrchestrator:
             temp_increment: Temperature increase per retry
             interactive: Whether to enable interactive mode (unused in single-run logic, but kept for future)
             recovery_manager: Optional RecoveryManager for checkpoint/restore
+            session_store: Optional store for persisting the session
         """
         self.ai_manager = ai_manager
         self.test_runner = test_runner
@@ -159,6 +178,9 @@ class FixOrchestrator:
 
         # If you want to handle advanced rollbacks or error handling
         self.recovery_manager = recovery_manager
+
+        # NEW: store the session_store so we can do save_session(...)
+        self.session_store = session_store
 
         # You might create or inject an actual FixService instance.
         # Alternatively, you can do so externally and pass it in.
@@ -221,28 +243,61 @@ class FixOrchestrator:
 
         return True
 
-    def run_session(self, session_id: UUID) -> bool:
+    def run_session(
+        self,
+        session_id: UUID,
+        total_tests: int = 0,
+        environment_info: Optional[Dict[str, Any]] = None,
+    ) -> bool:
         """
         Run an existing fix session synchronously.
 
         - For each error, call self.fix_error(...) with multi-retries.
         - If any error cannot be fixed, mark the session FAILED.
+        - If no errors fail, mark the session COMPLETED.
+        - Always save the session data to the session_store if present.
+
+        Args:
+            session_id: The session UUID
+            total_tests: Optional total test count from the test run
+            environment_info: Optional dict of environment details
 
         Returns:
             bool indicating if all errors were eventually fixed
         """
         self._validate_session(session_id)
 
-        # Process errors in a loop
+        # Record extra info if provided
+        if environment_info:
+            self._session.environment_info.update(environment_info)
+        self._session.total_tests = total_tests
+
+        # Process each error
         for error in self._session.errors:
             if not self._handle_error_fix(error):
+                # Save session if needed
+                if self.session_store:
+                    self.session_store.save_session(self._session)
                 return False
 
-        # If we reach here, all errors are presumably fixed
-        self._session.state = FixSessionState.COMPLETED
-        return True
+        # If we reach here, presumably all errors are fixed
+        # so we can set passed/failed counts
+        self._session.failed_tests = sum(
+            1 for e in self._session.errors if e.status != "fixed"
+        )
+        self._session.passed_tests = self._session.error_count - self._session.failed_tests
 
-    # @snoop
+        # If no errors remain unfixed, mark as COMPLETED
+        if self._session.failed_tests == 0:
+            self._session.state = FixSessionState.COMPLETED
+        else:
+            self._session.state = FixSessionState.FAILED
+
+        # Always save session
+        if self.session_store:
+            self.session_store.save_session(self._session)
+        return self._session.state == FixSessionState.COMPLETED
+
     def fix_error(self, error: TestError) -> bool:
         """
         Attempt multiple fix attempts for a single error,
@@ -254,10 +309,6 @@ class FixOrchestrator:
         if not self._session:
             raise RuntimeError("No active session")
 
-        # Potentially create a checkpoint before we try
-        # If you wish to do so, call _create_checkpoint_if_needed(...)
-        # We'll skip that for now, or you can adapt as needed.
-
         current_temp = self.initial_temp
         for attempt_index in range(self.max_retries):
             logger.info(
@@ -265,7 +316,6 @@ class FixOrchestrator:
                 f"at temperature={current_temp}"
             )
 
-            # We might call a separate FixService that does one attempt at a time:
             from branch_fixer.orchestration.fix_service import FixService
 
             fix_service = FixService(
@@ -274,17 +324,15 @@ class FixOrchestrator:
                 change_applier=self.change_applier,
                 git_repo=self.git_repo,
                 dev_force_success=False,  # or some logic
-                session_store=None,  # or attach a store if you want
-                state_manager=None,  # or attach if you have one
+                session_store=None,       # Not storing partial attempts here
+                state_manager=None,
                 session=self._session,
             )
 
             success = fix_service.attempt_fix(error, temperature=current_temp)
             if success:
-                # If it’s fixed, we can stop retrying for this error
                 return True
 
-            # If not successful, increment temperature & try again
             current_temp += self.temp_increment
 
         return False
@@ -302,7 +350,6 @@ class FixOrchestrator:
             raise RuntimeError("No active session for handling errors")
         logger.warning(f"Handling orchestrator-level error: {error}")
 
-        # If we have a RecoveryManager, attempt to handle it
         if self.recovery_manager:
             context = {"current_state": self._session.state.value}
             try:
@@ -316,7 +363,6 @@ class FixOrchestrator:
                 logger.error(f"Recovery manager failed: {e}")
                 return False
 
-        # If we cannot handle it, mark session as ERROR
         self._session.state = FixSessionState.ERROR
         return False
 
@@ -359,7 +405,7 @@ class FixOrchestrator:
             )
 
         self._session.state = new_state
-        logger.info(f"Session {self._session.id} {action}d.")  # note the 'd'
+        logger.info(f"Session {self._session.id} {action}d.")
         return True
 
     def pause_session(self) -> bool:
@@ -382,7 +428,6 @@ class FixOrchestrator:
             action="resume",
         )
 
-    # If you’d like advanced checkpointing:
     def _create_checkpoint_if_needed(self, session: FixSession, label: str) -> None:
         """
         Possibly create a checkpoint with the recovery manager (if present).
