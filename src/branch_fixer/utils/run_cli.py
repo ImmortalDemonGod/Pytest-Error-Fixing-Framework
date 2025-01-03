@@ -1,11 +1,12 @@
 # src/branch_fixer/utils/run_cli.py
 
 import logging
+import platform  # NEW: for environment info
 from pathlib import Path
 from typing import Optional
 
 import click
-
+import snoop
 from branch_fixer.config.logging_config import setup_logging
 from branch_fixer.utils.cli import CLI, ComponentSettings
 
@@ -58,6 +59,7 @@ def cli():
     is_flag=True,
     help="Force all fix attempts to be marked successful (for dev testing)",
 )
+@snoop
 def fix(
     api_key: str,
     max_retries: int,
@@ -75,6 +77,7 @@ def fix(
     """
 
     from branch_fixer.services.pytest.error_processor import parse_pytest_errors
+    from branch_fixer.orchestration.orchestrator import FixSession, FixSessionState
 
     setup_logging()
     logger.info("Starting pytest-fixer...")
@@ -120,9 +123,27 @@ def fix(
         f"Test run complete. Total tests: {total_tests}, Failed tests: {failed_tests}"
     )
 
-    # If no failures, nothing to fix
+    # If no failures, let's still record a session in TinyDB for completeness
     if failed_tests == 0:
         logger.info("All tests passed - no fixes needed!")
+
+        # Create a minimal session with 0 failures, mark as COMPLETED
+        zero_session = FixSession()
+        zero_session.total_tests = total_tests
+        zero_session.failed_tests = 0
+        zero_session.passed_tests = total_tests
+        zero_session.state = FixSessionState.COMPLETED
+
+        # Optionally gather environment details
+        zero_session.environment_info = {
+            "os": platform.system(),
+            "python_version": platform.python_version(),
+        }
+
+        # If session_store is available, persist it
+        if cli_obj.service.session_store:
+            cli_obj.service.session_store.save_session(zero_session)
+
         return 0
 
     # Parse errors
