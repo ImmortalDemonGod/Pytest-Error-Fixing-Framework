@@ -77,12 +77,10 @@ class FixService:
         self.temp_increment = temp_increment
         self.dev_force_success = dev_force_success
 
-        # NEW: Optionally store session, session_store, and state_manager
+        # Keep references to optional sessioning logic
         self.session_store = session_store
         self.state_manager = state_manager
-        self.session = (
-            session  # We'll assume the session is created or loaded elsewhere
-        )
+        self.session = session
 
     # @snoop
     def attempt_fix(self, error: TestError, temperature: float) -> bool:
@@ -107,17 +105,17 @@ class FixService:
             ValueError: If error is already fixed
         """
         try:
-            # Validate workspace before attempting fix
+            # Validate workspace
             try:
                 self.validator.validate_workspace(error.test_file.parent)
                 self.validator.check_dependencies()
             except Exception as e:
                 raise FixServiceError(f"Workspace validation failed: {str(e)}") from e
 
-            # Start fix attempt with the given temperature
+            # Start fix attempt
             attempt = error.start_fix_attempt(temperature)
 
-            # If dev_force_success is set, skip actual fix generation
+            # Skip actual fix generation if dev_force_success
             if self.dev_force_success:
                 logger.info(
                     "Dev force success enabled: skipping actual fix logic and marking success."
@@ -127,27 +125,21 @@ class FixService:
                 return True
 
             try:
-                # Generate fix using AI
+                # AI-based fix
                 changes = self.ai_manager.generate_fix(error, attempt.temperature)
-
-                # Apply changes (we'll get both success bool and backup_path)
                 success, backup_path = self.change_applier.apply_changes_with_backup(
                     error.test_file, changes
                 )
 
-                # If it didn't even apply successfully (syntax, etc.), fail
                 if not success:
                     self._handle_failed_attempt(error, attempt)
                     return False
 
-                # Now we do the functional test
+                # Re-run functional test
                 if not self._verify_fix(error, attempt):
-                    # Revert the file because the functional test failed
                     try:
                         if backup_path:
-                            self.change_applier.restore_backup(
-                                error.test_file, backup_path
-                            )
+                            self.change_applier.restore_backup(error.test_file, backup_path)
                             logger.info(
                                 f"Reverted {error.test_file} after functional test failure."
                             )
@@ -159,22 +151,17 @@ class FixService:
                     self._handle_failed_attempt(error, attempt)
                     return False
 
-                # If we get here, the fix is good. Mark as fixed
+                # If we reach here, fix is good
                 error.mark_fixed(attempt)
                 self._update_session_if_present(error)
                 return True
 
             except Exception as e:
-                # If something unexpected breaks, let's also revert if we can
-                # But we only have a backup if apply_changes_with_backup got that far
-                logger.warning(
-                    "Error occurred after changes might have been applied. Attempting revert."
-                )
+                logger.warning("Error occurred after changes might have been applied.")
                 self._handle_failed_attempt(error, attempt)
                 raise FixServiceError(str(e)) from e
 
         except Exception as e:
-            # Get the root cause, not the FixServiceError wrapper
             root_cause = getattr(e, "__cause__", e)
             raise FixServiceError(str(root_cause)) from e
 
@@ -184,14 +171,12 @@ class FixService:
         Check if a user's manual code edits have fixed the failing test.
 
         1) Validate workspace
-        2) Re-run the test via test_runner to see if it now passes
-        3) Return True if it passes, else False
+        2) Re-run the test
+        3) Mark error as fixed if it passes
 
-        This method does not modify code or revert changes—it's purely a test verification
-        step to see if the user's manual edits have resolved the issue.
+        Returns True if test passes, else False
         """
         try:
-            # Validate workspace before re-testing
             self.validator.validate_workspace(error.test_file.parent)
             self.validator.check_dependencies()
         except Exception as e:
@@ -199,11 +184,8 @@ class FixService:
                 f"Workspace validation failed (manual fix): {str(e)}"
             ) from e
 
-        # Run the test to see if the issue is resolved
         success = self.test_runner.verify_fix(error.test_file, error.test_function)
         if success:
-            # Mark as fixed if test passes
-            # We still want to create a fix attempt for tracking (with 0.0 temperature if you like)
             attempt = error.start_fix_attempt(0.0)
             error.mark_fixed(attempt)
             self._update_session_if_present(error)
@@ -212,11 +194,7 @@ class FixService:
     snoop()
 
     def _handle_failed_attempt(self, error: TestError, attempt: FixAttempt) -> None:
-        """
-        Handle cleanup after failed fix attempt.
-
-        This marks the attempt as failed. Additional cleanup or revert logic can be added here if needed.
-        """
+        """Mark attempt as failed and optionally revert code."""
         try:
             error.mark_attempt_failed(attempt)
             self._update_session_if_present(error)
@@ -238,11 +216,10 @@ class FixService:
         except Exception as e:
             raise FixServiceError(f"Fix verification failed: {str(e)}") from e
 
-    # NEW: optional helper to update session state or persist session
     def _update_session_if_present(self, error: TestError) -> None:
         """
         If a session is attached, update it with the new error state.
-        Optionally persist via session_store and handle state transitions via state_manager.
+        Save to session_store if present, manage states via state_manager if provided.
         """
         if not self.session:
             return
@@ -260,12 +237,8 @@ class FixService:
                         self.state_manager.transition_state(
                             self.session, "FixSessionState.COMPLETED"
                         )
-                    else:
-                        # Keep session as RUNNING if not completed
-                        pass
                 except (StateTransitionError, StateValidationError) as ex:
                     logger.warning(f"Failed to transition session state: {ex}")
 
-            # Persist session changes if store is provided
             if self.session_store:
                 self.session_store.save_session(self.session)

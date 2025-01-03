@@ -70,7 +70,12 @@ class SessionStore:
                 "modified_files": [str(p) for p in session.modified_files],
                 "completed_errors": [str(err.id) for err in session.completed_errors],
                 "current_error": str(session.current_error.id) if session.current_error else None,
-                # Additional fields as needed
+                # Store new numeric fields
+                "total_tests": session.total_tests,
+                "passed_tests": session.passed_tests,
+                "failed_tests": session.failed_tests,
+                # Store environment info or other metadata
+                "environment_info": session.environment_info,
             }
 
             existing = self.sessions.get(Session.id == str(session.id))
@@ -111,9 +116,14 @@ class SessionStore:
                 error_count=session_data.get("error_count", 0),
                 retry_count=session_data.get("retry_count", 0),
                 git_branch=session_data.get("git_branch"),
-                modified_files=[
-                    Path(p) for p in session_data.get("modified_files", [])
-                ],
+                modified_files=[Path(p) for p in session_data.get("modified_files", [])],
+
+                # Re-hydrate new numeric fields
+                total_tests=session_data.get("total_tests", 0),
+                passed_tests=session_data.get("passed_tests", 0),
+                failed_tests=session_data.get("failed_tests", 0),
+                # Re-hydrate environment info
+                environment_info=session_data.get("environment_info", {}),
             )
             # We don't have direct references to errors or completed_errors here,
             # so re-attach them as needed if your code handles them externally.
@@ -157,6 +167,12 @@ class SessionStore:
                     retry_count=data.get("retry_count", 0),
                     git_branch=data.get("git_branch"),
                     modified_files=[Path(p) for p in data.get("modified_files", [])],
+
+                    # Re-hydrate new numeric fields
+                    total_tests=data.get("total_tests", 0),
+                    passed_tests=data.get("passed_tests", 0),
+                    failed_tests=data.get("failed_tests", 0),
+                    environment_info=data.get("environment_info", {}),
                 )
                 sessions_list.append(fix_session)
 
