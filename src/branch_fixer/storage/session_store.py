@@ -5,7 +5,7 @@ from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 from tinydb import TinyDB, Query
-
+import snoop
 from branch_fixer.orchestration.orchestrator import FixSession, FixSessionState
 
 class StorageError(Exception):
@@ -47,7 +47,7 @@ class SessionStore:
         db_path = self.storage_dir / "sessions.json"
         self.db = TinyDB(db_path)
         self.sessions = self.db.table("sessions")
-
+    
     def save_session(self, session: FixSession) -> None:
         """
         Persist session state to TinyDB storage.

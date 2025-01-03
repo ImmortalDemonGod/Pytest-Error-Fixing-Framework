@@ -21,6 +21,7 @@ from branch_fixer.services.code.change_applier import ChangeApplier
 from branch_fixer.services.git.repository import GitRepository
 from branch_fixer.services.pytest.runner import TestRunner
 
+import snoop
 logger = logging.getLogger(__name__)
 
 
@@ -273,6 +274,7 @@ class CLI:
         click.echo("Retry limit reached. Exiting manual fix mode.")
         return "quit"
 
+    @snoop
     def setup_components(self, config: ComponentSettings) -> bool:
         """
         Initialize AI, Test Runner, Change Applier, GitRepo, FixService, & Orchestrator.
@@ -303,6 +305,13 @@ class CLI:
                 temp_increment=config.temp_increment,
                 dev_force_success=config.dev_force_success,
             )
+
+            # NEW: Initialize SessionStore to ensure session data is always saved
+            from branch_fixer.storage.session_store import SessionStore
+            store_dir = Path.cwd() / "session_data"
+            store_dir.mkdir(parents=True, exist_ok=True)
+            session_store = SessionStore(store_dir)
+            self.service.session_store = session_store
 
             # Optional orchestrator
             logger.info("Creating Orchestrator object for session-based approach...")
