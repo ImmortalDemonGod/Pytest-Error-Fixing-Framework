@@ -1,4 +1,5 @@
 # src/branch_fixer/orchestration/orchestrator.py
+
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -13,14 +14,15 @@ from branch_fixer.services.code.change_applier import ChangeApplier
 from branch_fixer.services.git.repository import GitRepository
 from branch_fixer.services.pytest.runner import TestRunner
 
-# If you need them, we keep references to recovery-related imports:
+# Recovery-related imports retained for potential use
 from branch_fixer.storage.recovery import CheckpointError, RecoveryManager
+from branch_fixer.storage import state_manager
 
 logger = logging.getLogger(__name__)
 
 
 class FixSessionState(Enum):
-    """Possible states for a fix session"""
+    """Possible states for a fix session."""
 
     INITIALIZING = "initializing"
     RUNNING = "running"
@@ -33,7 +35,7 @@ class FixSessionState(Enum):
 @dataclass
 class FixSession:
     """
-    Tracks state for a test fixing session
+    Tracks state for a test fixing session.
     """
 
     id: UUID = field(default_factory=uuid4)
@@ -47,19 +49,19 @@ class FixSession:
     modified_files: List[Path] = field(default_factory=list)
     git_branch: Optional[str] = None
 
-    # NEW numeric fields for test session counts
+    # Numeric fields for test session counts
     total_tests: int = 0
     passed_tests: int = 0
     failed_tests: int = 0
 
-    # Example for storing environment info or other metadata
+    # Storing environment info or other metadata
     environment_info: Dict[str, Any] = field(default_factory=dict)
 
+    # Store any warnings from the test runner
+    warnings: List[str] = field(default_factory=list)
+
     def create_snapshot(self) -> Dict[str, Any]:
-        """
-        Create serializable snapshot of current state (legacy placeholder).
-        By default, just returns self.to_dict().
-        """
+        """Create a serializable snapshot of current state."""
         return self.to_dict()
 
     def to_dict(self) -> dict:
@@ -84,6 +86,7 @@ class FixSession:
             "passed_tests": self.passed_tests,
             "failed_tests": self.failed_tests,
             "environment_info": self.environment_info,
+            "warnings": self.warnings,  # NEW: Included warnings
         }
 
     @staticmethod
@@ -112,6 +115,7 @@ class FixSession:
             passed_tests=data.get("passed_tests", 0),
             failed_tests=data.get("failed_tests", 0),
             environment_info=data.get("environment_info", {}),
+            warnings=data.get("warnings", []),  # NEW: Included warnings
         )
         return session
 
@@ -119,8 +123,8 @@ class FixSession:
 @dataclass
 class FixProgress:
     """
-    Tracks progress of fix operations, if you need
-    a structured way to represent it for a UI/logging.
+    Tracks progress of fix operations.
+    Provides a structured way to represent progress for UI/logging.
     """
 
     total_errors: int
@@ -149,22 +153,24 @@ class FixOrchestrator:
         temp_increment: float = 0.1,
         interactive: bool = True,
         recovery_manager: Optional[RecoveryManager] = None,
-        session_store=None,  # NEW: optional session_store for saving
+        session_store: Optional[Any] = None,  # Type can be specified based on implementation
+        state_manager: Optional[state_manager.StateManager] = None,
     ):
         """
         Initialize orchestrator with required components and settings.
 
         Args:
-            ai_manager: AI service for generating fixes
-            test_runner: Test execution service
-            change_applier: Code change service
-            git_repo: Git operations service
-            max_retries: Maximum fix attempts per error
-            initial_temp: Initial temperature for AI
-            temp_increment: Temperature increase per retry
-            interactive: Whether to enable interactive mode (unused in single-run logic, but kept for future)
-            recovery_manager: Optional RecoveryManager for checkpoint/restore
-            session_store: Optional store for persisting the session
+            ai_manager: AI service for generating fixes.
+            test_runner: Test execution service.
+            change_applier: Code change service.
+            git_repo: Git operations service.
+            max_retries: Maximum fix attempts per error.
+            initial_temp: Initial temperature for AI.
+            temp_increment: Temperature increase per retry.
+            interactive: Whether to enable interactive mode.
+            recovery_manager: Optional RecoveryManager for checkpoint/restore.
+            session_store: Optional store for persisting the session.
+            state_manager: Optional manager for validating state transitions.
         """
         self.ai_manager = ai_manager
         self.test_runner = test_runner
@@ -175,28 +181,23 @@ class FixOrchestrator:
         self.temp_increment = temp_increment
         self.interactive = interactive
         self._session: Optional[FixSession] = None
+        self.state_manager = state_manager  # Placeholder for state management
 
-        # If you want to handle advanced rollbacks or error handling
         self.recovery_manager = recovery_manager
-
-        # NEW: store the session_store so we can do save_session(...)
-        self.session_store = session_store
-
-        # You might create or inject an actual FixService instance.
-        # Alternatively, you can do so externally and pass it in.
+        self.session_store = session_store  # NEW: Session store for persistence
 
     def start_session(self, errors: List[TestError]) -> FixSession:
         """
         Start a new fix session synchronously.
 
         Args:
-            errors: List of errors to fix
+            errors: List of errors to fix.
 
         Returns:
-            New FixSession instance
+            New FixSession instance.
 
         Raises:
-            ValueError: If errors list is empty
+            ValueError: If errors list is empty.
         """
         if not errors:
             raise ValueError("Cannot start a session with no errors")
@@ -211,37 +212,6 @@ class FixOrchestrator:
 
         logger.info(f"Session {session.id} started with {len(errors)} errors.")
         return session
-
-    def _validate_session(self, session_id: UUID) -> None:
-        """
-        Validate session existence and state.
-        Raises RuntimeError if any validation fails.
-        """
-        if not self._session or self._session.id != session_id:
-            raise RuntimeError("Session not found or not started")
-
-        if self._session.state != FixSessionState.RUNNING:
-            raise RuntimeError(f"Cannot run session in state {self._session.state}")
-
-        logger.info(f"Running session {session_id}")
-
-    def _handle_error_fix(self, error: TestError) -> bool:
-        """
-        Handle a single TestError:
-        - Skip already-fixed errors.
-        - Attempt to fix; on failure, mark session as FAILED.
-        - Return True if successful, False otherwise.
-        """
-        if error.status == "fixed":
-            return True  # skip already-fixed
-
-        success = self.fix_error(error)
-        if not success:
-            # Mark session as FAILED if an error is irreparable
-            self._session.state = FixSessionState.FAILED
-            return False
-
-        return True
 
     def run_session(
         self,
@@ -258,12 +228,12 @@ class FixOrchestrator:
         - Always save the session data to the session_store if present.
 
         Args:
-            session_id: The session UUID
-            total_tests: Optional total test count from the test run
-            environment_info: Optional dict of environment details
+            session_id: The session UUID.
+            total_tests: Optional total test count from the test run.
+            environment_info: Optional dict of environment details.
 
         Returns:
-            bool indicating if all errors were eventually fixed
+            bool indicating if all errors were eventually fixed.
         """
         self._validate_session(session_id)
 
@@ -280,14 +250,13 @@ class FixOrchestrator:
                     self.session_store.save_session(self._session)
                 return False
 
-        # If we reach here, presumably all errors are fixed
-        # so we can set passed/failed counts
+        # Update test counts
         self._session.failed_tests = sum(
             1 for e in self._session.errors if e.status != "fixed"
         )
         self._session.passed_tests = self._session.error_count - self._session.failed_tests
 
-        # If no errors remain unfixed, mark as COMPLETED
+        # Determine final state
         if self._session.failed_tests == 0:
             self._session.state = FixSessionState.COMPLETED
         else:
@@ -298,10 +267,57 @@ class FixOrchestrator:
             self.session_store.save_session(self._session)
         return self._session.state == FixSessionState.COMPLETED
 
+    def _validate_session(self, session_id: UUID) -> None:
+        """
+        Validate session existence and state.
+        Raises RuntimeError if any validation fails.
+
+        Args:
+            session_id: The session UUID.
+
+        Raises:
+            RuntimeError: If session is not found or not in the RUNNING state.
+        """
+        if not self._session or self._session.id != session_id:
+            raise RuntimeError("Session not found or not started")
+
+        if self._session.state != FixSessionState.RUNNING:
+            raise RuntimeError(f"Cannot run session in state {self._session.state}")
+
+        logger.info(f"Running session {session_id}")
+
+    def _handle_error_fix(self, error: TestError) -> bool:
+        """
+        Handle a single TestError:
+        - Skip already-fixed errors.
+        - Attempt to fix; on failure, mark session as FAILED.
+        - Return True if successful, False otherwise.
+
+        Args:
+            error: The TestError to handle.
+
+        Returns:
+            bool indicating success.
+        """
+        if error.status == "fixed":
+            return True  # Skip already-fixed errors
+
+        success = self.fix_error(error)
+        if not success:
+            # Mark session as FAILED if an error is irreparable
+            self._session.state = FixSessionState.FAILED
+            return False
+
+        self._session.completed_errors.append(error)
+        return True
+
     def fix_error(self, error: TestError) -> bool:
         """
         Attempt multiple fix attempts for a single error,
         bumping temperature each time if it fails.
+
+        Args:
+            error: The TestError to fix.
 
         Returns:
             bool indicating if fix succeeded after max_retries.
@@ -312,7 +328,7 @@ class FixOrchestrator:
         current_temp = self.initial_temp
         for attempt_index in range(self.max_retries):
             logger.info(
-                f"[Session {self._session.id}] Attempt #{attempt_index+1} for test '{error.test_function}' "
+                f"[Session {self._session.id}] Attempt #{attempt_index + 1} for test '{error.test_function}' "
                 f"at temperature={current_temp}"
             )
 
@@ -323,28 +339,38 @@ class FixOrchestrator:
                 test_runner=self.test_runner,
                 change_applier=self.change_applier,
                 git_repo=self.git_repo,
-                dev_force_success=False,  # or some logic
-                session_store=None,       # Not storing partial attempts here
-                state_manager=None,
+                dev_force_success=False,  # Placeholder for logic
+                session_store=self.session_store,  # Pass session_store if needed
+                state_manager=state_manager,  # Placeholder for state management
                 session=self._session,
             )
 
             success = fix_service.attempt_fix(error, temperature=current_temp)
             if success:
+                logger.info(f"Successfully fixed error '{error.test_function}' on attempt {attempt_index + 1}.")
                 return True
 
             current_temp += self.temp_increment
+            self._session.retry_count += 1
+            logger.warning(
+                f"Failed to fix error '{error.test_function}' on attempt {attempt_index + 1}. "
+                f"Increasing temperature to {current_temp}."
+            )
 
+        logger.error(f"All attempts to fix error '{error.test_function}' have failed.")
         return False
 
     def handle_error(self, error: Exception) -> bool:
         """
-        Handle errors during fix process.
-        If a RecoveryManager is present, attempt to do a restore.
+        Handle errors during the fix process.
+        If a RecoveryManager is present, attempt to perform a restore.
         Otherwise, just log the error.
 
+        Args:
+            error: The exception to handle.
+
         Returns:
-            bool indicating if recovery or handling succeeded
+            bool indicating if recovery or handling succeeded.
         """
         if not self._session:
             raise RuntimeError("No active session for handling errors")
@@ -368,8 +394,13 @@ class FixOrchestrator:
 
     def get_progress(self) -> FixProgress:
         """
-        Return a snapshot of the session's progress if needed.
-        No concurrency: just a direct method returning progress.
+        Return a snapshot of the session's progress.
+
+        Returns:
+            FixProgress instance representing current progress.
+
+        Raises:
+            RuntimeError: If no active session exists.
         """
         if not self._session:
             raise RuntimeError("No active session for progress")
@@ -383,7 +414,8 @@ class FixOrchestrator:
                 else None
             ),
             retry_count=self._session.retry_count,
-            current_temperature=self.initial_temp,
+            current_temperature=self.initial_temp + self.temp_increment * self._session.retry_count,
+            last_error=self._session.current_error.test_function if self._session.current_error else None,
         )
 
     def _change_session_state(
@@ -395,6 +427,17 @@ class FixOrchestrator:
         """
         Generic helper for changing session state.
         Raises a RuntimeError if session is missing or in the wrong state.
+
+        Args:
+            current_required_state: The state required to perform the action.
+            new_state: The new state to transition to.
+            action: The action being performed.
+
+        Returns:
+            bool indicating successful state change.
+
+        Raises:
+            RuntimeError: If session is missing or not in the required state.
         """
         if not self._session:
             raise RuntimeError(f"No active session to {action}")
@@ -410,7 +453,13 @@ class FixOrchestrator:
 
     def pause_session(self) -> bool:
         """
-        Pause current fix session.
+        Pause the current fix session.
+
+        Returns:
+            bool indicating successful pause.
+
+        Raises:
+            RuntimeError: If session cannot be paused.
         """
         return self._change_session_state(
             current_required_state=FixSessionState.RUNNING,
@@ -420,7 +469,13 @@ class FixOrchestrator:
 
     def resume_session(self) -> bool:
         """
-        Resume paused fix session.
+        Resume a paused fix session.
+
+        Returns:
+            bool indicating successful resume.
+
+        Raises:
+            RuntimeError: If session cannot be resumed.
         """
         return self._change_session_state(
             current_required_state=FixSessionState.PAUSED,
@@ -430,7 +485,14 @@ class FixOrchestrator:
 
     def _create_checkpoint_if_needed(self, session: FixSession, label: str) -> None:
         """
-        Possibly create a checkpoint with the recovery manager (if present).
+        Create a checkpoint with the recovery manager if needed.
+
+        Args:
+            session: The current FixSession.
+            label: Label for the checkpoint.
+
+        Logs:
+            Information about checkpoint creation or warnings if failed.
         """
         if not self.recovery_manager:
             return
