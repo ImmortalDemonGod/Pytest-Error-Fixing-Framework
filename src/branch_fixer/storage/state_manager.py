@@ -7,7 +7,7 @@ from uuid import uuid4
 
 if TYPE_CHECKING:
     from src.branch_fixer.storage.session_store import SessionStore
-    from src.branch_fixer.orchestrator import FixSession, FixSessionState
+    from src.branch_fixer.orchestration.orchestrator import FixSession, FixSessionState
 
 class StateTransitionError(Exception):
     """Invalid state transition errors"""
