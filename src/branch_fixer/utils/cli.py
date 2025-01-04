@@ -1,6 +1,7 @@
 # src/branch_fixer/utils/cli.py
 
 import logging
+from math import log
 import signal
 import traceback
 import uuid
@@ -20,6 +21,7 @@ from branch_fixer.services.ai.manager import AIManager
 from branch_fixer.services.code.change_applier import ChangeApplier
 from branch_fixer.services.git.repository import GitRepository
 from branch_fixer.services.pytest.runner import TestRunner
+from branch_fixer.storage.state_manager import StateManager
 
 import snoop
 logger = logging.getLogger(__name__)
@@ -274,7 +276,7 @@ class CLI:
         click.echo("Retry limit reached. Exiting manual fix mode.")
         return "quit"
 
-    @snoop
+   # @snoop
     def setup_components(self, config: ComponentSettings) -> bool:
         """
         Initialize AI, Test Runner, Change Applier, GitRepo, FixService, & Orchestrator.
@@ -294,6 +296,9 @@ class CLI:
             logger.info("Initializing Git Repository...")
             git_repo = GitRepository()
 
+            logger.info("Creating State Manager...")
+            state_manager = StateManager()
+
             logger.info("Creating Fix Service...")
             self.service = FixService(
                 ai_manager=ai_manager,
@@ -304,6 +309,7 @@ class CLI:
                 initial_temp=config.initial_temp,
                 temp_increment=config.temp_increment,
                 dev_force_success=config.dev_force_success,
+                state_manager=state_manager,
             )
 
             # NEW: Initialize SessionStore to ensure session data is always saved
