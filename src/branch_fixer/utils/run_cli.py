@@ -59,7 +59,7 @@ def cli():
     is_flag=True,
     help="Force all fix attempts to be marked successful (for dev testing)",
 )
-@snoop
+#@snoop
 def fix(
     api_key: str,
     max_retries: int,
@@ -139,6 +139,9 @@ def fix(
             "os": platform.system(),
             "python_version": platform.python_version(),
         }
+
+        # Store warnings from the test run
+        zero_session.warnings = test_result.warnings  # <--- ADDED
 
         # If session_store is available, persist it
         if cli_obj.service.session_store:
