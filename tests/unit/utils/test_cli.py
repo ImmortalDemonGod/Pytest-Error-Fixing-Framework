@@ -13,8 +13,8 @@ from unittest.mock import patch, MagicMock, call
 from pathlib import Path
 from typing import List
 
-from branch_fixer.core.models import TestError, ErrorDetails
-from branch_fixer.utils.cli import CLI, ComponentSettings
+from src.branch_fixer.core.models import TestError, ErrorDetails
+from src.branch_fixer.utils.cli import CLI, ComponentSettings
 
 # -----------------------------------------------------------------------------
 # FIXTURES
