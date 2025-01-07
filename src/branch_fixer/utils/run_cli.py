@@ -151,6 +151,10 @@ def fix(
 
     # Parse errors
     logger.info("Analyzing test failures...")
+    # This means collection errors and standard failures are consolidated, and the older
+    # regex-based approach in error_processor.py is no longer used. The result is a list
+    # of TestError objects that reflect all the discovered issues in the pytest output.
+
     errors = parse_pytest_errors(test_result.output)
     if not errors:
         logger.warning("Tests failed but no parsable test failures found")

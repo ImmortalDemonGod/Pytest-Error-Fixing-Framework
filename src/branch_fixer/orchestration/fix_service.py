@@ -208,6 +208,10 @@ class FixService:
         Returns:
             bool indicating if fix works
 
+        Note: If you rely on parsing the pytest output for post-processing,
+        it will now flow through the new unified_error_parser (via error_processor).
+        That ensures consistent handling of both collection errors and standard failures.
+
         Raises:
             FixServiceError: If verification fails unexpectedly
         """
