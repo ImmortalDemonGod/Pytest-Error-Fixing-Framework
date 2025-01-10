@@ -60,6 +60,11 @@ debug_log "Mypy version -> $(uv run mypy --version 2>&1 || echo 'Mypy not found'
 debug_log "which cs -> $(uv run which cs || echo 'cs not found')"
 debug_log "which ruff -> $(uv run which ruff || echo 'ruff not found')"
 
+# Warn if VIRTUAL_ENV doesn't match .venv
+if [ -n "$VIRTUAL_ENV" ] && [[ "$VIRTUAL_ENV" != *".venv"* ]]; then
+    echo "warning: \`VIRTUAL_ENV=$VIRTUAL_ENV\` does not match the project environment path \`.venv\` and will be ignored"
+fi
+
 # Initialize PYTHONPATH if not set
 PYTHONPATH=${PYTHONPATH:-}
 
@@ -101,7 +106,17 @@ else
 fi
 
 ###############################################################################
-# 2. Run Mypy
+# 2. Ensure lxml is installed before running Mypy with --xml-report
+###############################################################################
+if ! uv run python -c 'import lxml' 2>/dev/null; then
+    echo "lxml is not installed. Attempting to install..."
+    if ! python -m pip install lxml; then
+        echo "Warning: Could not install lxml. Mypy XML reporting might fail."
+    fi
+fi
+
+###############################################################################
+# 3. Run Mypy
 ###############################################################################
 echo "Running Mypy..."
 echo -e "\n=== MYPY ANALYSIS ===\n" >> "$COMBINED_OUTPUT"
@@ -119,7 +134,7 @@ if [ -f "$TEMP_DIR/index.xml" ]; then
 fi
 
 ###############################################################################
-# 3. Run Ruff
+# 4. Run Ruff
 ###############################################################################
 echo "Running Ruff checks and formatting..."
 echo -e "\n=== RUFF FIX OUTPUT ===\n" >> "$COMBINED_OUTPUT"
@@ -131,18 +146,42 @@ uv run ruff format "$FILE_PATH" > /dev/null 2>&1 || true
 uv run ruff check --select I --fix "$FILE_PATH" > /dev/null 2>&1 || true
 uv run ruff format "$FILE_PATH" > /dev/null 2>&1 || true
 
-###############################################################################
-# 4. Add Refactoring Template
-###############################################################################
-echo -e "\n=======\nREFACTOR:\n**=======**" >> "$COMBINED_OUTPUT"
-if [ -f "/workspaces/Pytest-Error-Fixing-Framework/scripts/Code-Refactoring-Instructions.md" ]; then
-    cat "/workspaces/Pytest-Error-Fixing-Framework/scripts/Code-Refactoring-Instructions.md" >> "$COMBINED_OUTPUT"
-else
-    echo "Warning: Refactoring template not found at: $PROJECT_ROOT/docs/templates/Code Refactoring Instructions.md"
-fi
 
 ###############################################################################
-# 5. Add Full Code
+# 5. Add Refactoring Template
+###############################################################################
+echo -e "\n=======\nREFACTOR:\n**=======**" >> "$COMBINED_OUTPUT"
+
+# Cleanly add the multi-line text via a here document
+cat <<'EOF' >> "$COMBINED_OUTPUT"
+REFACTOR:    
+=======
+The major types of code refactoring mentioned include:
+
+1. **Extract Function**: Extracting code into a function or method (also referred to as Extract Method).
+2. **Extract Variable**: Extracting code into a variable.
+3. **Inline Function**: The inverse of Extract Function, where a function is inlined back into its calling code.
+4. **Inline Variable**: The inverse of Extract Variable, where a variable is inlined back into its usage.
+5. **Change Function Declaration**: Changing the names or arguments of functions.
+6. **Rename Variable**: Renaming variables for clarity.
+7. **Encapsulate Variable**: Encapsulating a variable to manage its visibility.
+8. **Introduce Parameter Object**: Combining common arguments into a single object.
+9. **Combine Functions into Class**: Grouping functions with the data they operate on into a class.
+10. **Combine Functions into Transform**: Merging functions particularly useful with read-only data.
+11. **Split Phase**: Organizing modules into distinct processing phases.
+
+These refactorings focus on improving code clarity and maintainability without altering its observable behavior.
+
+For more detailed information, you might consider using tools that could provide further insights or examples related to these refactoring types.
+
+
+====
+FULL CODE:
+====
+show the full file dont drop comments or existing functionality
+EOF
+###############################################################################
+# 6. Add Full Code
 ###############################################################################
 echo -e "\n**====**\nFULL CODE:\n**====**" >> "$COMBINED_OUTPUT"
 if [ -f "$FILE_PATH" ]; then
@@ -152,13 +191,13 @@ else
 fi
 
 ###############################################################################
-# Write to local file (always)
+# 7. Write to local file (always)
 ###############################################################################
 cat "$COMBINED_OUTPUT" > "analysis_results.txt"
 echo "Results also saved to analysis_results.txt"
 
 ###############################################################################
-# Copy to clipboard (no script exit on failure)
+# 8. Copy to clipboard (no script exit on failure)
 ###############################################################################
 # We preserve set -eo pipefail, but handle errors manually
 if [[ "$OSTYPE" == "darwin"* ]]; then
