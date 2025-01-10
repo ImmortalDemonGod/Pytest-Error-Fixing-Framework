@@ -4,6 +4,12 @@ set -eo pipefail
 # Script Name: analyze_code.sh
 # Description: Runs CodeScene (cs), Mypy, and Ruff on a user-provided script file
 # and copies combined results to clipboard.
+#
+# New Features:
+# - Test file detection (test_<filename>.py)
+# - Coverage run if test file found
+# - Auto-switch to --test prompt if coverage < 100%
+# - Robust coverage line parsing to avoid integer expression errors
 
 ###############################################################################
 # 0. Usage & Flag Parsing
@@ -174,6 +180,111 @@ uv run ruff check --fix "$FILE_PATH" 2>&1 | tee -a "$COMBINED_OUTPUT" || true
 uv run ruff format "$FILE_PATH" > /dev/null 2>&1 || true
 uv run ruff check --select I --fix "$FILE_PATH" > /dev/null 2>&1 || true
 uv run ruff format "$FILE_PATH" > /dev/null 2>&1 || true
+
+###############################################################################
+# 4.5 Coverage Check for a Matching Test File
+###############################################################################
+BASENAME="$(basename "$FILE_PATH" .py)"
+TEST_CANDIDATE_1="$(dirname "$FILE_PATH")/test_${BASENAME}.py"
+TEST_CANDIDATE_2="$(dirname "$FILE_PATH")/${BASENAME}_test.py"
+TEST_CANDIDATE_3="${PROJECT_ROOT}/tests/test_${BASENAME}.py"
+
+TEST_FILE=""
+if [ -f "$TEST_CANDIDATE_1" ]; then
+    TEST_FILE="$TEST_CANDIDATE_1"
+elif [ -f "$TEST_CANDIDATE_2" ]; then
+    TEST_FILE="$TEST_CANDIDATE_2"
+elif [ -f "$TEST_CANDIDATE_3" ]; then
+    TEST_FILE="$TEST_CANDIDATE_3"
+fi
+
+COVERAGE_UNDER_100=false
+
+if [ -z "$TEST_FILE" ]; then
+    echo "No test file found for $FILE_PATH. Skipping coverage." | tee -a "$COMBINED_OUTPUT"
+else
+    echo "=== TEST FILE DETECTED ===" >> "$COMBINED_OUTPUT"
+    echo "Found test file at $TEST_FILE" | tee -a "$COMBINED_OUTPUT"
+    if ! command -v coverage >/dev/null 2>&1; then
+        echo "Warning: 'coverage' is not installed or not in PATH. Please install coverage." | tee -a "$COMBINED_OUTPUT"
+    else
+        echo "Running coverage on $TEST_FILE..." | tee -a "$COMBINED_OUTPUT"
+        # Run coverage, do not exit on test failures
+        coverage run -m pytest "$TEST_FILE" || {
+            echo "Tests failed under coverage. Proceeding with other steps." | tee -a "$COMBINED_OUTPUT"
+        }
+
+        coverage report -m > "$TEMP_DIR/coverage_report.txt" || true
+        coverage xml -o "$TEMP_DIR/coverage_report.xml" || true
+
+        # Append coverage text to combined output
+        if [ -f "$TEMP_DIR/coverage_report.txt" ]; then
+            echo -e "\n=== TEST COVERAGE REPORT ===" >> "$COMBINED_OUTPUT"
+            cat "$TEMP_DIR/coverage_report.txt" >> "$COMBINED_OUTPUT"
+        fi
+
+        # Attempt to parse coverage for the specific file
+        TARGET_BASENAME="$(basename "$FILE_PATH")"
+        COVERAGE_LINE=$(grep "$TARGET_BASENAME" "$TEMP_DIR/coverage_report.txt" || true)
+
+        # Example coverage line format (depends on coverage version):
+        # quick-fixes/tasks/lifelines_models.py  163  21  88%  91
+        # Name    Stmts   Miss  Cover   Missing
+        # lifelines_models.py  20  2  90%   10-11
+        if [ -n "$COVERAGE_LINE" ]; then
+            # Break the line into an array of fields
+            # This example reads up to 6 fields in case the coverage tool
+            # outputs "Name  Stmts  Miss  Cover  Missing  SomeExtra"
+            read -ra FIELDS <<< "$COVERAGE_LINE"
+
+            # We want to find the field that ends with '%'
+            # Usually it's the 4th field in standard coverage reports
+            # But let's search to be robust
+            COVERAGE_PERCENT_RAW=""
+            for field in "${FIELDS[@]}"; do
+                if [[ "$field" == *"%"* ]]; then
+                    COVERAGE_PERCENT_RAW="$field"
+                    break
+                fi
+            done
+
+            if [ -n "$COVERAGE_PERCENT_RAW" ]; then
+                # Remove the '%' sign
+                COVERAGE_INT=$(echo "$COVERAGE_PERCENT_RAW" | tr -d '%')
+                # If it's not a pure integer, we can strip decimals or handle gracefully
+                COVERAGE_INT=$(echo "$COVERAGE_INT" | sed 's/\..*//')  # remove anything after a dot
+
+                echo "Coverage for $TARGET_BASENAME is ${COVERAGE_PERCENT_RAW}." \
+                     "Parsed integer coverage: $COVERAGE_INT%" >> "$COMBINED_OUTPUT"
+
+                # Check coverage < 100 => we might auto-switch to TEST_MODE
+                if [[ "$COVERAGE_INT" =~ ^[0-9]+$ ]]; then
+                    # Only compare if numeric
+                    if [ "$COVERAGE_INT" -lt 100 ]; then
+                        COVERAGE_UNDER_100=true
+                    fi
+                else
+                    # If we can't parse it, assume coverage incomplete
+                    echo "Warning: coverage percentage not parseable. Auto-flagging coverage < 100%." >> "$COMBINED_OUTPUT"
+                    COVERAGE_UNDER_100=true
+                fi
+            else
+                # If no field ends with '%', coverage may be 0 or unreported
+                echo "No percentage field found in coverage line." >> "$COMBINED_OUTPUT"
+                COVERAGE_UNDER_100=true
+            fi
+        else
+            echo "No specific coverage data found for $TARGET_BASENAME. Possibly 0% coverage." >> "$COMBINED_OUTPUT"
+            COVERAGE_UNDER_100=true
+        fi
+    fi
+fi
+
+# If coverage is incomplete, we can auto-switch to test mode if not already set
+if [ "$COVERAGE_UNDER_100" = true ] && [ "$TEST_MODE" = false ]; then
+    echo "Coverage < 100% for $FILE_PATH. Auto-activating TEST_MODE..." | tee -a "$COMBINED_OUTPUT"
+    TEST_MODE=true
+fi
 
 ###############################################################################
 # 5. Add Prompt (Refactoring or Test Prompt) Depending on Flag
