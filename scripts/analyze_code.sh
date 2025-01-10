@@ -3,10 +3,14 @@ set -eo pipefail
 
 # Script Name: analyze_code.sh
 # Description: Runs CodeScene (cs), Mypy, and Ruff on a user-provided script file
-# and copies combined results to clipboard
+# and copies combined results to clipboard.
+
+###############################################################################
+# 0. Usage & Flag Parsing
+###############################################################################
 
 usage() {
-    echo "Usage: $0 /path/to/your/script.py"
+    echo "Usage: $0 [--test] /path/to/your/script.py"
     exit 1
 }
 
@@ -15,13 +19,36 @@ debug_log() {
     echo "DEBUG: $*" >&2
 }
 
-# Ensure exactly one argument is passed
-if [ "$#" -ne 1 ]; then
-    echo "Error: Exactly one argument (file path) is required."
+# Default: Not in test mode
+TEST_MODE=false
+
+# Simple argument parsing
+if [ "$#" -eq 0 ]; then
     usage
 fi
 
-FILE_PATH="$1"
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --test)
+            TEST_MODE=true
+            shift
+            ;;
+        -*)
+            echo "Unknown option: $1"
+            usage
+            ;;
+        *)
+            FILE_PATH="$1"
+            shift
+            ;;
+    esac
+done
+
+# Validate we have a file path
+if [[ -z "$FILE_PATH" ]]; then
+    echo "Error: A script file path is required."
+    usage
+fi
 
 if [ ! -f "$FILE_PATH" ]; then
     echo "Error: The file '$FILE_PATH' does not exist."
@@ -52,7 +79,9 @@ debug_log "Project root determined as '$PROJECT_ROOT'."
 
 cd "$PROJECT_ROOT" || { echo "Error: Failed to change directory to '$PROJECT_ROOT'."; exit 1; }
 
-# Debug info about the environment and tools
+###############################################################################
+# 0a. Debug info about the environment and tools
+###############################################################################
 debug_log "which python -> $(which python || echo 'not found')"
 debug_log "Python version -> $(uv run python --version 2>&1 || echo 'Failed to get Python version')"
 debug_log "which mypy -> $(uv run which mypy || echo 'Mypy not found')"
@@ -67,19 +96,20 @@ fi
 
 # Initialize PYTHONPATH if not set
 PYTHONPATH=${PYTHONPATH:-}
-
 # Add PROJECT_ROOT to PYTHONPATH
 if [ -z "$PYTHONPATH" ]; then
     PYTHONPATH="$PROJECT_ROOT"
 else
     PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"
 fi
-
 export PYTHONPATH
+
 debug_log "PYTHONPATH set to '$PYTHONPATH'."
 debug_log "Current Directory: $(pwd)"
 
-# Create temporary directory for outputs
+###############################################################################
+# 0b. Create temporary directory for outputs
+###############################################################################
 TEMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TEMP_DIR"' EXIT
 
@@ -139,22 +169,145 @@ fi
 echo "Running Ruff checks and formatting..."
 echo -e "\n=== RUFF FIX OUTPUT ===\n" >> "$COMBINED_OUTPUT"
 
-# Run all Ruff commands but only save the fix output
 uv run ruff check "$FILE_PATH" > /dev/null 2>&1 || true
 uv run ruff check --fix "$FILE_PATH" 2>&1 | tee -a "$COMBINED_OUTPUT" || true
 uv run ruff format "$FILE_PATH" > /dev/null 2>&1 || true
 uv run ruff check --select I --fix "$FILE_PATH" > /dev/null 2>&1 || true
 uv run ruff format "$FILE_PATH" > /dev/null 2>&1 || true
 
-
 ###############################################################################
-# 5. Add Refactoring Template
+# 5. Add Prompt (Refactoring or Test Prompt) Depending on Flag
 ###############################################################################
-echo -e "\n=======\nREFACTOR:\n**=======**" >> "$COMBINED_OUTPUT"
+echo -e "\n=======\nPROMPT:\n**=======**" >> "$COMBINED_OUTPUT"
 
-# Cleanly add the multi-line text via a here document
-cat <<'EOF' >> "$COMBINED_OUTPUT"
-REFACTOR:    
+if [ "$TEST_MODE" = true ]; then
+    # Here Document for your test prompt
+    cat <<'EOF' >> "$COMBINED_OUTPUT"
+# SYSTEM
+
+You are a Python testing expert specializing in writing pytest test cases. You will receive Python function information and create comprehensive test cases following pytest best practices.
+
+## GOALS
+
+1. Create thorough pytest test cases for the given Python function
+2. Cover normal operations, edge cases, and error conditions
+3. Use pytest fixtures when appropriate
+4. Include proper type hints and docstrings
+5. Follow pytest naming conventions and best practices
+
+## RULES
+
+1. Always include docstrings explaining test purpose
+2. Use descriptive variable names
+3. Include type hints for all parameters
+4. Create separate test functions for different test cases
+5. Use pytest.mark.parametrize for multiple test cases when appropriate
+6. Include error case testing with pytest.raises when relevant
+7. Add comments explaining complex test logic
+8. Follow the standard test_function_name pattern for test names
+
+## CONSTRAINTS
+
+1. Only write valid pytest code
+2. Only use standard pytest features and commonly available packages
+3. Keep test functions focused and avoid unnecessary complexity
+4. Don't test implementation details, only public behavior
+5. Don't create redundant tests
+
+## WORKFLOW
+
+1. Analyze the provided function
+2. Identify key test scenarios
+3. Create appropriate fixtures if needed
+4. Write test functions with clear names and docstrings
+5. Include multiple test cases and edge cases
+6. Add error condition testing
+7. Verify all function parameters are tested
+8. Add type hints and documentation
+
+## FORMAT
+
+```python
+# Test code here
+```
+
+# USER
+
+I will provide you with Python function information. Please generate pytest test cases following the above guidelines.
+
+# ASSISTANT
+
+I'll analyze the provided function and create comprehensive pytest test cases following best practices for testing normal behavior, edge cases, and error conditions.
+
+The test code will be properly structured with:
+- Clear docstrings explaining test purpose
+- Type hints for all parameters
+- Appropriate fixtures where needed
+- Parametrized tests for multiple cases
+- Error case handling
+- Meaningful variable names and comments
+
+Let me know if you need any adjustments to the generated test cases.
+===
+Follow the Pre-test analysis first then write the tests
+# Pre-Test Analysis
+1. Identify the exact function/code to be tested
+   - Copy the target code and read it line by line
+   - Note all parameters, return types, and dependencies
+   - Mark any async/await patterns
+   - List all possible code paths
+2. Analyze Infrastructure Requirements
+   - Check if async testing is needed
+   - Identify required mocks/fixtures
+   - Note any special imports or setup needed
+   - Check for immutable objects that need special handling
+3. Create Test Foundation
+   - Write basic fixture setup
+   - Test the fixture with a simple case
+   - Verify imports work
+   - Run once to ensure test infrastructure works
+4. Plan Test Cases
+   - List happy path scenarios
+   - List error cases from function's try/except blocks
+   - Map each test to specific lines of code
+   - Verify each case tests something unique
+5. Write and Verify Incrementally
+   - Write one test case
+   - Run coverage to verify it hits expected lines
+   - Fix any setup issues before continuing
+   - Only proceed when each test works
+6. Cross-Check Coverage
+   - Run coverage report
+   - Map uncovered lines to missing test cases
+   - Verify edge cases are covered
+   - Confirm error handling is tested
+7. Final Verification
+   - Run full test suite
+   - Compare before/after coverage
+   - Verify each test targets the intended function
+   - Check for test isolation/independence
+# Red Flags to Watch For
+- Tests that don't increase coverage
+- Overly complex test setups
+- Tests targeting multiple functions
+- Untested fixture setups
+- Missing error cases
+- Incomplete mock configurations
+# Questions to Ask
+- Am I actually testing the target function?
+- Does each test serve a clear purpose?
+- Are the mocks properly configured?
+- Have I verified the test infrastructure works?
+- Does the coverage report show improvement?
+-------
+Write pytest code for this code snippet:
+
+EOF
+
+else
+    # Here Document for your normal refactoring prompt
+    cat <<'EOF' >> "$COMBINED_OUTPUT"
+REFACTOR:
 =======
 The major types of code refactoring mentioned include:
 
@@ -174,12 +327,12 @@ These refactorings focus on improving code clarity and maintainability without a
 
 For more detailed information, you might consider using tools that could provide further insights or examples related to these refactoring types.
 
-
-====
-FULL CODE:
-====
-show the full file dont drop comments or existing functionality
 EOF
+fi
+
+# Add a final line that indicates the request to show the full code
+echo -e "\n====\nFULL CODE:\n====\nshow the full file dont drop comments or existing functionality" >> "$COMBINED_OUTPUT"
+
 ###############################################################################
 # 6. Add Full Code
 ###############################################################################
@@ -199,7 +352,6 @@ echo "Results also saved to analysis_results.txt"
 ###############################################################################
 # 8. Copy to clipboard (no script exit on failure)
 ###############################################################################
-# We preserve set -eo pipefail, but handle errors manually
 if [[ "$OSTYPE" == "darwin"* ]]; then
     if command -v pbcopy >/dev/null 2>&1; then
         if cat "$COMBINED_OUTPUT" | pbcopy 2>/dev/null; then
