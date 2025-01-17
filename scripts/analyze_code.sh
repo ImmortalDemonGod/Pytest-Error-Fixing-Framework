@@ -61,6 +61,81 @@ if [ ! -f "$FILE_PATH" ]; then
     exit 1
 fi
 
+###############################################################################
+# 0x. Ensure uv is installed before proceeding
+###############################################################################
+if ! command -v uv >/dev/null 2>&1; then
+    echo "uv not found. Attempting to install..."
+    # Option A: Use the official standalone installer (macOS/Linux):
+    #   curl -LsSf https://astral.sh/uv/install.sh | sh
+    
+    # Option B: Use pip to install uv:
+    echo "Installing uv using pip..."
+    if pip install uv; then
+        echo "uv installed via pip."
+    else
+        echo "Failed to install uv. Exiting."
+        exit 1
+    fi
+
+    # If uv is still not in PATH, consider:
+    #   export PATH="$(python -m site --user-base)/bin:$PATH"
+fi
+
+###############################################################################
+# 0y. Ensure CodeScene CLI (cs) is installed before proceeding
+###############################################################################
+if ! command -v cs >/dev/null 2>&1; then
+    echo "cs (CodeScene CLI) not found. Attempting to install..."
+    echo "Installing CodeScene CLI using the official script..."
+    # Per CodeScene docs: this script attempts to place 'cs' in ~/.local/bin
+    # If ~/.local/bin isn’t in PATH, it tries to add it for common shells.
+    # On Windows or other OS, user might need a manual approach.
+    
+    if command -v curl >/dev/null 2>&1; then
+        if ! curl -sSf https://downloads.codescene.io/enterprise/cli/install-codescene-cli.sh | sh; then
+            echo "Failed to install CodeScene CLI with the official script. Exiting."
+            exit 1
+        fi
+    else
+        echo "curl not found or not available. Cannot auto-install CodeScene CLI."
+        echo "Please install it manually, or ensure 'cs' is in PATH."
+        exit 1
+    fi
+
+    # If 'cs' still isn't in PATH, we can attempt to export:
+    #   export PATH="$HOME/.local/bin:$PATH"
+fi
+
+###############################################################################
+# 0y-1. Ensure CodeScene Access Token is set
+###############################################################################
+# If CS_ACCESS_TOKEN is not already exported in the environment, set a default.
+# Replace the placeholder token below with your real CodeScene token if needed.
+# If the token is valid, CodeScene analysis should pass the license check.
+
+if [ -z "$CS_ACCESS_TOKEN" ]; then
+    echo "CS_ACCESS_TOKEN not set. Setting a default..."
+    export CS_ACCESS_TOKEN="Njk0NjM-MjAyNi0wMS0xN1QxOTo1Mzo1Mw-I3sicmVmYWN0b3IuYWNjZXNzIiAiY2xpLmFjY2VzcyJ9.30-SmgU-Ybio83czYew_WCtu_QvyPWyWlSQQD63_gZA"
+    # If you have a different token, you can replace the line above or override
+    # in your shell environment.
+fi
+
+###############################################################################
+# 0z. Ensure ruff is installed before proceeding
+###############################################################################
+# We'll install ruff into the environment that uv manages. So we use "uv run pip".
+# This ensures that "uv run ruff" will work properly without needing a system-level install.
+if ! uv run which ruff >/dev/null 2>&1; then
+    echo "ruff not found in uv environment. Attempting to install..."
+    if uv run pip install ruff; then
+        echo "ruff installed via uv environment."
+    else
+        echo "Failed to install ruff. Exiting."
+        exit 1
+    fi
+fi
+
 # Function to find the project root
 find_project_root() {
     local path="$1"
@@ -84,6 +159,7 @@ fi
 debug_log "Project root determined as '$PROJECT_ROOT'."
 
 cd "$PROJECT_ROOT" || { echo "Error: Failed to change directory to '$PROJECT_ROOT'."; exit 1; }
+
 
 ###############################################################################
 # 0a. Debug info about the environment and tools
@@ -129,6 +205,7 @@ echo "Starting analysis on '$FILE_PATH'..."
 # 1. Run CodeScene
 ###############################################################################
 echo "Running CodeScene..."
+
 if ! command -v uv >/dev/null 2>&1; then
     echo "Error: uv is not installed or not in PATH. Please install uv and ensure it's accessible."
     exit 1
@@ -233,13 +310,9 @@ else
         # lifelines_models.py  20  2  90%   10-11
         if [ -n "$COVERAGE_LINE" ]; then
             # Break the line into an array of fields
-            # This example reads up to 6 fields in case the coverage tool
-            # outputs "Name  Stmts  Miss  Cover  Missing  SomeExtra"
             read -ra FIELDS <<< "$COVERAGE_LINE"
 
             # We want to find the field that ends with '%'
-            # Usually it's the 4th field in standard coverage reports
-            # But let's search to be robust
             COVERAGE_PERCENT_RAW=""
             for field in "${FIELDS[@]}"; do
                 if [[ "$field" == *"%"* ]]; then
@@ -249,27 +322,22 @@ else
             done
 
             if [ -n "$COVERAGE_PERCENT_RAW" ]; then
-                # Remove the '%' sign
                 COVERAGE_INT=$(echo "$COVERAGE_PERCENT_RAW" | tr -d '%')
-                # If it's not a pure integer, we can strip decimals or handle gracefully
-                COVERAGE_INT=$(echo "$COVERAGE_INT" | sed 's/\..*//')  # remove anything after a dot
+                # Remove decimals, if any
+                COVERAGE_INT=$(echo "$COVERAGE_INT" | sed 's/\..*//')
 
                 echo "Coverage for $TARGET_BASENAME is ${COVERAGE_PERCENT_RAW}." \
                      "Parsed integer coverage: $COVERAGE_INT%" >> "$COMBINED_OUTPUT"
 
-                # Check coverage < 100 => we might auto-switch to TEST_MODE
                 if [[ "$COVERAGE_INT" =~ ^[0-9]+$ ]]; then
-                    # Only compare if numeric
                     if [ "$COVERAGE_INT" -lt 100 ]; then
                         COVERAGE_UNDER_100=true
                     fi
                 else
-                    # If we can't parse it, assume coverage incomplete
                     echo "Warning: coverage percentage not parseable. Auto-flagging coverage < 100%." >> "$COMBINED_OUTPUT"
                     COVERAGE_UNDER_100=true
                 fi
             else
-                # If no field ends with '%', coverage may be 0 or unreported
                 echo "No percentage field found in coverage line." >> "$COMBINED_OUTPUT"
                 COVERAGE_UNDER_100=true
             fi
