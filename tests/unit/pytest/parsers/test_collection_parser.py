@@ -1,5 +1,6 @@
 # tests/pytest/error_parser/test_collection_parser.py
 import unittest
+from textwrap import dedent
 
 
 class TestCollectionParser(unittest.TestCase):
@@ -11,7 +12,7 @@ class TestCollectionParser(unittest.TestCase):
 
     def test_parse_collection_errors_single_error(self):
         """Should parse a single collection error from pytest output"""
-        pytest_output = """
+        pytest_output = dedent("""
         ============================= test session starts ==============================
         platform darwin -- Python 3.9.7, pytest-6.2.4, py-1.10.0, pluggy-0.13.1
         rootdir: /Users/dev/project
@@ -24,7 +25,7 @@ class TestCollectionParser(unittest.TestCase):
         /path/to/venv/site-packages/test_example.py
         which is not the same as the test file we want to collect:
         /Users/dev/project/tests/test_example.py
-        """
+        """)
 
         errors = self.parser.parse_collection_errors(pytest_output)
 
@@ -37,7 +38,7 @@ class TestCollectionParser(unittest.TestCase):
 
     def test_parse_collection_errors_multiple_errors(self):
         """Should parse multiple collection errors from pytest output"""
-        pytest_output = """
+        pytest_output = dedent("""
         ============================= test session starts ==============================
         platform darwin -- Python 3.9.7, pytest-6.2.4, py-1.10.0, pluggy-0.13.1
         rootdir: /Users/dev/project
@@ -55,7 +56,7 @@ class TestCollectionParser(unittest.TestCase):
         /path/to/two/test_two.py
         which is not the same as the test file we want to collect:
         /Users/dev/project/tests/test_two.py
-        """
+        """)
 
         errors = self.parser.parse_collection_errors(pytest_output)
 
@@ -65,14 +66,14 @@ class TestCollectionParser(unittest.TestCase):
 
     def test_parse_collection_errors_no_errors(self):
         """Should return empty list when no collection errors exist"""
-        pytest_output = """
+        pytest_output = dedent("""
         ============================= test session starts ==============================
         platform darwin -- Python 3.9.7, pytest-6.2.4, py-1.10.0, pluggy-0.13.1
         rootdir: /Users/dev/project
         collected 5 items
         
         test_example.py .....                                                  [100%]
-        """
+        """)
 
         errors = self.parser.parse_collection_errors(pytest_output)
         self.assertEqual(len(errors), 0)
@@ -85,13 +86,13 @@ class TestCollectionParser(unittest.TestCase):
             COLLECTION_PATTERN,
         )
 
-        error_text = """
+        error_text = dedent("""
         ERROR collecting test_example.py
         imported module 'test_example' has __file__ attribute:
         /path/to/venv/site-packages/test_example.py
         which is not the same as the test file we want to collect:
         /Users/dev/project/tests/test_example.py
-        """
+        """)
 
         match = re.search(COLLECTION_PATTERN, error_text, re.MULTILINE | re.DOTALL)
         self.assertIsNotNone(match, "Pattern should match the error text")

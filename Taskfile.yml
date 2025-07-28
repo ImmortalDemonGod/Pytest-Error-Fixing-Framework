@@ -1,0 +1,125 @@
+# Project Taskfile for Pytest-Error-Fixing-Framework
+# Usage: Install Go Task (https://taskfile.dev) and run `task` commands.
+
+description: Standardized project task runner for Pytest-Error-Fixing-Framework
+version: '3'
+
+dotenv: ['.env']
+
+vars:
+  PYTHON_VENV: .venv
+  PYTHON_INTERPRETER: "{{.PYTHON_VENV}}/bin/python"
+  SRC_DIR: src
+  PACKAGE_NAME: branch_fixer
+  DOCS_DIR: docs
+
+tasks:
+  default:
+    desc: "Lists all available tasks. This is the default when running 'task' with no arguments."
+    cmds:
+      - task --list-all
+    silent: true
+
+  setup:
+    desc: "Sets up the Python virtual environment and installs dependencies."
+    cmds:
+      - echo "Ensuring a clean environment by removing old venv..."
+      - rm -rf {{.PYTHON_VENV}}
+      - echo "Creating Python virtual environment at {{.PYTHON_VENV}}..."
+      - python3 -m venv {{.PYTHON_VENV}}
+      - "{{.PYTHON_INTERPRETER}} -m pip install --upgrade pip"
+      - "{{.PYTHON_INTERPRETER}} -m pip install uv"
+      - task: deps:install
+      - echo "Setup complete. Activate with 'source {{.PYTHON_VENV}}/bin/activate'"
+
+  deps:install:
+    desc: "Installs project in editable mode with dev dependencies using uv."
+    cmds:
+      - "{{.PYTHON_INTERPRETER}} -m uv pip install -e '.[dev]'"
+
+  lint:
+    desc: "Runs all linters (Python, Markdown)."
+    cmds:
+      - task: lint:py
+      - task: lint:md
+
+  lint:py:
+    desc: "Runs the Ruff linter on all Python files. Usage: task lint:py -- --fix"
+    cmds:
+      - "{{.PYTHON_INTERPRETER}} -m ruff check . {{.CLI_ARGS}}"
+
+  lint:md:
+    desc: "Runs pymarkdownlint on the documentation files."
+    cmds:
+      - "{{.PYTHON_VENV}}/bin/pymarkdown scan {{.DOCS_DIR}} --recurse"
+
+  test:
+    desc: "Runs the full Python test suite with pytest and coverage."
+    cmds:
+      - >
+        {{.PYTHON_INTERPRETER}} -m pytest
+        --cov={{.SRC_DIR}}/{{.PACKAGE_NAME}}
+        --cov-config=pyproject.toml
+        --cov-branch
+        -v
+        tests/
+        {{.CLI_ARGS}}
+
+  test:file:
+    desc: "Runs pytest on a specific file. Usage: task test:file -- <path/to/test_file.py>"
+    cmds:
+      - "{{.PYTHON_INTERPRETER}} -m pytest -v {{.CLI_ARGS}}"
+
+  run:fix:
+    desc: "Runs the pytest-fixer CLI tool. Pass arguments after --. Usage: task run:fix -- --help"
+    cmds:
+      - "{{.PYTHON_INTERPRETER}} -m {{.PACKAGE_NAME}}.main {{.CLI_ARGS}}"
+
+  run:fix-test:
+    desc: "Runs the fixer with dev flags to confirm the application runs without errors."
+    cmds:
+      - "{{.PYTHON_INTERPRETER}} -m {{.PACKAGE_NAME}}.main fix --dev-force-success --non-interactive --fast-run --test-path tests/temp_failing_test.py"
+
+  docs:serve:
+    desc: "Serves the documentation site locally for development."
+    cmds:
+      - "{{.PYTHON_INTERPRETER}} -m mkdocs serve --dev-addr localhost:8001"
+
+  docs:build:
+    desc: "Builds the static documentation site."
+    cmds:
+      - "{{.PYTHON_INTERPRETER}} -m mkdocs build --clean"
+
+  docs:deploy:
+    desc: "Builds and deploys the documentation to GitHub Pages."
+    cmds:
+      - "{{.PYTHON_INTERPRETER}} -m mkdocs gh-deploy"
+
+  # --- CodeScene Integration Tasks ---
+  codescene:check:
+    desc: "Run CodeScene lint-style check on all Python files (excluding .venv)."
+    cmds:
+      - 'find . -type f -name "*.py" -not -path "./{{.PYTHON_VENV}}/*" -exec cs check {} \;'
+
+  codescene:review:
+    desc: "Run CodeScene review (JSON) on all Python files (excluding .venv)."
+    cmds:
+      - 'find . -type f -name "*.py" -not -path "./{{.PYTHON_VENV}}/*" -exec cs review --output-format json {} \;'
+
+  codescene:delta:
+    desc: "Run CodeScene delta analysis on the current git repository."
+    cmds:
+      - 'cs delta'
+
+  codescene:check-staged:
+    desc: "Run CodeScene check only on staged Python files. Useful for pre-commit hooks."
+    cmds:
+      - 'git diff --name-only --cached --diff-filter=ACMRTUXB HEAD | grep "\\.py$" | xargs -r cs check'
+
+  clean:
+    desc: "Cleans the project of temporary files, logs, and caches."
+    cmds:
+      - find . -type f -name '*.pyc' -delete
+      - find . -type d -name '__pycache__' -exec rm -rf {} +
+      - rm -rf ./.pytest_cache ./.ruff_cache ./site ./htmlcov ./.mypy_cache
+      - rm -f ./.coverage*

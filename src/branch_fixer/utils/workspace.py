@@ -33,18 +33,14 @@ class WorkspaceValidator:
         Raises:
             NotAGitRepositoryError: If no Git repository found
         """
-        try:
-            current = path.absolute()
-            while current != current.parent:
-                if (current / ".git").is_dir():
-                    logger.debug(f"Found Git repository root at {current}")
-                    return current
-                current = current.parent
-            
-            raise NotAGitRepositoryError(f"No Git repository found for {path}")
-            
-        except Exception as e:
-            raise NotAGitRepositoryError(f"Failed to find Git repository: {str(e)}")
+        current = path.absolute()
+        while current != current.parent:
+            if (current / ".git").is_dir():
+                logger.debug(f"Found Git repository root at {current}")
+                return current
+            current = current.parent
+        
+        raise NotAGitRepositoryError(f"No Git repository found for {path}")
 
     @staticmethod
     def validate_workspace(path: Path) -> None:
@@ -65,29 +61,30 @@ class WorkspaceValidator:
         if not os.access(path, os.R_OK | os.W_OK):
             raise PermissionError(f"Workspace directory {path} is not accessible.")
 
+        repo = None
         try:
             # Find and validate Git repository
             git_root = WorkspaceValidator.find_git_root(path)
             repo = Repo(git_root)
-            
+
             # Additional Git repository validations
             if repo.bare:
                 raise NotAGitRepositoryError("Repository is bare")
-                
-            if not repo.active_branch:
-                raise NotAGitRepositoryError("No active branch")
-                
+
             logger.debug(f"Git repository validation successful at {git_root}")
-            
+            logger.debug(f"Workspace validation successful for {path}")
+
         except InvalidGitRepositoryError as e:
             logger.error(f"Invalid Git repository: {e}")
-            raise NotAGitRepositoryError(f"Invalid Git repository at {path}: {str(e)}")
-            
+            raise NotAGitRepositoryError(f"Invalid Git repository at {path}: {str(e)}") from e
         except Exception as e:
-            logger.error(f"Git repository validation failed: {e}")
-            raise NotAGitRepositoryError(f"Failed to validate Git repository: {str(e)}")
-
-        logger.debug(f"Workspace validation successful for {path}")
+            # Catch any other exceptions during Repo interaction and wrap them
+            logger.error(f"An unexpected error occurred during Git validation: {e}")
+            raise NotAGitRepositoryError(f"Git validation failed at {path}: {str(e)}") from e
+        finally:
+            if repo:
+                repo.git.clear_cache()
+                repo.close()
 
     @staticmethod
     def check_dependencies() -> None:

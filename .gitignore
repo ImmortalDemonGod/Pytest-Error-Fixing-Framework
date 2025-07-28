@@ -15,6 +15,10 @@ ENV/
 .venv/
 .ENV/
 
+logs/
+session_data/*
+scripts/*
+ai-manager-ideas/*
 # Editor and IDE files
 .vscode/
 .idea/
@@ -97,3 +101,4 @@ tools/llm/onefilellm/uncompressed_output.txt
 .ruff_cache/
 data/*
 vector_db_storage/*
+uv.lock
