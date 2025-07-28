@@ -15,6 +15,10 @@ ENV/
 .venv/
 .ENV/
 
+logs/
+session_data/*
+scripts/*
+ai-manager-ideas/*
 # Editor and IDE files
 .vscode/
 .idea/
