@@ -128,53 +128,58 @@ class CLI:
         try:
             if (
                 self.service
-                and not self.service.git_repo.branch_manager.create_fix_branch(
+                and self.service.git_repo.branch_manager.create_fix_branch(
                     branch_name
                 )
             ):
-                logger.error(f"Failed to create fix branch: {branch_name}")
-                return None
-        except Exception as branch_err:
-            logger.warning(f"Branch creation warning: {branch_err}")
-            # Continue even if branch creation fails
-            # but return the branch name to keep logic consistent
+                self.created_branches.add(branch_name)
+                return branch_name
 
-        self.created_branches.add(branch_name)
-        return branch_name
+            logger.error(f"Failed to create fix branch: {branch_name}")
+            return None
+        except Exception as branch_err:
+            logger.warning(f"Branch creation failed with exception: {branch_err}")
+            return None
 
     def run_fix_workflow(self, error: TestError, interactive: bool) -> bool:
         """
-        Run the fix workflow for a single error using AI:
-        1) Create a unique fix branch
-        2) Attempt to generate/apply a fix
-        3) Optionally create a PR & push
-        4) Return success/failure
+        Run the fix workflow for a single error using AI.
+        This workflow now ensures the original branch is checked out upon completion.
         """
+        if not self.service:
+            logger.error("FixService not initialized, cannot run fix workflow.")
+            return False
+
+        original_branch = self.service.git_repo.get_current_branch()
+        logger.info(f"Starting fix workflow from branch: {original_branch}")
+        success = False
+
         try:
             logger.info(f"Attempting to fix {error.test_function} in {error.test_file}")
 
-            # 1) Create fix branch with unique suffix
+            # 1) Create fix branch
             branch_name = self._create_fix_branch(error)
             if not branch_name:
-                # If branch creation fails entirely, we skip
-                return False
+                return False  # Early exit if branch creation fails
 
             # 2) Attempt to generate and apply fix
-            if not self._generate_and_apply_fix(error):
-                return False
+            if self._generate_and_apply_fix(error):
+                # 3) On success, handle PR creation
+                if interactive:
+                    if click.confirm(
+                        "Fix succeeded. Would you like to open a Pull Request?",
+                        default=True,
+                    ):
+                        success = self._create_and_push_pr(branch_name, error)
+                    else:
+                        logger.info("Skipping PR creation at user request.")
+                        success = True  # Fix is good, just no PR
+                else:
+                    # Non-interactive mode: create PR automatically
+                    success = self._create_and_push_pr(branch_name, error)
 
-            if interactive:
-                # If in interactive mode, optionally create PR
-                pr_confirm = click.confirm(
-                    "Fix succeeded. Would you like to open a Pull Request?",
-                    default=True,
-                )
-                if not pr_confirm:
-                    logger.info("Skipping PR creation at user request.")
-                    return True  # We still succeeded in the fix
-
-            # 3) Create PR if desired
-            return self._create_and_push_pr(branch_name, error)
+            # If _generate_and_apply_fix failed, success remains False
+            return success
 
         except Exception as e:
             logger.error(f"Fix workflow encountered an error: {str(e)}")
@@ -183,6 +188,15 @@ class CLI:
                     f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}"
                 )
             return False
+        finally:
+            # ALWAYS check out the original branch
+            current_branch = self.service.git_repo.get_current_branch()
+            if current_branch != original_branch:
+                logger.info(f"Checking out original branch: {original_branch}")
+                try:
+                    self.service.git_repo.run_command(["checkout", original_branch])
+                except Exception as e:
+                    logger.error(f"Failed to checkout original branch '{original_branch}': {e}")
 
     def _generate_and_apply_fix(self, error: TestError) -> bool:
         """
@@ -480,6 +494,11 @@ class CLI:
             click.echo("Starting cleanup...")
             self.cleanup()
             click.echo("Cleanup complete.")
+
+        # If the user quit early, total_processed will be less than total_errors.
+        # This should result in a non-zero exit code.
+        if total_processed < total_errors:
+            return 1
 
         # If you want to tie success_count to actual fix results, incorporate it in the interactive checks.
         # For now we assume success_count remains a placeholder for further logic.

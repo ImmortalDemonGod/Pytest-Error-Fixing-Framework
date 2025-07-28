@@ -76,7 +76,7 @@ def fix(
     Fix failing pytest tests automatically.
     """
 
-    from branch_fixer.services.pytest.error_processor import parse_pytest_errors
+    from branch_fixer.services.pytest.error_processor import process_pytest_results
     from branch_fixer.orchestration.orchestrator import FixSession, FixSessionState
 
     setup_logging()
@@ -151,11 +151,7 @@ def fix(
 
     # Parse errors
     logger.info("Analyzing test failures...")
-    # This means collection errors and standard failures are consolidated, and the older
-    # regex-based approach in error_processor.py is no longer used. The result is a list
-    # of TestError objects that reflect all the discovered issues in the pytest output.
-
-    errors = parse_pytest_errors(test_result.output)
+    errors = process_pytest_results(test_result)
     if not errors:
         logger.warning("Tests failed but no parsable test failures found")
         return 1

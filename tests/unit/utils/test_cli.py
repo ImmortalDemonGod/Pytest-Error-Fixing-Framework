@@ -216,9 +216,8 @@ def test_create_fix_branch_failure(cli_instance: CLI, mock_test_error: TestError
     mock_service.git_repo.branch_manager.create_fix_branch.return_value = False
 
     branch_name = cli_instance._create_fix_branch(mock_test_error)
-    # Even if creation fails, code returns branch_name for logic consistency
-    assert branch_name is not None
-    assert branch_name in cli_instance.created_branches
+    # On creation failure, the method should consistently return None.
+    assert branch_name is None
 
 
 def test_generate_and_apply_fix_success(cli_instance: CLI, mock_test_error: TestError) -> None:
@@ -331,12 +330,13 @@ def test_setup_components_failure(cli_instance: CLI) -> None:
     keep this test. Otherwise, if your real code is swallowing the error or returning True,
     adapt or remove the assertion as needed.
     """
-    # If your code doesn't actually handle the exception to return False,
-    # this test might fail. So either fix the code or remove the check.
-    with patch("branch_fixer.utils.cli.AIManager", side_effect=Exception("Initialization error")):
+    # Patching the __init__ method on the original class is more robust
+    with patch("branch_fixer.services.ai.manager.AIManager.__init__",
+               side_effect=Exception("Initialization error"),
+               return_value=None):
         config = ComponentSettings(api_key="FAKE_KEY")
         ok = cli_instance.setup_components(config)
-        # If your code DOES handle the exception properly to return False:
+        # The try/except block in setup_components should catch the error and return False
         assert ok is False
 
 
