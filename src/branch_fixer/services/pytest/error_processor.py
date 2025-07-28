@@ -1,8 +1,18 @@
 # src/branch_fixer/services/pytest/error_processor.py
 from typing import List
 from pathlib import Path
+import re
 from branch_fixer.core.models import TestError, ErrorDetails
 from branch_fixer.services.pytest.models import SessionResult
+
+
+def _extract_error_type(error_message: str | None) -> str:
+    """Extracts the error type from a pytest error message using regex."""
+    if not error_message:
+        return "UnknownError"
+
+    error_match = re.match(r'^(\w+(?:Error|Exception|Failure))', error_message.strip())
+    return error_match.group(1) if error_match else "UnknownError"
 
 
 def process_pytest_results(result: SessionResult) -> List[TestError]:
@@ -15,11 +25,7 @@ def process_pytest_results(result: SessionResult) -> List[TestError]:
     # Process standard test failures
     for test_result in result.test_results.values():
         if test_result.failed:
-            # Extract error type from the error_message if possible
-            error_type = "UnknownError"
-            if test_result.error_message:
-                # A simple heuristic to get the error type
-                error_type = test_result.error_message.split(":")[0]
+            error_type = _extract_error_type(test_result.error_message)
 
             ed = ErrorDetails(
                 error_type=error_type,
