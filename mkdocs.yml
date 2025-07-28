@@ -4,28 +4,28 @@ theme: readthedocs
 nav:
   - 'Home': 'index.md'
   - 'User Guide':
-    - 'Installation': 'user-guide/01-installation.md'
-    - 'Quick Start': 'user-guide/02-quickstart.md'
-    - 'CLI Reference': 'user-guide/03-cli-reference.md'
+      - 'Installation': 'user-guide/01-installation.md'
+      - 'Quick Start': 'user-guide/02-quickstart.md'
+      - 'CLI Reference': 'user-guide/03-cli-reference.md'
   - 'Developer Guide':
-    - 'Architecture': 'developer-guide/01-architecture.md'
-    - 'Contributing': 'developer-guide/02-contribution-guide.md'
-    - 'Testing Strategy': 'developer-guide/03-testing-strategy.md'
-    - 'Execution Flow': 'developer-guide/04-execution-flow.md'
-    - 'LLM Prompts':
-        - 'Pytest Generation': 'developer-guide/prompts/pytest-generation.md'
-        - 'Code Refactoring': 'developer-guide/prompts/Code-Refactoring-Instructions.md'
-        - 'Structured Test Development': 'developer-guide/prompts/Structured-Test-Development-Process.md'
-        - 'Test Refactoring': 'developer-guide/prompts/test-refactoring.md'
+      - 'Architecture': 'developer-guide/01-architecture.md'
+      - 'Contributing': 'developer-guide/02-contribution-guide.md'
+      - 'Testing Strategy': 'developer-guide/03-testing-strategy.md'
+      - 'Execution Flow': 'developer-guide/04-execution-flow.md'
+      - 'LLM Prompts':
+          - 'Pytest Generation': 'developer-guide/prompts/pytest-generation.md'
+          - 'Code Refactoring': 'developer-guide/prompts/Code-Refactoring-Instructions.md'
+          - 'Structured Test Development': 'developer-guide/prompts/Structured-Test-Development-Process.md'
+          - 'Test Refactoring': 'developer-guide/prompts/test-refactoring.md'
   - 'Design & Research':
-    - 'Strategic Analysis': 'design-and-research/01-strategic-analysis.md'
-    - 'SWE-bench Strategy': 'design-and-research/02-swe-bench-strategy.md'
-    - 'Git API Design': 'design-and-research/03-git-api-design.md'
+      - 'Strategic Analysis': 'design-and-research/01-strategic-analysis.md'
+      - 'SWE-bench Strategy': 'design-and-research/02-swe-bench-strategy.md'
+      - 'Git API Design': 'design-and-research/03-git-api-design.md'
   - 'Reference':
-    - 'DDD Principles': 'reference/ddd-principles.md'
-    - 'Debugging Workflow': 'reference/debugging-workflow.md'
-    - 'Bug Taxonomy': 'reference/bug-taxonomy.md'
-    - 'Hypothesis Guide': 'reference/hypothesis-guide.md'
+      - 'DDD Principles': 'reference/ddd-principles.md'
+      - 'Debugging Workflow': 'reference/debugging-workflow.md'
+      - 'Bug Taxonomy': 'reference/bug-taxonomy.md'
+      - 'Hypothesis Guide': 'reference/hypothesis-guide.md'
 
 plugins:
   - search
