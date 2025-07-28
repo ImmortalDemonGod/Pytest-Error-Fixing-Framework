@@ -75,6 +75,11 @@ tasks:
     cmds:
       - "{{.PYTHON_INTERPRETER}} -m {{.PACKAGE_NAME}}.main {{.CLI_ARGS}}"
 
+  run:fix-test:
+    desc: "Runs the fixer with dev flags to confirm the application runs without errors."
+    cmds:
+      - "{{.PYTHON_INTERPRETER}} -m {{.PACKAGE_NAME}}.main fix --dev-force-success --non-interactive --fast-run --test-path tests/temp_failing_test.py"
+
   docs:serve:
     desc: "Serves the documentation site locally for development."
     cmds:
