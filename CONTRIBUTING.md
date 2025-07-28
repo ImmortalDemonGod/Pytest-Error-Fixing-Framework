@@ -4,7 +4,7 @@ First off, thank you for considering contributing to Pytest-Fixer! It's people l
 
 ## Where do I go from here?
 
-If you've noticed a bug or have a feature request, [make one](https://github.com/your-github-username/pytest-fixer/issues/new)! It's generally best if you get confirmation of your bug or approval for your feature request this way before starting to code.
+If you've noticed a bug or have a feature request, [make one](https://github.com/ImmortalDemonGod/pytest-fixer/issues/new)! It's generally best if you get confirmation of your bug or approval for your feature request this way before starting to code.
 
 ### Fork & create a branch
 
