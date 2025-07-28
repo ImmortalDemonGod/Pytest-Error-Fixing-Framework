@@ -101,3 +101,4 @@ tools/llm/onefilellm/uncompressed_output.txt
 .ruff_cache/
 data/*
 vector_db_storage/*
+uv.lock
