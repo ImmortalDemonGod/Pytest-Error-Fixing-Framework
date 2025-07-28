@@ -17,8 +17,8 @@ An AI-powered tool that automatically fixes failing pytest tests by analyzing er
 
 For full, detailed instructions, please see our official documentation site:
 
--   **[User Guide](https://immortaldemongod.github.io/Pytest-Error-Fixing-Framework/user-guide/01-installation/)**: For everyone who wants to use the tool.
--   **[Developer Guide](https://immortaldemongod.github.io/Pytest-Error-Fixing-Framework/developer-guide/01-architecture/)**: For everyone who wants to contribute to the tool.
+-   **[User Guide](https://immortaldemongod.github.io/pytest-fixer/user-guide/01-installation/)**: For everyone who wants to use the tool.
+-   **[Developer Guide](https://immortaldemongod.github.io/pytest-fixer/developer-guide/01-architecture/)**: For everyone who wants to contribute to the tool.
 
 ## Development Setup
 
