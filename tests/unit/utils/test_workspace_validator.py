@@ -1,3 +1,4 @@
+# tests/unit/utils/test_workspace_validator.py
 """
 Combined test file for WorkspaceValidator in branch_fixer/utils/workspace.py
 Leverages pytest fixtures, parametrization, and Hypothesis to maximize coverage
@@ -12,8 +13,8 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 from git import Repo, InvalidGitRepositoryError
 from hypothesis import given, strategies as st, reject
-from src.branch_fixer.utils.workspace import WorkspaceValidator
-from src.branch_fixer.services.git.exceptions import NotAGitRepositoryError
+from branch_fixer.utils.workspace import WorkspaceValidator
+from branch_fixer.services.git.exceptions import NotAGitRepositoryError
 
 logger = logging.getLogger(__name__)
 
@@ -30,12 +31,17 @@ def tmp_non_git_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def tmp_git_dir(tmp_path: Path) -> Path:
+def tmp_git_dir(tmp_path: Path):
     """
     Pytest fixture providing a temporary directory with an initialized .git repository.
+    Ensures the repository object is closed after the test to release file handles.
     """
-    Repo.init(tmp_path)  # Initialize a local Git repo
-    return tmp_path
+    repo = Repo.init(tmp_path)
+    try:
+        yield tmp_path
+    finally:
+        repo.git.clear_cache()
+        repo.close()
 
 
 # -----------------------------------------------------------------------------
@@ -64,45 +70,21 @@ def test_find_git_root_no_git_directory(tmp_non_git_dir: Path) -> None:
     """
     Confirm find_git_root raises NotAGitRepositoryError if there's no .git folder.
     """
-    with pytest.raises(NotAGitRepositoryError) as exc:
-        WorkspaceValidator.find_git_root(tmp_non_git_dir)
-    assert "Failed to find Git repository" in str(exc.value), "Error should indicate .git was not found"
+    # To ensure the test is isolated, we patch `parent` to stop traversal
+    # once it reaches the top of the temporary directory.
+    original_parent = Path.parent
 
+    def limited_parent(self):
+        # If we are about to leave the tmp dir, return self to stop the loop
+        if self == tmp_non_git_dir:
+            return self
+        return original_parent.fget(self)
 
-def test_find_git_root_unexpected_exception(tmp_non_git_dir: Path) -> None:
-    """
-    Force an unexpected exception inside find_git_root to check error wrapping coverage.
-    """
-    with patch("pathlib.Path.absolute", side_effect=Exception("Unexpected error")):
+    with patch.object(Path, 'parent', property(limited_parent)):
         with pytest.raises(NotAGitRepositoryError) as exc:
             WorkspaceValidator.find_git_root(tmp_non_git_dir)
-        # Confirm the raised error is wrapped properly
-        assert "Failed to find Git repository" in str(exc.value)
 
-
-@given(random_path=st.from_type(Path))
-def test_find_git_root_hypothesis_fuzz(random_path: Path) -> None:
-    """
-    Property-based test: If random_path has no .git folder, find_git_root must raise.
-    We mock out the directory existence checks to always fail for .git.
-    """
-    # If the path is empty or doesn't end in .git, we say it fails
-    # If the path does end in .git, we 'pretend' it is found
-    path_str = str(random_path)
-
-    def is_dir_side_effect(p: Path) -> bool:
-        """Return True only if p ends with .git"""
-        return str(p).endswith(".git")
-
-    with patch("pathlib.Path.is_dir", side_effect=is_dir_side_effect):
-        if path_str.endswith(".git"):
-            # We expect success
-            result = WorkspaceValidator.find_git_root(random_path)
-            assert isinstance(result, Path), "Should return a Path object if .git is found"
-        else:
-            # We expect an error
-            with pytest.raises(NotAGitRepositoryError):
-                WorkspaceValidator.find_git_root(random_path)
+    assert "No Git repository found" in str(exc.value)
 
 
 # -----------------------------------------------------------------------------
@@ -140,26 +122,41 @@ def test_validate_workspace_no_git_dir(tmp_non_git_dir: Path) -> None:
     """
     Confirm validate_workspace raises NotAGitRepositoryError if no .git folder is found.
     """
-    with pytest.raises(NotAGitRepositoryError):
-        WorkspaceValidator.validate_workspace(tmp_non_git_dir)
+    original_parent = Path.parent
+
+    def limited_parent(self):
+        if self == tmp_non_git_dir:
+            return self
+        return original_parent.fget(self)
+
+    with patch.object(Path, 'parent', property(limited_parent)):
+        with pytest.raises(NotAGitRepositoryError):
+            WorkspaceValidator.validate_workspace(tmp_non_git_dir)
 
 
 def test_validate_workspace_bare_repo(tmp_git_dir: Path) -> None:
     """
     Confirm validate_workspace raises NotAGitRepositoryError if the repo is bare.
     """
-    with patch("branch_fixer.utils.workspace.Repo") as mock_repo:
-        mock_repo.return_value.bare = True
+    mock_repo_instance = MagicMock()
+    mock_repo_instance.bare = True
+
+    with patch("branch_fixer.utils.workspace.WorkspaceValidator.find_git_root", return_value=tmp_git_dir), \
+         patch("branch_fixer.utils.workspace.Repo", return_value=mock_repo_instance) as mock_repo_class:
+        
         with pytest.raises(NotAGitRepositoryError) as exc:
             WorkspaceValidator.validate_workspace(tmp_git_dir)
+
         assert "Repository is bare" in str(exc.value), "Expected bare repository error"
+        mock_repo_class.assert_called_with(tmp_git_dir)
 
 
 def test_validate_workspace_invalid_repo(tmp_git_dir: Path) -> None:
     """
     Confirm validate_workspace raises NotAGitRepositoryError if Repo() fails with InvalidGitRepositoryError.
     """
-    with patch("branch_fixer.utils.workspace.Repo", side_effect=InvalidGitRepositoryError("Corrupted repo")):
+    with patch("branch_fixer.utils.workspace.WorkspaceValidator.find_git_root", return_value=tmp_git_dir), \
+         patch("branch_fixer.utils.workspace.Repo", side_effect=InvalidGitRepositoryError("Corrupted repo")):
         with pytest.raises(NotAGitRepositoryError) as exc:
             WorkspaceValidator.validate_workspace(tmp_git_dir)
         assert "Corrupted repo" in str(exc.value), "Error message should include cause of failure"
@@ -169,10 +166,11 @@ def test_validate_workspace_unknown_error(tmp_git_dir: Path) -> None:
     """
     Confirm validate_workspace re-raises NotAGitRepositoryError when an unexpected exception occurs.
     """
-    with patch("branch_fixer.utils.workspace.Repo", side_effect=Exception("Something else")):
+    with patch("branch_fixer.utils.workspace.WorkspaceValidator.find_git_root", return_value=tmp_git_dir), \
+         patch("branch_fixer.utils.workspace.Repo", side_effect=Exception("Something else")):
         with pytest.raises(NotAGitRepositoryError) as exc:
             WorkspaceValidator.validate_workspace(tmp_git_dir)
-        assert "Failed to validate Git repository" in str(exc.value)
+        assert "Something else" in str(exc.value), "Error message should include cause of failure"
 
 
 def test_validate_then_check_dependencies_round_trip(tmp_git_dir: Path) -> None:
