@@ -1,16 +1,14 @@
 [project]
-name = "pytest-error-fixing-framework"
+name = "pytest-fixer"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.11"  # Changed from >=3.13
+requires-python = ">=3.13"
 dependencies = [
     "aiohttp>=3.11.11",
     "click>=8.1.7",
     "gitpython>=3.1.43",
-    "hypothesis>=6.122.5",
     "marvin>=2.3.8",
-    "pytest-asyncio>=0.25.0",
     "pytest>=8.3.4",
     "snoop>=0.6.0",
     "litellm>=1.55.8",
@@ -19,4 +17,17 @@ dependencies = [
     "pluggy>=1.5.0",
     "openai>=1.58.1",
     "python-dotenv>=1.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocs-awesome-pages-plugin",
+    "pymarkdownlnt",
+
+    "pytest-cov",
+    "pytest-asyncio",
+    "hypothesis",
 ]
