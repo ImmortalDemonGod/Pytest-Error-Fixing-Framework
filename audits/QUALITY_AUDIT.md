@@ -63,10 +63,20 @@ This document contains the findings of a comprehensive code audit of the `pytest
  | `pytest.ini` | Test Configuration | `pythonpath=src` combined with additional `sys.path` manipulation (e.g., `tests/conftest.py`) and tests importing `src.branch_fixer.*` creates multiple import roots, increasing the risk of duplicate module loads and hard-to-debug import behavior. | Medium | Standardize on a single import strategy (prefer `branch_fixer.*`), remove `sys.path` hacks, and keep `pytest.ini` minimal. |
  | `.github/workflows/*.yml` | CI/CD Reliability | CI uses Python 3.10 despite `requires-python >= 3.13`, and other workflows reference a missing `requirements.txt` and wrong source dir (`pytest_fixer` vs `branch_fixer`), making CI/coverage/docstring jobs likely broken. | High | Align workflows with `pyproject.toml` (Python 3.13, install via `uv` or `pip install -e '.[dev]'`) and remove/replace `requirements.txt` assumptions; validate source dirs. |
  | `docs/user-guide/01-installation.md` | Doc Alignment | Docs instruct `uv sync` "from the lock file", but `uv.lock` is currently gitignored, so a clean clone cannot follow the reproducible install steps. | Medium | Either commit `uv.lock` (preferred for reproducibility) or update docs to describe generating a lock / using `uv pip install -e '.[dev]'`. |
-  | `docs/user-guide/02-quickstart.md` | Doc Alignment | The quickstart suggests invoking the tool via `python -m src.branch_fixer.main ...`, which conflicts with the Taskfile (`python -m branch_fixer.main`) and reinforces inconsistent import roots. | Medium | Standardize on a single invocation path and update docs to match the supported packaging/entry points. |
-  | `.gitignore` | Hygiene | `uv.lock` is gitignored (undermining reproducible installs) and backup directories like `.backups/` (used by `ChangeApplier`) are not explicitly ignored, risking accidental commits. | Medium | Decide whether to commit `uv.lock` and align docs accordingly; ignore tool-generated backup directories consistently. |
-  | `src/dev/**` | Packaging | `src/dev` is a Python package (has `__init__.py`) and will be included by `find_packages`, potentially shipping incomplete dev tooling (`dev.*`) to end users. | Medium | Move dev tooling outside `src` or explicitly exclude it from packaging; alternatively, complete and document it. |
-  | `.python-version` | Reproducibility | There is no `.python-version` pin despite requiring Python 3.13+, so toolchain alignment relies on external discipline. | Low | Add `.python-version` (or equivalent pinning strategy) and keep it aligned with CI + `pyproject` requirements. |
+ | `docs/user-guide/02-quickstart.md` | Doc Alignment | The quickstart suggests invoking the tool via `python -m src.branch_fixer.main ...`, which conflicts with the Taskfile (`python -m branch_fixer.main`) and reinforces inconsistent import roots. | Medium | Standardize on a single invocation path and update docs to match the supported packaging/entry points. |
+ | `.gitignore` | Hygiene | `uv.lock` is gitignored (undermining reproducible installs) and backup directories like `.backups/` (used by `ChangeApplier`) are not explicitly ignored, risking accidental commits. | Medium | Decide whether to commit `uv.lock` and align docs accordingly; ignore tool-generated backup directories consistently. |
+ | `src/dev/**` | Packaging | `src/dev` is a Python package (has `__init__.py`) and will be included by `find_packages`, potentially shipping incomplete dev tooling (`dev.*`) to end users. | Medium | Move dev tooling outside `src` or explicitly exclude it from packaging; alternatively, complete and document it. |
+ | `.python-version` | Reproducibility | A `.python-version` pin is present (`3.13.1`), but CI workflows use Python `3.10`/`3.x`, risking toolchain drift between local and CI environments. | Low | Treat `.python-version` as the authoritative pin and align GitHub Actions `python-version` settings with it (and `pyproject.toml`). |
+ | `scripts/**` | Safety | The `scripts/` directory is tracked but also listed under `.gitignore` (`scripts/*`), and several scripts perform potentially destructive operations (`rm -f`, `shutil.rmtree`) or auto-install tooling via `curl`/`pip`/`uv`; some include hardcoded absolute paths. | High | Decide whether `scripts/` is first-class repo tooling (and remove it from `.gitignore`) or local-only; document usage + safety constraints (confirmations/dry-run), avoid auto-install-by-default, and remove hardcoded paths. |
+ | `.taskmaster/**` | Workflow Governance | `.taskmaster/docs/prd.txt` is tracked, but `.taskmaster/config.json` exists untracked and contains telemetry/user identifiers; `.taskmaster/tasks/` is empty, so Task Master workflow state/config is not clearly versioned or documented. | Medium | Clarify which Task Master artifacts are versioned vs local; ensure local config is gitignored or committed intentionally; document expected env vars, model settings, and telemetry policy. |
+ | `.windsurfrules` | Maintenance | `.windsurfrules` contains duplicated sections (a second DEV_WORKFLOW block appears to have been appended) and references `scripts/dev.js`, which is absent, risking conflicting/outdated workflow guidance for assistants. | Medium | Deduplicate and update to the current Task Master CLI guidance, remove stale references (e.g., `scripts/dev.js`), and define ownership/update cadence for assistant rules. |
+ | `CONTRIBUTING.md` | Doc Alignment | The contribution guide is minimal and can drift from actual workflow (Taskfile usage, Python 3.13 pin, lockfile handling); it also instructs `uv sync` despite `uv.lock` being gitignored. | Medium | Align `CONTRIBUTING.md` with README/docs; decide on `uv.lock` policy; include supported Python version and common `task` commands for contributors. |
+ | `LICENSE` | Governance | The MIT license file is present, but the audit does not verify that repo metadata/README references it or that dependency licenses are compatible. | Low | Confirm dependency/license compatibility and ensure the license is referenced in README/docs and release packaging. |
+ | `.gitattributes` | Reproducibility | `.gitattributes` contains only `* text=auto`; cross-platform line-ending determinism (especially for shell scripts) is not explicitly enforced or documented. | Low | Consider explicit `eol=lf` rules for `*.sh` (and other text types) or document the intended line-ending policy. |
+ | `src/*egg-info/` | Hygiene | `src/pytest_fixer.egg-info/` and `src/pytest_error_fixing_framework.egg-info/` exist (untracked), indicating build artifacts are being generated in-tree; if committed, these can confuse packaging/imports and tooling. | Medium | Keep `*.egg-info/` ignored and ensure build workflows output artifacts outside `src/`; document/automate cleanup for local builds. |
+ | `ai-manager-ideas/` | Repo Hygiene | `ai-manager-ideas/*` are stored as git submodule links (gitlinks), but `.gitmodules` is missing; `git submodule` commands error, and the directory is also listed under `.gitignore`, creating confusing/fragile repo state. | High | Either configure submodules properly (`.gitmodules` + docs) or remove/relocate the folder; avoid `.gitignore` patterns that conflict with tracked gitlinks. |
+ | `src/dev/test_generator/**` | Completeness | `src/dev/test_generator/**` exists but most modules are empty stubs; it’s unclear whether test generation is a supported feature, and packaging may ship incomplete dev tooling. | Medium | Explicitly mark as experimental/stub (and exclude from packaging) or implement/document a minimal supported contract; add safety/determinism guarantees and minimal tests. |
+ | `audits/**` | Governance | Multiple audit artifacts exist (`QUALITY_AUDIT.md`, meta-audits), but there is no explicit policy for keeping audits current or for distinguishing “historical” vs “current” findings. | Low | Add a simple audit artifact hygiene policy (naming conventions, update cadence, and how audits are linked from docs/README). |
 
 ---
 
@@ -184,9 +194,42 @@ This document contains the findings of a comprehensive code audit of the `pytest
     -   **Dev Workflow Consistency:** Do tasks match documented setup, CI behavior, and the actual entry points?
 - [x] **Docs Build & Alignment (`mkdocs.yml`, `docs/**`, `README.md`)**
     -   **Doc Alignment:** Do docs accurately describe installation/configuration (e.g., `.env` keys) and CLI behavior?
-- [x] **Generated Artifacts & Secrets Hygiene (`.gitignore`, `.env`, operational outputs)**
+ - [x] **Generated Artifacts & Secrets Hygiene (`.gitignore`, `.env`, operational outputs)**
     -   **Hygiene:** Are backups/logs/session data and other generated artifacts consistently gitignored and cleaned up?
-- [x] **Dev Tooling (`src/dev/**`)**
+    -   **Concrete artifacts:** Are `.DS_Store`, `.coverage*`, `.pytest_cache/`, `.hypothesis/`, and `.venv/` ignored and kept out of commits?
+ - [x] **Dev Tooling (`src/dev/**`)**
     -   **Scope & Maintenance:** Is dev tooling intentionally supported (with docs/tests) or should it be isolated/removed?
-- [x] **Runtime/Toolchain Versioning (`.python-version`)**
+ - [x] **Test Generation Dev Tooling (`src/dev/test_generator/**`)**
+     -   **Completeness:** Is test generation supported vs experimental/stub, and is there a minimal, documented contract?
+     -   **Safety & Determinism:** Does it avoid executing untrusted code, and are outputs/config/seeds deterministic and controlled?
+     -   **Operational hygiene:** Where are generated tests written, and is there a cleanup/overwrite policy?
+     -   **Packaging:** Is it excluded from runtime packaging unless intentionally supported?
+ - [x] **Runtime/Toolchain Versioning (`.python-version`)**
     -   **Reproducibility:** Are toolchain pins aligned with CI and `pyproject` requirements?
+ - [x] **Project Scripts (`scripts/**`)**
+     -   **Intended usage:** Are scripts maintained vs legacy, and are they referenced by docs/Taskfile?
+     -   **Safety:** Do scripts avoid unsafe defaults (destructive operations, network installs) and require confirmation/dry-run?
+     -   **Portability:** Are there hardcoded absolute paths or OS-specific assumptions?
+     -   **Tracking policy:** Are scripts intentionally tracked, and does `.gitignore` avoid masking new scripts/changes?
+ - [x] **Task Master Workflow Artifacts (`.taskmaster/**`)**
+     -   **Correctness:** Are Task Master paths and assumptions aligned with how the repo is actually managed?
+     -   **Versioning policy:** Which files are committed (`docs/prd.txt`, tasks) vs local-only (`config.json`), and is that documented?
+     -   **Privacy/security:** Are telemetry/user identifiers and keys avoided in committed artifacts?
+ - [x] **Agent/IDE Rules (`.windsurfrules`)**
+     -   **Consistency:** Are rules deduplicated and aligned with the actual dev workflow (e.g., `task-master` vs missing `scripts/dev.js`)?
+     -   **Security:** Do rules avoid encouraging unsafe automation (secrets, arbitrary command execution)?
+ - [x] **Contributor Docs (`CONTRIBUTING.md`)**
+     -   **Alignment:** Does it match README/docs, the Taskfile, and the actual packaging/CI expectations?
+     -   **Reproducibility:** Does it clearly state the supported Python version and lockfile policy?
+ - [x] **Licensing (`LICENSE`)**
+     -   **Correctness:** Is the license text correct and consistent with project claims?
+     -   **Compatibility:** Are dependencies/license obligations understood and compatible with the chosen license?
+ - [x] **Git Attributes (`.gitattributes`)**
+     -   **Line endings:** Are cross-platform line-ending rules explicit enough for deterministic behavior?
+ - [x] **Build Artifacts Hygiene (`src/*egg-info/`)**
+     -   **Hygiene:** Are build artifacts kept out of the source tree (or at least never committed), and is cleanup documented?
+ - [x] **Idea/Prototype Folders (`ai-manager-ideas/`)**
+     -   **Intent:** Is this directory intentionally part of the repo surface or a local/experimental area?
+     -   **Git correctness:** If it uses submodules, is `.gitmodules` present and are init/update steps documented?
+ - [x] **Audit Artifact Hygiene (`audits/**`)**
+     -   **Staleness policy:** How are audits kept current, and how are old findings/version snapshots identified?
