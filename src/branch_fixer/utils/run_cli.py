@@ -13,7 +13,23 @@ from branch_fixer.utils.cli import CLI, ComponentSettings
 logger = logging.getLogger(__name__)
 
 
+import importlib.metadata
+
+def get_version() -> str:
+    """Dynamically get the project version from installed package metadata."""
+    try:
+        # The package name "pytest-fixer" is defined in pyproject.toml
+        return importlib.metadata.version("pytest-fixer")
+    except importlib.metadata.PackageNotFoundError:
+        # Graceful fallback for when package is not installed in the environment.
+        # This is more informative than a generic error or a misleading version like "0.0.0".
+        return "unknown (package not installed)"
+
 @click.group()
+@click.version_option(
+    version=get_version,
+    prog_name="pytest-fixer"
+)
 def cli():
     """Pytest Error Fixing Framework - Automatically fix failing pytest tests."""
     pass
