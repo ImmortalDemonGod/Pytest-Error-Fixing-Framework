@@ -343,7 +343,7 @@ class CLI:
                 max_retries=config.max_retries,
                 initial_temp=config.initial_temp,
                 temp_increment=config.temp_increment,
-                interactive=True,  # or dev_force_success
+                interactive=not config.dev_force_success,
             )
 
             # Validate workspace
