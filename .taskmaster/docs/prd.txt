@@ -1,0 +1,1064 @@
+# Repository Planning Graph (RPG): `pytest-fixer` Refactor & Hardening
+
+**Version:** 3.0 (Canonical Execution Blueprint)
+**Status:** Ready for Implementation
+**Context:** This PRD operationalizes the findings from the **January 2025 Critical Audit** and prepares the system to pass the **Live-Fire Benchmark Harness**. It supersedes all prior drafts by combining strict architectural constraints with topological execution logic.
+
+---
+
+<overview>
+## Problem Statement
+The `pytest-fixer` system currently suffers from **Architectural Fracture**. While the design documents describe a Domain-Driven, layered architecture, the actual implementation exhibits critical defects:
+1.  **Dead Brain:** The CLI bypasses the `FixOrchestrator` entirely, rendering advanced session management and retry logic inaccessible.
+2.  **Phantom Features:** The "Pull Request" capability is a hardcoded stub that simulates success without network interaction.
+3.  **Fragile Logic:** AI parsing relies on brittle string splitting, and critical Git operations spawn excessive subprocesses.
+4.  **Testing Gaps:** The CI environment uses mismatched Python versions, and existing tests rely on "cheat flags" (`dev_force_success`) rather than verifying real behavior.
+
+## Target State
+A unified system where the CLI acts strictly as an interface layer, delegating all logic to a fully functional `FixOrchestrator`. The system must perform real-world actions (Git operations, AI generation, PR creation) reliably, verified by passing the **"Live-Fire" Benchmark** without mocking.
+
+## Success Metrics
+1.  **Architectural Integrity:** The CLI code contains *zero* business logic; it only parses args and calls `Orchestrator`.
+2.  **Verification:** Passing the "Live-Fire" Benchmark with `Pass@1 > 60%` and `PR Created = True`.
+3.  **Type Safety:** Removal of all `AttributeError` risks caused by the `GitErrorDetails` vs `TestError` model mismatch.
+4.  **Resilience:** AI Parser handles markdown fences, chatty preambles, and malformed JSON gracefully.
+</overview>
+
+---
+
+<functional-decomposition>
+## Capability Tree
+
+### Capability: Domain Modeling
+*The "Lingua Franca" of the application.*
+#### Feature: Unified Error Representation
+- **Description**: A single, canonical representation of a test failure used across all layers.
+- **Inputs**: Raw Pytest Data / Git Context.
+- **Outputs**: `TestError` Aggregate Root.
+- **Behavior**: Enforces immutability on details; manages state transitions (unfixed -> in_progress -> fixed).
+- **Audit Fix**: Must replace the redundant `GitErrorDetails` found in the services layer.
+
+### Capability: Infrastructure Services
+*The "How" - External Adapters.*
+#### Feature: Robust AI Generation
+- **Description**: Generates code patches using LLMs with strict error handling.
+- **Inputs**: `TestError`, `temperature`.
+- **Outputs**: `CodeChanges` (Value Object).
+- **Behavior**: Handles API failures, parses markdown fences, retries on malformed JSON/Text. **Must not crash on conversational filler.**
+
+#### Feature: Delivery (Real PRs)
+- **Description**: Interacts with remote forge (GitHub) to submit changes.
+- **Inputs**: `BranchName`, `Title`, `Body`.
+- **Outputs**: `PR_URL` (String).
+- **Behavior**: Uses `gh` CLI (via subprocess) or `PyGithub` to create actual PRs. Fails gracefully if auth is missing. **Must replace existing in-memory stub.**
+
+#### Feature: Native Git Interactions
+- **Description**: Optimized git read operations.
+- **Inputs**: Repository Path.
+- **Outputs**: `BranchStatus`.
+- **Behavior**: Uses `GitPython` object references for read operations to eliminate subprocess overhead.
+
+### Capability: Orchestration
+*The "Brain" - Session Management.*
+#### Feature: Session Lifecycle
+- **Description**: Manages the state of a multi-error fix run.
+- **Inputs**: List of `TestError`.
+- **Outputs**: `FixSession` (Completed).
+- **Behavior**: Iterates errors, manages retry loops (temperature scaling), persists state to `SessionStore` (TinyDB), handles interrupts (resume capability).
+
+</functional-decomposition>
+
+---
+
+<structural-decomposition>
+## Module Definitions & Exports
+
+### Module: `core/models.py` (Foundation)
+- **Responsibility**: Define the Unified Data Model.
+- **Exports**:
+    - `class TestError`: The canonical aggregate.
+    - `class FixAttempt`: Entity.
+    - `class CodeChanges`: Value Object.
+    - **Constraints**: MUST replace `services/git/models.py::GitErrorDetails`.
+
+### Module: `services/ai/manager.py` (Infrastructure)
+- **Responsibility**: Robust LLM interaction.
+- **Exports**:
+    - `generate_fix(error: TestError, temp: float) -> CodeChanges`
+- **Refactor Requirement**: Replace string splitting with Regex parsing. Introduce `ParsingError` vs `APIError` exception hierarchy.
+
+### Module: `services/git/pr_manager.py` (Infrastructure)
+- **Responsibility**: Real Pull Request generation.
+- **Exports**:
+    - `create_pr(branch: str, title: str, body: str) -> str`
+- **Refactor Requirement**: Remove in-memory dictionary stub. Implement `subprocess.run(['gh', 'pr', 'create', ...])`.
+
+### Module: `orchestration/fix_service.py` (Application)
+- **Responsibility**: Atomic fix logic (Single Error).
+- **Exports**:
+    - `attempt_fix(error: TestError, temp: float) -> bool`
+- **Refactor Requirement**: **REMOVE** `dev_force_success` check. It must always call the AI service.
+
+### Module: `orchestration/orchestrator.py` (Application)
+- **Responsibility**: Batch processing and State Management.
+- **Exports**:
+    - `run_session(errors: List[TestError]) -> FixSession`
+- **Refactor Requirement**: Ensure it correctly calls `FixService` and persists via `SessionStore`.
+
+### Module: `utils/cli.py` (Interface)
+- **Responsibility**: User Input / System Output.
+- **Exports**: `class CLI`
+- **Refactor Requirement**: **STRICTLY FORBIDDEN** from containing loops or git logic. Must only parse args and call `self.orchestrator.run_session()`.
+
+</structural-decomposition>
+
+---
+
+<dependency-graph>
+## Dependency Chain (Topological Execution Order)
+
+### Phase 0: Foundation & Environment (Critical Path)
+*Must be completed to resolve CI/Type issues.*
+1.  **`config/environments`**: Update `ci.yml` to Python 3.13.
+2.  **`core/models`**: Unify `GitErrorDetails` into `TestError`.
+
+### Phase 1: Infrastructure Hardening
+*Depends on Phase 0. Enables robust service execution.*
+3.  **`services/ai/manager`**: Hardens parsing logic (Depends on `core/models`).
+4.  **`services/git/repository`**: Update type signatures to accept `TestError`.
+5.  **`services/git/pr_manager`**: Implements real `gh` calls (Depends on `repository`).
+
+### Phase 2: Service Layer Refactor
+*Depends on Phase 1.*
+6.  **`orchestration/fix_service`**: Removes cheat flags, integrates hardened `AIManager`.
+
+### Phase 3: Orchestration Wiring
+*Depends on Phase 2.*
+7.  **`orchestration/orchestrator`**: Implements the loop calling `FixService`. Connects `SessionStore`.
+
+### Phase 4: Interface Connection
+*Depends on Phase 3.*
+8.  **`utils/cli`**: Deletes legacy logic, wires inputs to `Orchestrator`.
+
+</dependency-graph>
+
+---
+
+<implementation-roadmap>
+## Development Phases
+
+### Phase 0: Foundation & Hygiene
+**Goal**: Establish a stable, type-safe base.
+**Entry Criteria**: Repository cloned, `uv` installed.
+**Tasks**:
+- [ ] **CI Alignment**: Update `.github/workflows/ci.yml` to use `python-version: '3.13'`.
+- [ ] **Model Unification**:
+    - Refactor `services/git/repository.py` to accept `core.models.TestError`.
+    - Delete `services/git/models.py`.
+    - Update all type hints to `TestError`.
+**Exit Criteria**: `mypy` passes strict checks; CI pipeline passes; no circular imports.
+
+---
+
+### Phase 1: Infrastructure Realization
+**Goal**: Replace stubs and fragile code with robust implementations.
+**Entry Criteria**: Phase 0 complete.
+**Tasks**:
+- [ ] **AI Parser Hardening**:
+    - Implement Regex extraction for Markdown code blocks.
+    - Add specific exception classes (`ParsingError`, `ContextError`).
+- [ ] **Real PR Implementation**:
+    - Rewrite `create_pr` in `pr_manager.py`.
+    - Check for `gh` binary existence.
+    - Execute `gh pr create --head <branch> --title <title> --body <body>`.
+**Exit Criteria**: Unit tests for AI Manager pass with complex/dirty inputs. Manual verification of `gh` call (or mock verification in unit test).
+
+---
+
+### Phase 2: Service Layer Integrity
+**Goal**: Ensure the atomic fix unit is honest.
+**Entry Criteria**: Phase 1 complete.
+**Tasks**:
+- [ ] **Remove Cheat Flags**: Delete `dev_force_success` logic from `fix_service.py`.
+- [ ] **Verify Backup/Restore**: Ensure `ChangeApplier` is called correctly within the `attempt_fix` try/finally block.
+**Exit Criteria**: `FixService` unit tests pass and *require* mocked AI responses to succeed.
+
+---
+
+### Phase 3: The Orchestration Link
+**Goal**: Activate the "Brain" of the system (Currently Dead Code).
+**Entry Criteria**: Phase 2 complete.
+**Tasks**:
+- [ ] **Implement Session Loop**: In `orchestrator.py`, implement `run_session`.
+    - Iterate `session.errors`.
+    - Call `fix_service.attempt_fix`.
+    - Update `session` state (persisted via `SessionStore`).
+- [ ] **Retry Logic**: Move retry/temperature scaling from `CLI` (legacy) into `Orchestrator`.
+**Exit Criteria**: Integration test: `Orchestrator` successfully processes a list of mocked errors and saves state to TinyDB.
+
+---
+
+### Phase 3.5: IP Implementation (The Heuristics)
+**Goal**: Implement the core "Heuristic Engine" components for context optimization and generative capabilities.
+**Entry Criteria**: Phase 3 complete.
+**Tasks**:
+- [ ] **Context Signal-to-Noise Optimization (Heuristic Class III)**:
+    - Implement a filtering layer (`services/ai/context_filter.py`) to parse stack frames and truncate standard library/site-packages traces, retaining full user code context.
+    - Ensure prompts for LLMs are constructed using only filtered, high-signal frames to reduce token costs and improve focus.
+- [ ] **Greenfield Test Generator (Heuristic Class VII)**:
+    - Implement the "Import Topology" heuristic: Scan source file imports and current test directory structure to generate a constrained import block for the LLM.
+    - Implement the "Fixture Scout" heuristic: Scan `conftest.py` for `@pytest.fixture` definitions and inject a "Menu of Available Fixtures" into the LLM prompt.
+    - Implement the "Skeleton" Strategy: System generates initial file structure (imports, class, `pass`) for new tests, validates imports, then prompts AI to fill test bodies.
+- [ ] **Scope Guard & Integrity Checks (Heuristic Class IV)**:
+    - Implement an AST Diff Check (`services/code/ast_analysis.py`) to compare original and modified code.
+    - Enforce safety rules: Hard Reject if a function is deleted or the failing test function name disappears.
+**Exit Criteria**: Unit tests for context filtering, import topology, fixture scouting, and AST checks pass. Manual verification demonstrates prompt optimization and safety enforcement.
+
+---
+
+### Phase 4.5: Reflexion Logic
+**Goal**: Integrate intelligent feedback loops into the fix attempts, moving beyond linear temperature scaling.
+**Entry Criteria**: Phase 3.5 complete.
+**Tasks**:
+- [ ] **Feedback Injection Loop (Heuristic Class VIII)**:
+    - Modify `AIManager.generate_fix` to accept an optional `previous_failure_context` argument (containing the new error message and diff of the last failed attempt).
+    - Construct new prompts that explicitly inform the LLM about previous failed changes and resulting errors, instructing it to avoid past patterns.
+- [ ] **"Lint-First" Repair (Heuristic Class VIII)**:
+    - Integrate a linter (e.g., `ruff check`) into the pre-verification step within `ChangeApplier` or `FixService`.
+    - Automatically reject or trigger a specific AI prompt for common linting issues (e.g., undefined names, unused imports) before running `pytest`.
+**Exit Criteria**: Integration tests demonstrate adaptive prompting based on previous failures. Linting catches common AI generation issues before full test execution.
+
+---
+
+### Phase 5: Interface Refactor
+**Goal**: Make the CLI a dumb terminal.
+**Entry Criteria**: Phase 4.5 complete.
+**Tasks**:
+- [ ] **Gut the CLI**: Remove `_process_interactive_error` logic loops.
+- [ ] **Delegate**: `CLI.process_errors` should instantiate `FixOrchestrator` and call `run_session`.
+**Exit Criteria**: Running `task run:fix` triggers the full stack. The Benchmark Harness reports `Success`.
+
+---
+
+### Phase 6: Asset Packaging
+**Goal**: Expose the core `FixOrchestrator` as a portable library interface, making the system consumable beyond the CLI.
+**Entry Criteria**: Phase 5 complete. (Note: Phase 5 is effectively the final interface connection, so this comes after all core logic is done).
+**Tasks**:
+- [ ] **Library Interface Design**: Define a clear, high-level Python API for `FixOrchestrator` functionality (e.g., `from branch_fixer import FixEngine; engine = FixEngine(...); engine.run_fix_session(...)`).
+- [ ] **CLI Decoupling**: Refactor `src/branch_fixer/utils/cli.py` to be a thin wrapper around the new library interface, eliminating any remaining direct business logic or orchestration within the CLI.
+- [ ] **SDK Interface Documentation**: Add `docs/design/sdk-interface.md` outlining the library's public API and usage examples.
+**Exit Criteria**: The `pytest-fixer` core can be imported and run as a library. Running `task run:fix` still works and uses the new library interface.
+
+</implementation-roadmap>
+
+---
+
+<test-strategy>
+## Critical Test Scenarios (TDD Context)
+
+*These scenarios guide the "White Box" unit testing required to pass the "Black Box" Benchmark.*
+
+### Module: `services/ai/manager.py`
+*   **Scenario: Chatty LLM**
+    *   *Input:* "Here is the code you asked for: ```python ... ``` I hope this helps!"
+    *   *Expected:* Successfully extracts code inside backticks. Ignores preamble/postscript.
+*   **Scenario: Malformed JSON**
+    *   *Input:* "{"original": ... (missing closing brace)"
+    *   *Expected:* Raises `ParsingError` (caught by Service to trigger retry).
+
+### Module: `services/git/pr_manager.py`
+*   **Scenario: Missing GH CLI**
+    *   *Context:* `shutil.which('gh')` returns None.
+    *   *Expected:* Log warning "GitHub CLI not found", return False (do not crash).
+*   **Scenario: Auth Failure**
+    *   *Context:* `gh` returns non-zero exit code.
+    *   *Expected:* Log error, return False.
+
+### Module: `orchestration/orchestrator.py`
+*   **Scenario: Session Resume**
+    *   *Context:* Session loaded from TinyDB has 2 fixed, 1 pending.
+    *   *Expected:* Orchestrator skips the 2 fixed, processes the 1 pending.
+
+</test-strategy>
+
+---
+
+<risks>
+## Technical Risks
+**Risk**: `gh` CLI dependency in CI environments.
+- **Impact**: High. Tests will fail in CI if `gh` isn't installed.
+- **Mitigation**: Add `gh` installation step to `.github/workflows/ci.yml` OR mock the subprocess call in *unit* tests (but not in the Benchmark).
+
+**Risk**: Infinite Retry Loops.
+- **Impact**: Medium. Cost overrun.
+- **Mitigation**: Orchestrator must enforce a hard `max_retries` cap per session, independent of the per-error retry count.
+
+**Risk**: "Works on my machine" (Python Path issues).
+- **Impact**: Medium.
+- **Mitigation**: Phase 0 explicitly aligns `pyproject.toml` and CI to Python 3.13.
+</risks>
+
+# Architectural Blueprint & Critical Audit: `pytest-fixer`
+
+**Version:** 1.0 (Canonical Reference)
+**Date:** January 2025
+**Scope:** Architecture, Logic, Infrastructure, and Security
+**Target Audience:** Lead Architects, Core Maintainers
+
+---
+
+## 1. Executive Summary
+
+`pytest-fixer` is an automated software repair tool architected around **Domain-Driven Design (DDD)** and **Clean Architecture** principles. It orchestrates `pytest` execution, AI-driven code generation, and Git version control to autonomously resolve test failures.
+
+**Current State Assessment:**
+The project exhibits a high degree of architectural maturity in its structural design (`core` vs. `services` separation) and safety mechanisms (atomic file backups, isolated git branches). However, the implementation suffers from significant **"Wiring Fractures"**: the robust orchestration logic is bypassed by the CLI, the CI pipeline is misconfigured for the required runtime environment, and key features (Pull Request creation) are simulated rather than implemented.
+
+**Verdict:** The system is **Architecturally Sound but Operationally Fragile**. It requires targeted refactoring to align the implementation with its architectural intent.
+
+---
+
+## 2. System Architecture & Components
+
+The codebase follows a strict layered architecture, designed to isolate business logic from infrastructure concerns.
+
+### 2.1 Directory Structure & Roles
+
+| Layer | Directory | Responsibility | Status |
+| :--- | :--- | :--- | :--- |
+| **Domain** | `src/branch_fixer/core/` | Defines pure business entities (`TestError`, `FixAttempt`) and value objects. Contains no external dependencies. | **Healthy** |
+| **Application** | `src/branch_fixer/orchestration/` | Coordinates the fix workflow (`FixService`) and session lifecycle (`FixOrchestrator`). | **Fractured** (Orchestrator is unused) |
+| **Infrastructure** | `src/branch_fixer/services/` | Adapters for `git`, `pytest`, `ai` (LLM), and `code` (File I/O). | **Mixed** (Robust IO / Brittle AI / Mocked Git PRs) |
+| **Interface** | `src/branch_fixer/utils/` | CLI entry points (`run_cli.py`) and workspace validation. | **Functional** (but carries state logic) |
+| **Persistence** | `src/branch_fixer/storage/` | Saves session state to `TinyDB` JSON files. | **Functional** |
+
+### 2.2 Entry Points
+*   **Primary:** `src/branch_fixer/main.py` -> `utils/run_cli.py`. Uses `click` to define the `fix` command tree.
+*   **Development:** `Taskfile.yml` defines standardized developer workflows (`task setup`, `task run:fix`).
+
+---
+
+## 3. Critical Findings (Verified)
+
+This section details confirmed issues categorized by severity. All findings are verified against the codebase state.
+
+### 🚨 Severity: CRITICAL (Blocks Usage / Data Risk)
+
+#### 1. CI/Development Environment Mismatch
+*   **Evidence:** `.github/workflows/ci.yml` specifies `python-version: '3.10'`. `pyproject.toml` mandates `requires-python = ">=3.13"`.
+*   **Impact:** The CI pipeline creates an environment that contradicts the package requirements. Dependencies utilizing Python 3.13 features will cause CI failures despite local success.
+*   **Location:** `.github/workflows/ci.yml` (Line 16) vs `pyproject.toml` (Line 5).
+
+#### 2. Undocumented Logic Bypass (`dev_force_success`)
+*   **Evidence:** In `orchestration/fix_service.py`, the `attempt_fix` method checks `if self.dev_force_success:`. If true, it marks the error as fixed and returns immediately, **skipping AI generation, code application, and verification**.
+*   **Impact:** If this flag is accidentally enabled (e.g., via env var or default config drift), the tool will falsely report success without performing any work. This is a "silent failure" mode.
+*   **Location:** `src/branch_fixer/orchestration/fix_service.py` (Line 75).
+
+#### 3. Data Model Schism (Type Safety Violation)
+*   **Evidence:** `GitRepository.create_pull_request_sync` expects an argument of type `GitErrorDetails` (from `services.git.models`). However, the CLI (`utils/cli.py`) passes an object of type `TestError` (from `core.models`).
+*   **Impact:** The code relies on implicit "duck typing" because both classes share `test_file` and `test_function` attributes. However, `GitErrorDetails` expects a nested `ErrorDetails` object which may differ in structure from the Domain version. This creates a brittle coupling that will break if either model evolves independently.
+*   **Location:** `services/git/repository.py` vs `utils/cli.py`.
+
+### ⚠️ Severity: HIGH (Misleading Functionality / Tech Debt)
+
+#### 4. The "Phantom" Pull Request
+*   **Evidence:** The `PRManager` class stores PRs in an in-memory dictionary (`self.prs = {}`). It contains no logic to interact with GitHub/GitLab APIs or the `gh` CLI.
+*   **Impact:** The CLI reports "Created pull request successfully," deceiving the user. No actual PR is created on the remote forge.
+*   **Location:** `src/branch_fixer/services/git/pr_manager.py`.
+
+#### 5. Architectural Divergence (Dead Code)
+*   **Evidence:** The `FixOrchestrator` class contains sophisticated logic for session management, state transitions (`FixSessionState`), and multi-error retries. However, the CLI (`utils/cli.py`) manually iterates through errors and calls `service.attempt_fix` directly.
+*   **Impact:** The `orchestrator.py` module is effectively dead code in the main execution path. Features like "Resume Session" or "Pause" defined in the orchestrator are inaccessible to the user.
+*   **Location:** `src/branch_fixer/utils/cli.py` (Lines 378-436).
+
+### ⚠️ Severity: MEDIUM (Reliability / Performance)
+
+#### 6. Brittle AI Response Parsing
+*   **Evidence:** `AIManager` uses strict string splitting (`response.split("Original code:")[1]...`) to parse LLM output.
+*   **Impact:** Small variations in LLM output (e.g., chatty preambles, Markdown code blocks, whitespace changes) will cause `IndexError` or `ValueError`, crashing the fix attempt.
+*   **Location:** `src/branch_fixer/services/ai/manager.py` (Line 95).
+
+#### 7. Subprocess Overhead in Git Services
+*   **Evidence:** `GitRepository` wraps almost every operation (including status checks) in `subprocess.run(["git", ...])`.
+*   **Impact:** While `GitPython` is imported, it is underutilized. Spawning a shell for every check in a tight loop (e.g., checking branch status for 100 tests) introduces significant performance overhead compared to native bindings.
+*   **Location:** `src/branch_fixer/services/git/repository.py`.
+
+---
+
+## 4. Functional Module Deep-Dive
+
+### 4.1 Domain Layer (`core/`)
+*   **Status:** **Exemplary.**
+*   **Analysis:** `TestError` correctly functions as an Aggregate Root. Value Objects like `ErrorDetails` are immutable (though shallowly frozen). The domain layer is pure and testable.
+
+### 4.2 Infrastructure Layer (`services/`)
+*   **`pytest/runner.py`:** Uses a custom `PytestPlugin` to capture structured data (`SessionResult`). This is far superior to regex parsing of stdout. **Risk:** `_current_session` is an instance variable that persists, leading to potential state leakage if the runner is reused across different sessions without explicit cleanup.
+*   **`code/change_applier.py`:** Implements a robust "Backup -> Apply -> Compile Check -> Restore" transaction. This is the system's primary safety net.
+*   **`ai/manager.py`:** Uses `litellm` for model agility (good), but error handling is generic (`raise ValueError`), masking the difference between API failures and parsing failures.
+
+### 4.3 Orchestration Layer (`orchestration/`)
+*   **Status:** **Disconnected.**
+*   **Analysis:** The logic here is sound but unused. It defines `FixSession`, `FixSessionState`, and recovery checkpoints, but the CLI implements a simpler, parallel version of this logic ("Script vs. Application" pattern).
+
+---
+
+## 5. Execution Flow Analysis (Actual vs. Intended)
+
+The following traces the **actual** execution path observed in the code, highlighting where it deviates from the architectural intent.
+
+1.  **Start:** User runs `task run:fix`.
+2.  **Setup:** `run_cli.py` initializes `CLI`.
+3.  **Injection:** `CLI.setup_components` creates `FixService` AND `FixOrchestrator`.
+4.  **Discovery:** `TestRunner` executes pytest. Captures failures.
+5.  **Divergence Point:**
+    *   *Intended:* `CLI` delegates to `FixOrchestrator.run_session(errors)`.
+    *   *Actual:* `CLI` calls `process_errors` -> loops list manually -> calls `run_fix_workflow`.
+6.  **Fix Attempt:** `FixService.attempt_fix` is called.
+    *   **Safety:** `ChangeApplier` backs up files.
+    *   **AI:** `AIManager` generates code (brittle parsing).
+    *   **Verify:** `TestRunner` verifies fix in subprocess.
+7.  **Completion:**
+    *   `CLI` calls `GitRepo.create_pull_request_sync` (Stubbed/Fake).
+    *   `CLI` pushes branch.
+    *   `CLI` cleans up local branches.
+
+---
+
+## 6. Recommendations & Roadmap
+
+### Phase 1: Stabilization (Immediate Action)
+1.  **Fix CI Pipeline:** Update `.github/workflows/ci.yml` to use `python-version: '3.13'` to match `pyproject.toml`.
+2.  **Unify Data Models:** Refactor `GitRepository.create_pull_request_sync` to accept `core.models.TestError`. Delete the redundant `services.git.models.GitErrorDetails`.
+3.  **Safety Guard:** Add a runtime environment check for `dev_force_success`. Ensure it logs a WARN level message or requires a specific env var (`PYTEST_FIXER_DEV_MODE=1`) to activate.
+
+### Phase 2: Architectural Alignment (High Priority)
+4.  **Wire the Orchestrator:** Refactor `src/branch_fixer/utils/cli.py` to delegate execution to `FixOrchestrator`. This activates session state tracking, persistence, and centralized retry logic.
+5.  **Implement or Mock PRs Explicitly:**
+    *   *Option A:* Integrate `gh` CLI or `PyGithub` for real PRs.
+    *   *Option B:* Rename method to `simulate_pull_request` and log clearly that this is a dry run.
+
+### Phase 3: Hardening (Medium Priority)
+6.  **Robust AI Parsing:** Replace string splitting with a regex-based parser that handles Markdown code fences (` ```python `) and conversational filler. Implement specific exceptions (`ParsingError` vs `APIError`).
+7.  **Optimize Git Operations:** Refactor `GitRepository` to use `GitPython` object methods for read operations (status, branch list) to avoid subprocess overhead.
+
+
+# Technical Specification: Pytest-Fixer "Live-Fire" Benchmark Harness
+
+**Version:** 2.0 (Canonical Architecture)
+**Date:** January 2025
+**Status:** Ready for Implementation
+**Principles:** Zero Mocking, Ephemeral Isolation, Economic Accountability
+
+---
+
+## 1. Executive Summary
+
+The **"Live-Fire" Benchmark Harness** is an adversarial integration testing system designed to empirically validate the `pytest-fixer` tool. Unlike internal unit tests which rely on mocks, this harness treats the application as a black box and executes it against a curated corpus of real bugs using **live LLM APIs** and **actual Git operations**.
+
+### 1.1 Strategic Objectives
+1.  **Truth Verification:** Definitively validate the "5 Core Claims" of the user story (Discovery, Isolation, Repair, Verification, Delivery) against the finding that the current Pull Request logic is simulated.
+2.  **Economic Calibration:** Measure the exact token consumption and USD cost per fix to establish commercial viability (e.g., "Cost per Successful Fix").
+3.  **Capability Mapping:** Determine the tool's "Skill Ceiling" by testing against a taxonomy of bug types (Syntax vs. Logic vs. Contextual).
+
+---
+
+## 2. System Architecture
+
+To resolve the conflict between **Process Isolation** (required for git safety) and **Telemetry Capture** (required for cost tracking), this specification utilizes a **Hybrid Execution Model**.
+
+### 2.1 Component Diagram
+
+```mermaid
+graph TD
+    subgraph "Harness Host Process"
+        Orchestrator[Benchmark Orchestrator]
+        Spy[Telemetry Spy (LiteLLM Patcher)]
+        Runner[Click CLI Runner]
+        Metrics[JSONL Recorder]
+    end
+
+    subgraph "Ephemeral Sandbox (Temp Dir)"
+        LocalRepo[Working Repository]
+        RemoteRepo[Local Bare 'Origin']
+        CorpusFile[Injected Buggy Code]
+    end
+
+    subgraph "External World"
+        LLM[Real AI Provider API]
+    end
+
+    Orchestrator -->|Provisions| LocalRepo
+    Orchestrator -->|Provisions| RemoteRepo
+    Orchestrator -->|Injects| CorpusFile
+    
+    Orchestrator -->|Activates| Spy
+    Spy --"Intercepts"--> LLM
+    
+    Orchestrator -->|Invokes| Runner
+    Runner -->|Executes in-process| LocalRepo
+    
+    Runner --"Git Push"--> RemoteRepo
+    Spy -->|Usage Data| Metrics
+```
+
+---
+
+## 3. The "Golden Corpus" (Data Layer)
+
+We reject inline string storage (V4 weakness) in favor of a file-based directory structure (V3 strength) to ensure maintainability and syntax highlighting support.
+
+### 3.1 Directory Structure
+```text
+benchmarks/
+├── cases/
+│   ├── 01_syntax_missing_colon/
+│   │   ├── test_file.py       # The buggy code
+│   │   └── manifest.json      # Validation rules
+│   ├── 02_logic_off_by_one/
+│   │   ├── src/
+│   │   │   └── calc.py        # Source bug
+│   │   ├── tests/
+│   │   │   └── test_calc.py   # Failing test
+│   │   └── manifest.json
+│   └── 03_context_missing_fixture/
+│       ├── conftest.py
+│       ├── test_db.py
+│       └── manifest.json
+```
+
+### 3.2 Manifest Schema (`manifest.json`)
+```json
+{
+  "id": "02_logic_off_by_one",
+  "category": "Logic",
+  "difficulty": 2,
+  "expected_error_type": "AssertionError",
+  "success_criteria": {
+    "test_passes": true,
+    "file_must_contain": "range(len(items) + 1)"
+  }
+}
+```
+
+---
+
+## 4. Infrastructure: The "Local Remote" Engine
+
+To verify `git push` without spamming GitHub or requiring network auth, the harness creates a purely local, filesystem-based Git topology.
+
+### 4.1 Git Identity Injection
+**Critical Requirement:** Headless environments (CI/CD) often lack a global git config. The harness must inject a local identity for every ephemeral repo to prevent `git commit` failures.
+
+### 4.2 Provisioning Logic
+```python
+class EnvironmentFactory:
+    def create_sandbox(self, run_id: str) -> SandboxContext:
+        # 1. Create unique temp directory
+        root = Path(tempfile.mkdtemp(prefix=f"bench_{run_id}_"))
+        
+        # 2. Init "Remote" (Bare Repo)
+        origin_path = root / "origin.git"
+        origin_path.mkdir()
+        Repo.init(origin_path, bare=True)
+        
+        # 3. Init "Local" (Worker Repo)
+        work_path = root / "worker"
+        repo = Repo.clone_from(str(origin_path), str(work_path))
+        
+        # 4. CRITICAL: Configure Identity
+        with repo.config_writer() as config:
+            config.set_value("user", "email", "bench@bot.local")
+            config.set_value("user", "name", "Benchmark Bot")
+            
+        return SandboxContext(root, origin_path, work_path, repo)
+```
+
+---
+
+## 5. Telemetry & Execution: The Hybrid Spy
+
+We cannot use `subprocess.run` because `pytest-fixer` does not output token usage to stdout. We must run the application **in-process** using `click.testing.CliRunner` while monkeypatching `litellm` to capture costs.
+
+### 5.1 The Telemetry Spy
+```python
+@dataclass
+class CostMetrics:
+    tokens_in: int = 0
+    tokens_out: int = 0
+    calls: int = 0
+    cost_usd: float = 0.0
+
+class LiveFireSpy:
+    """Context manager to intercept Litellm calls."""
+    def __enter__(self):
+        self.original_completion = litellm.completion
+        litellm.completion = self._intercept
+        self.metrics = CostMetrics()
+        return self
+
+    def _intercept(self, *args, **kwargs):
+        # 1. Passthrough to REAL API
+        response = self.original_completion(*args, **kwargs)
+        
+        # 2. Capture Metrics
+        self.metrics.calls += 1
+        self.metrics.tokens_in += response.usage.prompt_tokens
+        self.metrics.tokens_out += response.usage.completion_tokens
+        # Calculate cost based on model...
+        
+        # 3. Budget Circuit Breaker (Safety)
+        if self.metrics.cost_usd > 2.00:
+            raise BudgetExceededError("Hard Stop: $2.00 limit reached.")
+            
+        return response
+
+    def __exit__(self, ...):
+        litellm.completion = self.original_completion
+```
+
+### 5.2 Execution Loop
+The `HarnessExecutor` orchestrates the run:
+1.  **Provision:** Call `EnvironmentFactory.create_sandbox()`.
+2.  **Seed:** Copy scenario files into `work_path`. Git commit & push (initial state).
+3.  **Spy:** Enter `LiveFireSpy`.
+4.  **Run:** `CliRunner().invoke(cli, ["fix", "--non-interactive", ...])`.
+5.  **Collect:** Merge Spy metrics with CLI exit code and duration.
+
+---
+
+## 6. Verification Protocol (The 5 Claims)
+
+After execution, the harness performs forensic analysis on the sandbox to validate the system's claims.
+
+| Claim | Verification Mechanism | Status Logic |
+| :--- | :--- | :--- |
+| **1. Discovery** | **Log Analysis:** Check if `pytest` output was parsed and `TestError` objects were created. | `FAIL` if CLI output contains "No failing tests found". |
+| **2. Isolation** | **Git Status:** Check `git branch` in `work_path`. | `PASS` if branch `fix-...` exists and is checked out. |
+| **3. Repair** | **File Content:** Read the target file. | `PASS` if file content matches `success_criteria` or parses as valid Python. |
+| **4. Verification** | **Exit Code:** Did the CLI exit with 0? | `PASS` if 0. `FAIL` if 1 (Fix failed or crashed). |
+| **5. Delivery** | **Remote Inspection:** Run `git -C origin.git log --all`. | `PASS` if fix commit exists in `origin`. |
+| **5b. PR (The Lie)** | **Log vs. Reality:** Check logs for "Created pull request". Check memory/network for API calls. | **FLAG** as "Phantom Feature" if log says success but no HTTP traffic occurred. |
+
+---
+
+## 7. Metrics & Reporting (Business Intelligence)
+
+Output is saved to `benchmark_results.jsonl` for longitudinal tracking.
+
+### 7.1 Data Schema
+```json
+{
+  "timestamp": "2025-01-20T10:00:00Z",
+  "scenario_id": "02_logic_off_by_one",
+  "model": "gpt-4o",
+  "result": {
+    "status": "PASS",
+    "pass_at_1": true,
+    "retries": 0,
+    "duration_sec": 12.5
+  },
+  "economics": {
+    "input_tokens": 850,
+    "output_tokens": 120,
+    "cost_usd": 0.045
+  },
+  "verification": {
+    "syntax_valid": true,
+    "tests_passed": true,
+    "pushed_to_remote": true,
+    "pr_created": false
+  }
+}
+```
+
+### 7.2 KPIs
+*   **Pass@1:** % of scenarios fixed without retries.
+*   **Cost Per Fix:** Average USD cost for successful runs.
+*   **Destructive Rate:** Frequency of the AI deleting code or breaking syntax.
+
+---
+
+## 8. Implementation Roadmap
+
+### Phase 1: Plumbing (Days 1-2)
+*   Implement `EnvironmentFactory` with Git Identity configuration.
+*   Implement `LiveFireSpy` with basic token counting.
+*   Create a "Hello World" corpus case (simple syntax error).
+
+### Phase 2: Orchestration (Day 3)
+*   Connect `CliRunner` to the sandbox.
+*   Verify the "Local Remote" push mechanism works manually.
+
+### Phase 3: Corpus Expansion (Days 4-5)
+*   Port the 4 scenarios defined in the Golden Corpus.
+*   Include one "Flaky" test to verify retry logic.
+
+### Phase 4: Calibration (Day 6)
+*   Run the full suite with `gpt-4o`.
+*   Run the full suite with `gpt-3.5-turbo` (or `4o-mini`).
+*   Generate the baseline report establishing the "Skill Floor" and "Skill Ceiling."
+
+## 9. Safety & Constraints
+*   **Budget Cap:** Hard limit of $2.00 per benchmark run.
+*   **Cleanliness:** Use `tempfile` context managers to ensure auto-cleanup of git repos.
+*   **State:** Manually reset `sys.modules` or singleton states in `pytest-fixer` (if any exist) between runs, as `CliRunner` shares memory.
+====
+
+# The Heuristic Engine: Algorithmic Intelligence in Software Repair
+
+**Document Status:** Definitive Architecture & Roadmap
+**Version:** 2.0
+**Context:** Core IP Strategy / Technical Due Diligence
+**Primary Implementation:** `src/branch_fixer/orchestration/` & `services/code/`
+
+---
+
+## 1. Executive Summary: The "Wrapper vs. Algorithm" Distinction
+
+Most AI coding tools operate as "thin wrappers"—they blindly pass a user's prompt to an LLM and accept the output. While effective for simple snippets, this stochastic approach fails in automated engineering workflows due to three critical failure modes:
+
+1.  **Destructive "Fixes":** The AI makes a test pass by deleting the assertion, deleting the test function, or introducing invalid syntax that crashes the runner.
+2.  **Context Pollution:** Feeding 500 lines of library stack traces (`site-packages`) consumes token budget and confuses the model's attention mechanism (the "Lost in the Middle" phenomenon).
+3.  **Mode Collapse:** The model attempts the same failed strategy repeatedly (e.g., fixing an import) without realizing the environment is the root cause.
+
+`pytest-fixer` differentiates itself by implementing a **Heuristic Engine**: a deterministic control layer that acts as a firewall between the raw codebase and the probabilistic AI model. This engine applies static analysis, pattern recognition, and economic logic to optimize the prompt, validate the output, and ensure safety *before* and *after* the AI is invoked.
+
+---
+
+## 2. Heuristic Class I: The "Atomic Safety" Transaction
+
+**Objective:** Prevent the "Fixer" from becoming a "Breaker." Ensure that no matter how badly the AI hallucinates, the user's codebase is never left in a corrupted state.
+
+### 2.1 The Syntax Gatekeeper
+*   **Status:** **[Production]**
+*   **Implementation:** `src/branch_fixer/services/code/change_applier.py` (`_verify_changes`)
+*   **The Algorithm:**
+    Before any code touches the disk permanently or triggers a test run, the system performs static validation.
+    1.  **Buffer:** AI output is written to the file system.
+    2.  **Static Analysis:** The system runs Python's native `compile(source, filename, 'exec')` on the modified file.
+    3.  **Gate:** If `compile()` raises `SyntaxError`:
+        *   The transaction is flagged as **failed**.
+        *   The system immediately triggers a rollback.
+        *   **Telemetry Event:** A "Negative Sample" is logged (Prompt + Invalid Output) for future model fine-tuning.
+
+### 2.2 The Atomic Revert Protocol
+*   **Status:** **[Production]**
+*   **Implementation:** `src/branch_fixer/services/code/change_applier.py` (`apply_changes_with_backup`)
+*   **The Algorithm:**
+    We enforce a "Do No Harm" policy using a strict backup-and-restore capability that mimics a database transaction.
+    1.  **Snapshot:** A unique backup (`.bak`) is created in a hidden `.backups` directory before any write.
+    2.  **Apply:** The AI's changes are applied.
+    3.  **Verify:** The `PytestRunner` executes the specific test.
+    4.  **Rollback:** If the verification crashes, fails, or if the user rejects the fix (in interactive mode), the system explicitly calls `restore_backup`, reverting the file to its exact pre-fix state byte-for-byte.
+
+**Business Value:** This ensures `pytest-fixer` is safe to run on mission-critical repositories. It guarantees that a failed fix attempt leaves zero trace.
+
+---
+
+## 3. Heuristic Class II: Dynamic Strategy Scaling
+
+**Objective:** Balance the "Conservative Fix" against the "Creative Rewrite."
+
+### 3.1 Linear Temperature Ramp
+*   **Status:** **[Production]**
+*   **Implementation:** `src/branch_fixer/orchestration/fix_service.py` & `orchestrator.py`
+*   **The Algorithm:**
+    The system employs a linear escalation strategy to manage model entropy (randomness).
+    *   **Attempt 1:** `initial_temp` (Default: 0.4). Tries a conservative, surgical fix.
+    *   **Attempt N:** `current_temp = initial_temp + (attempt_index * temp_increment)`.
+    *   **Rationale:** We minimize the "blast radius" of the fix first. If the conservative fix fails, we incrementally allow the model more "creativity" to propose refactors or deeper logic changes.
+
+### 3.2 Taxonomy-Driven Router
+*   **Status:** **[Target Architecture / Roadmap]**
+*   **Concept:** The linear ramp is a blunt instrument. The target architecture upgrades this to a router based on `TestError.error_details.error_type`.
+
+| Detected Error Type | Strategy | Temperature | Rationale |
+| :--- | :--- | :--- | :--- |
+| `SyntaxError`, `IndentationError` | **Linter Mode** | `0.1` | Deterministic error. High creativity is harmful. |
+| `AssertionError` | **Logic Mode** | `0.4` | Code runs but logic is wrong. Needs reasoning, not rewriting. |
+| `TimeoutError` | **Optimize Mode** | `0.2` | Requires efficiency optimization, strict adherence to logic. |
+| `RecursionError` | **Refactor Mode** | `0.7` | Likely requires a structural rewrite of the algorithm. |
+
+---
+
+## 4. Heuristic Class III: Context Signal-to-Noise Optimization
+
+**Objective:** Maximize the signal passed to the LLM while minimizing token costs and distraction.
+
+### 4.1 The "User-Frame" Filter
+*   **Status:** **[Target Architecture / Specification]**
+*   **Current State:** The system currently uses regex-based parsing (`services/pytest/parsers/failure_parser.py`) which captures the traceback but does not semantically filter it.
+*   **The Heuristic:**
+    We will implement a filtering layer that parses stack frames into objects before prompt construction.
+    1.  **Parse:** Convert raw traceback text into structured Frame objects.
+    2.  **Filter Rule:**
+        *   **Standard Lib/Site Packages:** If path contains `/site-packages/` or `sys.prefix` -> **Truncate**. Show only function name and line number to establish flow.
+        *   **User Code:** If path matches `git root` -> **Expand**. Show full snippet +/- 5 lines of context.
+    3.  **Inject:** Construct the prompt using *only* the filtered, high-signal frames.
+
+**Business Value:** Reduces token costs by ~40% and significantly increases fix accuracy by forcing the LLM to attend only to mutable user code.
+
+---
+
+## 5. Heuristic Class IV: The "Scope Guard" & Integrity Checks
+
+**Objective:** Prevent the "Lazy Fix" (e.g., deleting the test to make the build green).
+
+### 5.1 The AST Diff Check
+*   **Status:** **[Target Architecture]**
+*   **Concept:** To be implemented in `src/branch_fixer/services/code/change_applier.py` before verification.
+*   **The Algorithm:**
+    Before Gate 3 (Verification), we perform an AST Comparison between `original_code` and `modified_code`.
+    1.  **Symbol Accounting:** Calculate `len(ast.walk(classes))` and `len(ast.walk(functions))`.
+    2.  **The Safety Rule:**
+        *   If `count(functions)` decreases (a function was deleted).
+        *   If the failing test function's name disappears from the AST symbol table.
+    3.  **Action:** **Hard Reject**. Trigger `SafetyError`, revert changes, and penalize the model strategy.
+
+---
+
+## 6. Heuristic Class V: Flaky Test Detection
+
+**Objective:** Prevent false positives caused by non-deterministic tests.
+
+### 6.1 The Reflection Loop
+*   **Status:** **[R&D / Prototype]**
+*   **Implementation:** Logic drafted in `src/branch_fixer/services/ai/manager_design_draft.py`.
+*   **The Algorithm:**
+    1.  **Detection:** If a test fails, the runner checks execution history or runs the test 3 times immediately (`--count=3` logic).
+    2.  **Classification:**
+        *   3/3 Failures: **Deterministic Bug** -> Send to Fixer.
+        *   1/3 or 2/3 Failures: **Flaky Test** -> Apply "Flaky Heuristic".
+    3.  **Strategy Shift:**
+        *   Do *not* ask the AI to "fix the logic."
+        *   Instead, prompt the AI specifically to "Identify race conditions, un-awaited async calls, or shared state pollution."
+
+---
+
+## 7. Heuristic Class VI: Test Enhancement (The "Dual-Mode" Strategy)
+
+**Objective:** Move beyond fixing bugs to actively improving code quality (Mode 2).
+
+### 7.1 Differential Coverage Injection
+*   **Status:** **[Roadmap]**
+*   **The Problem:** Generating tests for code that is already tested is wasteful.
+*   **The Algorithm:**
+    1.  **Heatmap:** Run `pytest --cov --cov-report=json`.
+    2.  **Targeting:** Identify specific **uncovered line ranges** (e.g., `lines 45-58` in `payment_processor.py`).
+    3.  **Prompting:** Constrain the AI to "Write a test specifically to trigger the logic branch at lines 45-58. Do NOT re-test the happy path."
+
+### 7.2 The "Triviality" Filter
+*   **Status:** **[Roadmap]**
+*   **The Problem:** AI generating `assert 1==1` to game coverage metrics.
+*   **The Algorithm:**
+    We reject generated tests that fail a "Cognitive Complexity" threshold via AST analysis:
+    *   **Reject** if `count(Assert) == 0`.
+    *   **Reject** if assertions compare two Literals.
+    *   **Reject** if the test body contains only `pass`.
+
+---
+
+## 8. Summary of IP
+
+This Heuristic Engine transforms `pytest-fixer` from a stochastic text generator into a robust engineering tool.
+
+1.  **Safety (Implemented):** Atomic Transactions and Syntax Gating ensure the tool is safe to use.
+2.  **Adaptability (Implemented):** Linear temperature scaling adjusts to problem difficulty.
+3.  **Intelligence (Planned):** Context filtering and AST scope guards will serve as the "Intellectual Property Moat," preventing the common failure modes of generic AI coding assistants.
+# Addendum: Generative Heuristics & Reflexion Architecture
+
+**Document Status:** Conceptual Design & IP Expansion
+**Parent Document:** "The Heuristic Engine: Algorithmic Intelligence in Software Repair"
+**Context:** Filling the "Generative Gap" and formalizing the "Feedback Loop" for the acquisition strategy.
+
+---
+
+## 1. Executive Summary
+
+This addendum expands the Heuristic Engine to address two critical areas required for the "Dual-Mode" strategy:
+1.  **Generative Mode:** How the system writes *new* tests from scratch without hallucinating imports or context.
+2.  **Reflexion Architecture:** Moving from a linear "Retry" loop to a recursive "Learning" loop, where error feedback drives smarter iterations.
+
+These additions transform the system from a "Fixer" into a true "Quality Engine," significantly increasing the asset's defensibility.
+
+---
+
+## 2. Heuristic Class VII: The "Greenfield" Test Generator
+
+**Objective:** Safely generate valid, high-value tests for uncovered code (Mode 2), solving the "Where do I put this?" and "How do I import this?" problems.
+
+### 7.1 The "Import Topology" Graph
+*   **Status:** **[Target Architecture]**
+*   **The Problem:** LLMs frequently hallucinate imports or fail to resolve relative paths in complex python projects.
+*   **The Heuristic:**
+    Before prompting for a new test, the system builds a mini-graph of the target module.
+    1.  **Scan:** Use `ast` to identify all imports in the *source* file (the code to be tested).
+    2.  **Mirror:** Identify the existing test directory structure. If `src/utils/calc.py` exists, check for `tests/utils/test_calc.py`.
+    3.  **Constraint:** Force the LLM to use a specific import block constructed by the system, rather than letting it guess.
+    *   *Prompt Injection:* "You MUST use the following import statement: `from src.utils.calc import Calculator`."
+
+### 7.2 The "Fixture Scout"
+*   **Status:** **[Target Architecture]**
+*   **The Problem:** Generated tests often fail because they don't use the project's existing `conftest.py` fixtures (e.g., database connections, auth mocks), leading to reinventing the wheel or setup failures.
+*   **The Heuristic:**
+    1.  **Scout:** Scan `tests/conftest.py` (and nearest `conftest.py` to the target) for `@pytest.fixture` decorators.
+    2.  **Extract:** Parse fixture names and docstrings.
+    3.  **Inject:** Provide the LLM with a "Menu of Available Fixtures."
+    *   *Prompt Injection:* "The following fixtures are available for use: `db_session`, `mock_user`. Prefer using them over creating new mocks."
+
+### 7.3 The "Skeleton" Strategy
+*   **Status:** **[Target Architecture]**
+*   **The Algorithm:**
+    To prevent "Blank Page Paralysis" or wild hallucinations:
+    1.  The System generates the *file structure* (Imports + Class definition + `pass`) first.
+    2.  The System validates the imports (does `python -c "import ..."` work?).
+    3.  Only *then* does it ask the AI to fill in the test body targeting the specific coverage gap.
+
+---
+
+## 3. Heuristic Class VIII: The Reflexion Loop (Smart Retries)
+
+**Objective:** Replace "Try Harder" (Temperature Scaling) with "Try Smarter" (Error Feedback).
+
+### 8.1 The Feedback Injection Loop
+*   **Status:** **[Target Architecture]**
+*   **The Problem:** Currently, if a fix fails, we just try again with higher temperature. The model has no idea *why* it failed.
+*   **The Heuristic:**
+    When a fix attempt fails verification (Phase 4):
+    1.  **Capture:** Capture the *new* error message generated by the *attempted* fix.
+    2.  **Diff:** Generate a diff of the attempted change.
+    3.  **Reflect:** Construct a new prompt for the next attempt that includes:
+        *   "You previously tried this change: [Diff]"
+        *   "It resulted in this error: [New Error]"
+        *   "Instruction: Fix the code, but avoid the pattern that caused the new error."
+    *   *Benefit:* This prevents the model from looping on the same invalid solution.
+
+### 8.2 The "Lint-First" Repair
+*   **Status:** **[Target Architecture]**
+*   **The Problem:** `compile()` checks syntax, but not undefined names or unused imports (common AI bugs).
+*   **The Heuristic:**
+    1.  **Pre-Verify:** Before running `pytest` (which is slow), run a linter (e.g., `ruff` or `pyflakes`) on the AI's generated code.
+    2.  **Auto-Fix:** If `ruff` reports "Undefined name 'mock'", automatically reject the fix *or* ask the AI specifically to "Add the missing import for 'mock'".
+    *   *Value:* Reduces the cost of verification cycles by catching cheap errors fast.
+
+---
+
+## 4. Integration Plan
+
+To operationalize these heuristics, the following tasks must be added to **PRD v3**:
+
+1.  **Phase 3.5 (Generative Mode):** Implement `CoverageAnalysis` (parsing `coverage.xml`) and `TestSynthesis` (using the Import Topology heuristic).
+2.  **Phase 4.5 (Reflexion):** Modify `AIManager.generate_fix` to accept an optional `previous_failure_context` argument, enabling the Feedback Injection Loop.
+
+## 5. Revised IP Claims
+
+With this addendum, the IP moat expands significantly:
+
+*   **Context-Aware Generation:** We don't just write tests; we write tests that *fit* the existing project topology (Fixture Scout, Import Topology).
+*   **Recursive Self-Correction:** The system learns from its immediate mistakes within the session (Reflexion Loop), mimicking a human developer's "Code -> Run -> Error -> Fix" cycle.
+====
+This analysis evaluates the **"Heuristic Engine" Whitepaper (and Addendum)** against the strategic requirement of creating a **"Technical Due Diligence Dossier."**
+
+**Verdict:** **Yes, this document is exceptionally strong.** It successfully transmutes standard engineering practices into defensible Intellectual Property. It provides the necessary narrative layer that prevents an acquirer from dismissing the tool as "just a `litellm` wrapper."
+
+However, to withstand a hostile technical audit (where an engineer looks at your code to verify these claims), it requires specific refinements to distinguish between *current capabilities* and *architectural designs*.
+
+Here is the systematic analysis:
+
+### 1. Agreement: Why this is Strategically Strong
+
+*   **The "Wrapper vs. Algorithm" Framing is Perfect:** The Executive Summary explicitly attacks the "thin wrapper" criticism head-on. By defining the AI as merely a stochastic component within a deterministic control layer, you validate the system's value proposition.
+*   **High-Value "Moat" Heuristics:**
+    *   **Class III (Context Filtering):** This is your strongest technical argument. Every developer tool company struggles with context windows. Claiming a heuristic that "Reduces token costs by ~40% while increasing accuracy" is exactly what a buyer wants to acquire.
+    *   **Class VII (Import Topology & Fixture Scout):** This addresses the #1 failure mode of AI coding (hallucinated imports). It proves you understand the *specific* pain points of Python development, not just generic LLM usage.
+*   **The "Safety First" Narrative:** Class I (Atomic Safety) and Class IV (Scope Guard) answer the "Legal/Compliance" questions before they are asked. An acquirer cannot integrate a tool that might delete user code; this documentation proves you have solved that liability.
+
+### 2. Disagreement: Risks and Alignment Gaps
+
+I have identified three specific risks where the documentation might overreach or conflict with the current PRD (Execution Plan).
+
+*   **Risk 1: The "Vaporware" Trap (Status Confusion):**
+    *   *Observation:* The document mixes **[Production]** and **[Target Architecture]**.
+    *   *Critique:* If a Due Diligence team reads this today, they will expect to see the **AST Diff Check** and **Fixture Scout** in the codebase. If they are missing, you lose credibility.
+    *   *Correction:* You must be extremely disciplined here. Either **implement these features immediately** (add them to PRD Phase 3.5), or explicitly label this document as "Architecture & Roadmap 2025" rather than implying current functionality. *Recommendation: Move the "Target Architecture" items to the PRD as mandatory tasks.*
+
+*   **Risk 2: Logic Conflict (Ramping vs. Reflexion):**
+    *   *Observation:* **Class II** describes a "Linear Temperature Ramp" (try harder). **Class VIII** describes a "Reflexion Loop" (try smarter).
+    *   *Critique:* These are mutually exclusive strategies for the retry loop. You cannot easily do both simultaneously without a complex state machine.
+    *   *Correction:* Define the precedence. "Reflexion is the primary recovery mechanism; Temperature Ramping is the fallback if Reflexion yields the same error signature twice."
+
+*   **Risk 3: "Atomic Revert" is just Git:**
+    *   *Observation:* You frame backup/restore as a "Heuristic."
+    *   *Critique:* To a senior engineer, `shutil.copy` or `git stash` is not a heuristic; it's plumbing. Framing it as "Algorithmic Intelligence" might smack of marketing fluff.
+    *   *Correction:* Reframe Class I. Call it the **"Deterministic Safety Layer"**. It is the *foundation* that allows the heuristics to operate, rather than being a heuristic itself.
+
+### 3. Proactive Analysis: Hardening the Asset
+
+To make this document "Acquisition-Ready," add the following technical details to substantiate your claims:
+
+*   **A. The "Decision Tree" Diagram:**
+    The text describes a complex routing logic (Taxonomy-Driven Router). A visual diagram is critical here. It should show:
+    `Error Input` -> `Taxonomy Classifier` -> `Strategy Selection` -> `Context Filter` -> `LLM` -> `AST Guard` -> `Verify`.
+    *Why:* Visuals prove you have thought through the flow control.
+
+*   **B. Quantifiable "Token Economics":**
+    For Class III (Context Filter), add a "Before/After" example.
+    *   *Raw Traceback:* 15,000 tokens (includes `site-packages/django/...`).
+    *   *Filtered Traceback:* 800 tokens (User code only).
+    *   *Business Impact:* "We reduce API costs by 90% for deep-stack framework errors." This is pure gold for a SaaS buyer.
+
+*   **C. The "Anti-Loop" Breaker:**
+    In Class VIII (Reflexion), add a heuristic for **"Semantic Drift."** If the AI changes the code, but the error message remains *exactly the same* (string match) for two iterations, the Heuristic Engine should abort the Reflexion loop and switch to a "Git Reset" or a human fallback. This proves you handle the "Insanity Definition" (doing the same thing expecting different results).
+
+### Final Recommendation
+
+**Use this document.** It is excellent.
+
+**Action Item:** Update **PRD v3** immediately.
+1.  Add **"Phase 3.5: Generative Heuristics"** to implement Class VII (Import/Fixture scouts).
+2.  Add **"Phase 4.5: Reflexion Logic"** to implement Class VIII (Smart Retries).
+
+This ensures that when the acquirer looks under the hood, the engine matches the brochure.
+Based on the "Exit-First" strategy and the current documentation stack (PRD v3, Audit, Benchmark), what is critically missing is the **"Asset Packaging"** layer.
+
+You have a plan to build the machine (PRD) and a plan to test if it runs (Benchmark). You **lack the documentation that proves the machine is hard to replicate.**
+
+For an acquirer (GitHub, CodeRabbit, etc.) to write a check, they must answer the **"Buy vs. Build"** question. Currently, your documentation suggests this is a "wrapper around `litellm` and `git`." If that is true, they will just build it themselves in a hackathon.
+
+To execute the acquisition, you need to create the **"Technical Due Diligence Dossier."** This consists of three missing technical artifacts:
+
+### 1. The "Secret Sauce" Whitepaper (Defensibility)
+**Why it's missing:** The current PRD mentions "Robust AI Generation" and "Prompt Construction" as features, but treats them as implementation details.
+**What is needed:** A document that frames your prompt engineering and error handling logic as **Proprietary IP**.
+*   **The Artifact:** `docs/research/heuristic-engine.md`
+*   **Content:** It must detail the specific, non-obvious heuristics you discovered.
+    *   *Example:* "How we solve the 'Context Window' problem by heuristically truncating stack traces based on library relevance."
+    *   *Example:* "The specific 'Reflection Loop' prompt chain used to fix Flaky tests vs. Logic errors."
+*   **Business Value:** This proves you have solved edge cases the acquirer hasn't thought of yet. It turns "Wrapper" into "Algorithm."
+
+### 2. The Telemetry Data Asset (The "Gold Mine")
+**Why it's missing:** The Benchmark Harness produces JSONL logs (`TestRunMetrics`), but currently, they are just "test results."
+**What is needed:** A strategy to aggregate this into a **Market Intelligence Dataset**.
+*   **The Artifact:** `docs/research/taxonomy-of-failure-report.md` (Generated from Benchmark data).
+*   **Content:** Statistical analysis of *why* tests fail and *how* AI fixes them.
+    *   "We analyzed 500 fix attempts. 30% failed due to 'Hallucinated Imports'. Here is how our architecture prevents that."
+    *   "Logic errors cost $0.05 to fix; Flaky tests cost $0.18."
+*   **Business Value:** You are selling them **Data**, not just code. You are selling the knowledge of *how* LLMs behave in a CI/CD environment.
+
+### 3. The Integration SDK (Portability)
+**Why it's missing:** The PRD focuses entirely on the CLI (`utils/cli.py`). An acquirer like GitHub Actions or SonarQube does not want to shell out to a CLI tool; they want a library they can import into their backend.
+**What is needed:** A distinct "Library Interface" design.
+*   **The Artifact:** `docs/design/sdk-interface.md`.
+*   **Content:** How to run `pytest-fixer` as a Python library without the CLI.
+    *   `from branch_fixer import FixEngine`
+    *   `engine.fix(file_content, error_log)` (No Git dependency, pure memory operation).
+*   **Business Value:** This lowers the "Integration Friction." It tells the buyer: "You can plug this into your SaaS backend tomorrow."
+
+---
+
+### Summary of the Missing Critical Path
+
+To sell the car, you don't just need the blueprints (PRD) and the crash test results (Benchmark). You need the **Patent Filing (Heuristics)** and the **Owner's Manual (SDK)**.
+
+**Recommendation:**
+Add a **"Phase 6"** to your PRD v3 specifically for **"Asset Packaging,"** tasked with generating these three documents. Without them, you are building a tool for users, not an asset for buyers.
