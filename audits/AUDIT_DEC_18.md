@@ -10,25 +10,40 @@
   - **Referenced-only**: appears only as an aside/recommendation (not evidence of review)
   - **Directory-only**: parent directory is checklisted, but the specific file/module is not named anywhere (coverage is ambiguous)
  
- ## High-level inventory snapshot (what exists in the repo)
+## High-level inventory snapshot (what exists in the repo)
   - **Runtime package:** `src/branch_fixer/**` (covered extensively in `QUALITY_AUDIT.md`)
   - **Dev tooling package:** `src/dev/**` (covered in Section VII)
   - **Tests:** `tests/**` (covered in Section V)
   - **Docs:** `docs/**`, `mkdocs.yml`, `README.md` (covered in Section VII)
   - **CI/CD:** `.github/workflows/*.yml` (covered in Section VII)
   - **Other repo surfaces:** `scripts/**`, `.taskmaster/**`, `.windsurfrules`, `CONTRIBUTING.md`, `LICENSE`, `.gitattributes`, `ai-manager-ideas/`, `audits/`, `src/*egg-info/` (**not fully represented** today)
+
+---
+
+## Status update (2025-12-18)
+
+All checklist additions proposed in sections **A–H** have been incorporated into `audits/QUALITY_AUDIT.md` (as new findings rows and new checklist items under Section VII, plus an explicit “Concrete artifacts” sub-bullet under **Generated Artifacts & Secrets Hygiene**). Treat the “Coverage status in `QUALITY_AUDIT.md`” column below as a historical snapshot from before incorporation.
+
+Mapping of the gaps in this document to the corresponding additions in `audits/QUALITY_AUDIT.md`:
+
+- **A (`scripts/**`)**: Finding row `scripts/**` and checklist item **Project Scripts (`scripts/**`)**
+- **B (`.taskmaster/**`)**: Finding row `.taskmaster/**` and checklist item **Task Master Workflow Artifacts (`.taskmaster/**`)** (covers `config.json`, `docs/prd.txt`, and `tasks/**`)
+- **C (`.windsurfrules`)**: Finding row `.windsurfrules` and checklist item **Agent/IDE Rules (`.windsurfrules`)**
+- **D (root metadata)**: Finding rows + checklist items for **Contributor Docs (`CONTRIBUTING.md`)**, **Licensing (`LICENSE`)**, and **Git Attributes (`.gitattributes`)**
+- **E (`src/*egg-info/`)**: Finding row `src/*egg-info/` and checklist item **Build Artifacts Hygiene (`src/*egg-info/`)**
+- **F (misc areas)**: Finding rows + checklist items for **Idea/Prototype Folders (`ai-manager-ideas/`)** and **Audit Artifact Hygiene (`audits/**`)**
+- **G (`src/dev/test_generator/**`)**: Finding row `src/dev/test_generator/**` and checklist item **Test Generation Dev Tooling (`src/dev/test_generator/**`)**
+- **H (local/generated artifacts)**: Checklist sub-bullet “**Concrete artifacts**” under **Generated Artifacts & Secrets Hygiene** (explicitly calls out `.DS_Store`, `.coverage*`, `.pytest_cache/`, `.hypothesis/`, and `.venv/`)
+
+## A. Dev / maintenance scripts (`scripts/**`) not covered
  
- ---
- 
- ## A. Dev / maintenance scripts (`scripts/**`) not covered
- 
- | Gap | Coverage status in `QUALITY_AUDIT.md` | Why it matters | Proposed checklist addition |
+| Gap | Coverage status in `QUALITY_AUDIT.md` | Why it matters | Proposed checklist addition |
  | :--- | :--- | :--- | :--- |
  | `scripts/**` (e.g., `analyze_code.sh`, `hypot_test_gen.py`, `reorganize_project.py`, `setup_project.sh`, debug helpers) | Unmentioned | These scripts can modify the repo, run analysis, generate files, or enforce conventions. If they drift, they can silently break developer workflows, generate incorrect artifacts, or introduce security issues (e.g., executing untrusted code / unsafe shell usage). | Add **Project Scripts (`scripts/**`)**: intended usage, safety, determinism, and whether they are maintained vs legacy. |
  
  ---
  
- ## B. Task Master configuration and PRD (`.taskmaster/**`) not covered
+## B. Task Master configuration and PRD (`.taskmaster/**`) not covered
  
  | Gap | Coverage status in `QUALITY_AUDIT.md` | Why it matters | Proposed checklist addition |
  | :--- | :--- | :--- | :--- |
