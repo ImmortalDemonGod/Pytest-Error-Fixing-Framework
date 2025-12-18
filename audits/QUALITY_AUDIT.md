@@ -14,16 +14,15 @@ This document contains the findings of a comprehensive code audit of the `pytest
 | Component      | Category          | Finding / Observation                                                                                                                       | Severity (Low/Med/High) | Recommendation                                                                                                                  |
 | :------------- | :---------------- | :------------------------------------------------------------------------------------------------------------------------------------------ | :---------------------- | :------------------------------------------------------------------------------------------------------------------------------ |
 | `AIManager`    | Error Handling    | If the AI returns malformed JSON, `_parse_response` raises a generic `ValueError`. This makes it hard for the orchestrator to know *why* it failed. | Medium                  | Create a new `ParsingError` subclass of `AIManagerError` and raise that instead.                                              |
- | `README.md`    | Doc Alignment     | The quick-start guide is excellent but doesn't explicitly mention the need for a `.env` file to store the `OPENAI_API_KEY`.                       | High                    | Add a clear "Configuration" step that shows how to create the `.env` file.                                                      |
- | `core/models.py` | Domain Integrity | Domain invariants rely on plain string `status` fields and generic `ValueError`s (e.g., fixed vs unfixed). This makes it harder for orchestration/CLI layers to distinguish user-error vs system-error and to implement consistent retries/telemetry. | Medium | Introduce domain-specific exceptions (from `core/exceptions.py` or a richer taxonomy) and replace string statuses with an `Enum`/`Literal` + validation. |
- | `core/models.py` | Serialization | `TestError.from_dict()` assumes keys like `fix_attempts` are always present and does not validate `status` values. This is brittle for persisted sessions / schema evolution. | Medium | Use defensive defaults (`data.get("fix_attempts", [])`), validate required fields, and consider schema versioning in storage. |
- | `core/models.py` | Completeness | `CodeChanges` has no `to_dict`/`from_dict`, which may complicate persistence and debugging if changes need to be stored in sessions. | Low | Add explicit serialization methods (or document that `CodeChanges` is transient-only) and ensure orchestrator/storage agree on the representation. |
+ | `README.md`    | Doc Alignment     | The README and docs provide mixed invocation guidance (`task run:fix` vs `python -m branch_fixer.main` vs `python -m src.branch_fixer.main`), reinforcing inconsistent import roots (including tests importing `src.branch_fixer.*`) and likely motivating `sys.path` hacks in `main.py`. | High                    | Standardize on a single invocation/import root and update README/docs/tests accordingly; remove `sys.path` manipulation once unified. |
+| `core/models.py` | Domain Integrity | Domain invariants rely on plain string `status` fields and generic `ValueError`s (e.g., fixed vs unfixed). This makes it harder for orchestration/CLI layers to distinguish user-error vs system-error and to implement consistent retries/telemetry. | Medium | Introduce domain-specific exceptions (from `core/exceptions.py` or a richer taxonomy) and replace string statuses with an `Enum`/`Literal` + validation. |
+| `core/models.py` | Serialization | `TestError.from_dict()` assumes keys like `fix_attempts` are always present and does not validate `status` values. This is brittle for persisted sessions / schema evolution. | Medium | Use defensive defaults (`data.get("fix_attempts", [])`), validate required fields, and consider schema versioning in storage. |
+| `core/models.py` | Completeness | `CodeChanges` has no `to_dict`/`from_dict`, which may complicate persistence and debugging if changes need to be stored in sessions. | Low | Add explicit serialization methods (or document that `CodeChanges` is transient-only) and ensure orchestrator/storage agree on the representation. |
  | `core/exceptions.py` | Error Taxonomy | The exception taxonomy appears mislocated and unused: it defines coordination/workflow/component-interaction errors (orchestration-level concerns) rather than domain invariant violations, is not imported by runtime code, and overlaps in naming with exceptions redefined elsewhere (e.g., orchestration stubs). | Medium | Either redesign `core/exceptions.py` to contain true domain invariant exceptions and adopt them in `core/models.py` + tests, or remove/move these types into the orchestration layer and centralize exception taxonomy to avoid duplicate/competing definitions. |
  | `orchestration/fix_service.py` | Side Effects | A bare `snoop()` call is executed at import-time, which is likely leftover debugging and introduces unexpected behavior/overhead. | High | Remove the stray call and keep snoop usage behind explicit dev flags or targeted decorators. |
  | `orchestration/fix_service.py` | Resilience | If an exception occurs after `apply_changes_with_backup()` succeeds (e.g., `_verify_fix()` raises), there is no guaranteed backup restoration path, so the workspace can be left in a mutated state for subsequent attempts. | High | Ensure restore happens on *all* failure/exception paths once a backup exists (e.g., `finally` block or explicit exception handling that restores when `backup_path` is set). |
  | `orchestration/fix_service.py` | Error Handling | Failures are often collapsed into a generic `FixServiceError` message, reducing the orchestrator/CLI’s ability to classify retryable vs fatal errors and to present consistent user-facing messages. | Medium | Introduce typed exceptions (or structured result objects) so orchestration can decide retry/abort and can report actionable errors without losing context. |
  | `orchestration/orchestrator.py` | State Management | Both `FixService` and `FixOrchestrator` mutate `FixSession.completed_errors`; `FixOrchestrator._handle_error_fix()` appends unconditionally, risking duplicates and skewing completion logic (e.g., counts/"all fixed" checks). | Medium | Centralize session mutation in one layer and guard against duplicates before appending. |
- | `orchestration/orchestrator.py` | Correctness | `FixSession.passed_tests`/`failed_tests` are derived from *fix outcomes* (`error_count - failed_tests`) rather than actual pytest results, which makes session metrics misleading. | Medium | Either rename these fields (e.g., `fixed_errors`) or populate them from the real pytest `SessionResult` data. |
  | `orchestration/orchestrator.py` | Correctness | In `fix_error()`, `FixService` is instantiated with `state_manager=state_manager` where `state_manager` is the imported module, not a `StateManager` instance; this likely breaks state transitions in `_update_session_if_present()`. | High | Pass the configured `StateManager` instance (or `None`) consistently, and add type checks/validation at initialization time. |
  | `orchestration/orchestrator.py` | Error Handling | The module defines `FixOrchestratorError`/`SessionError`, but most code raises `RuntimeError`/`ValueError` and does not catch `FixServiceError`, so a single exception can bypass retry logic and abort the session. | Medium | Use the orchestrator’s exception types consistently and treat known `FixServiceError`s as a failed attempt (unless explicitly fatal). |
  | `orchestration/exceptions.py` | Error Taxonomy | The orchestration exception hierarchy is inconsistent and partially unused: `FixOrchestratorError`/`SessionError`/`FixAttemptError` are not referenced by the orchestrator code, while `FixServiceError` is a separate base type used heavily by `fix_service.py`, making consistent catch/route logic difficult. | Medium | Consolidate under a single orchestration base exception (or make `FixServiceError` a subclass of `FixOrchestratorError`), and preserve structured context (retryable vs fatal + root cause) instead of collapsing most failures into string-wrapped exceptions. |
@@ -58,6 +57,17 @@ This document contains the findings of a comprehensive code audit of the `pytest
  | `config/settings.py` | Security | `DEBUG` is hardcoded to `True` and `SECRET_KEY` is hardcoded (`'your-secret-key'`), which is unsafe if this config is ever used in production paths or logged. | High | Remove hardcoded secrets, default `DEBUG` to `False`, and read settings from environment variables (or a config system). |
  | `config/logging_config.py` | Logging | `setup_logging()` adds handlers each time it is called (potential duplicate logs) and routes snoop logs to the same file without checking existing handlers. There is also no explicit redaction strategy for secrets. | Medium | Make logging setup idempotent (check existing handlers), add redaction for sensitive fields, and consider routing file logs to a tool-owned directory under the repo root. |
  | `pyproject.toml` | Dependencies | Some dependencies appear unused or redundant (`marvin`, `iniconfig`, `pluggy`), and `setup.py` conflicts with `pyproject.toml` as the canonical packaging source. | Medium | Audit imports to remove unused deps, rely on `pyproject.toml` as the single source of truth, and align dependency management (optionally commit `uv.lock` if using uv for reproducible installs). |
+ | `setup.py` | Packaging | `setup.py` declares only `mkdocs` in `install_requires`, conflicting with the `pyproject.toml` dependency list; `pip install .` (CI) likely installs an incomplete environment and can cause runtime/tests to fail. | High | Remove or modernize `setup.py` and add an explicit `pyproject.toml` build-system section so dependencies/entry points come from a single source of truth. |
+ | `services/ai/manager_design_draft.py` | Maintainability | The draft implementation lives in the shipped runtime package and defines a parallel `AIManager` + duplicate models (including a third `TestError`), while also calling async recovery APIs synchronously (`create_checkpoint`, `handle_failure`). Although currently unused, this increases cognitive load and risks accidental import. | Medium | Move to `src/dev/` or docs (or delete) and exclude from runtime/lint/test/package surfaces; reassess whether `marvin` is needed as a dependency. |
+ | `storage/recovery.py` | Atomicity | Recovery point index updates (`recovery_points.json`) are read-modify-write with no atomic replace/locking and may corrupt on crash; restore logic does not actually restore files and uses `print` instead of logging. | Medium | Use atomic write + file locking for index updates, implement a concrete file restore strategy, and route messages through the logger. |
+ | `main.py` | Packaging | The entry point mutates `sys.path` at import time and installs `snoop` globally on import, creating side effects and undermining packaging/venv expectations. | High | Remove `sys.path` hacks, provide a real console entry point, and gate `snoop.install` behind a debug flag with idempotent setup. |
+ | `pytest.ini` | Test Configuration | `pythonpath=src` combined with additional `sys.path` manipulation (e.g., `tests/conftest.py`) and tests importing `src.branch_fixer.*` creates multiple import roots, increasing the risk of duplicate module loads and hard-to-debug import behavior. | Medium | Standardize on a single import strategy (prefer `branch_fixer.*`), remove `sys.path` hacks, and keep `pytest.ini` minimal.
+ | `.github/workflows/*.yml` | CI/CD Reliability | CI uses Python 3.10 despite `requires-python >= 3.13`, and other workflows reference a missing `requirements.txt` and wrong source dir (`pytest_fixer` vs `branch_fixer`), making CI/coverage/docstring jobs likely broken. | High | Align workflows with `pyproject.toml` (Python 3.13, install via `uv` or `pip install -e '.[dev]'`) and remove/replace `requirements.txt` assumptions; validate source dirs.
+ | `docs/user-guide/01-installation.md` | Doc Alignment | Docs instruct `uv sync` "from the lock file", but `uv.lock` is currently gitignored, so a clean clone cannot follow the reproducible install steps. | Medium | Either commit `uv.lock` (preferred for reproducibility) or update docs to describe generating a lock / using `uv pip install -e '.[dev]'`.
+ | `docs/user-guide/02-quickstart.md` | Doc Alignment | The quickstart suggests invoking the tool via `python -m src.branch_fixer.main ...`, which conflicts with the Taskfile (`python -m branch_fixer.main`) and reinforces inconsistent import roots. | Medium | Standardize on a single invocation path and update docs to match the supported packaging/entry points.
+ | `.gitignore` | Hygiene | `uv.lock` is gitignored (undermining reproducible installs) and backup directories like `.backups/` (used by `ChangeApplier`) are not explicitly ignored, risking accidental commits. | Medium | Decide whether to commit `uv.lock` and align docs accordingly; ignore tool-generated backup directories consistently.
+ | `src/dev/**` | Packaging | `src/dev` is a Python package (has `__init__.py`) and will be included by `find_packages`, potentially shipping incomplete dev tooling (`dev.*`) to end users. | Medium | Move dev tooling outside `src` or explicitly exclude it from packaging; alternatively, complete and document it.
+ | `.python-version` | Reproducibility | There is no `.python-version` pin despite requiring Python 3.13+, so toolchain alignment relies on external discipline. | Low | Add `.python-version` (or equivalent pinning strategy) and keep it aligned with CI + `pyproject.toml`. |
  | *(Add your findings here)* | ...               | ...                                                                                                                                         | ...                     | ...                                                                                                                             |
 
 ---
@@ -112,7 +122,7 @@ This document contains the findings of a comprehensive code audit of the `pytest
  - [x] **Pytest Parsers (`pytest/parsers/`)**
      -   **Correctness:** Do parsers handle real-world edge cases and remain consistent with the plugin-based capture?
      -   **Usage/Compatibility:** The parser stack is effectively unused and likely incompatible with the current captured output. 
- - [ ] **Non-runtime / Draft Modules (`ai/manager_design_draft.py`)**
+ - [x] **Non-runtime / Draft Modules (`ai/manager_design_draft.py`)**
      -   **Maintainability:** Is draft code clearly isolated/excluded from runtime/lint/test surfaces to avoid confusion?
 
 ### IV. Persistence, State, and Recovery (`src/branch_fixer/storage/`)
@@ -122,7 +132,7 @@ This document contains the findings of a comprehensive code audit of the `pytest
     -   **Code Quality:** Are all `FixSession` fields correctly serialized and deserialized?
 - [x] **State Machine (`state_manager.py`)**
     -   **Architectural Consistency:** Is the state machine logic correctly enforcing valid transitions?
-- [ ] **Recovery & Checkpointing (`recovery.py`)**
+- [x] **Recovery & Checkpointing (`recovery.py`)**
     -   **Resilience:** Are checkpoints created/restored atomically? Is sync/async usage consistent with callers?
 
 ### V. Test Suite Quality (`tests/`)
@@ -133,11 +143,11 @@ This document contains the findings of a comprehensive code audit of the `pytest
     -   **Test Quality:** Do the tests cover key interactions between layers (e.g., `Orchestrator` -> `Service` -> `AIManager`)?
 - [x] **Test Infrastructure (`tests/fixtures/` and `tests/conftest.py`)**
     -   **Code Quality:** Are the fixtures easy to understand and use? Do they set up and tear down state reliably?
-- [ ] **Top-level Tests (`tests/*.py`)**
+- [x] **Top-level Tests (`tests/*.py`)**
     -   **Test Quality:** Are top-level tests stable, intentional, and aligned with CI expectations?
-- [ ] **Intentional Failure / Demo Tests Policy**
+- [x] **Intentional Failure / Demo Tests Policy**
     -   **Resilience:** Are any intentionally failing tests marked/isolated so they don’t break normal `pytest`/CI runs?
-- [ ] **Dev Tooling Tests (`tests/test_generator/`)**
+- [x] **Dev Tooling Tests (`tests/test_generator/`)**
     -   **Completeness:** Does dev tooling have an explicit test strategy, or should these stubs be removed?
 
 ### VI. Cross-Cutting Concerns
@@ -152,28 +162,28 @@ This document contains the findings of a comprehensive code audit of the `pytest
 
 ### VII. Repository Tooling, CI/CD, and Documentation
 
-- [ ] **Entry Point (`src/branch_fixer/main.py`)**
+- [x] **Entry Point (`src/branch_fixer/main.py`)**
     -   **Correctness:** Does startup have side effects (e.g., `sys.path` changes) that could break packaging or user environments?
     -   **Observability:** Is logging/snoop configuration idempotent and correctly scoped to debug/dev modes?
-- [ ] **Workspace Validation (`src/branch_fixer/utils/workspace.py`)**
+- [x] **Workspace Validation (`src/branch_fixer/utils/workspace.py`)**
     -   **Resilience:** Are Git discovery, permission checks, and dependency checks accurate and user-actionable?
-- [ ] **Configuration Modules (`src/branch_fixer/config/settings.py` and `defaults.py`)**
+- [x] **Configuration Modules (`src/branch_fixer/config/settings.py` and `defaults.py`)**
     -   **Security:** Are secrets and debug flags handled safely (no hardcoded secrets, safe defaults)?
     -   **Consistency:** Do defaults align with CLI flags and documentation?
-- [ ] **Packaging Consistency (`pyproject.toml` and `setup.py`)**
+- [x] **Packaging Consistency (`pyproject.toml` and `setup.py`)**
     -   **Correctness:** Is there a single source of truth for dependencies and entry points across dev/CI installs?
-- [ ] **Test Configuration (`pytest.ini`)**
+- [x] **Test Configuration (`pytest.ini`)**
     -   **Correctness:** Do markers, addopts, and pythonpath settings match the intended test execution environment?
-- [ ] **CI/CD Workflows (`.github/workflows/*.yml`)**
+- [x] **CI/CD Workflows (`.github/workflows/*.yml`)**
     -   **Reliability:** Do workflows reference existing files and install dependencies in a way that matches local development?
     -   **Security:** Are secrets handled safely and logs/artifacts free of sensitive data?
-- [ ] **Task Runner (`Taskfile.yml`)**
+- [x] **Task Runner (`Taskfile.yml`)**
     -   **Dev Workflow Consistency:** Do tasks match documented setup, CI behavior, and the actual entry points?
-- [ ] **Docs Build & Alignment (`mkdocs.yml`, `docs/**`, `README.md`)**
+- [x] **Docs Build & Alignment (`mkdocs.yml`, `docs/**`, `README.md`)**
     -   **Doc Alignment:** Do docs accurately describe installation/configuration (e.g., `.env` keys) and CLI behavior?
-- [ ] **Generated Artifacts & Secrets Hygiene (`.gitignore`, `.env`, operational outputs)**
+- [x] **Generated Artifacts & Secrets Hygiene (`.gitignore`, `.env`, operational outputs)**
     -   **Hygiene:** Are backups/logs/session data and other generated artifacts consistently gitignored and cleaned up?
-- [ ] **Dev Tooling (`src/dev/**`)**
+- [x] **Dev Tooling (`src/dev/**`)**
     -   **Scope & Maintenance:** Is dev tooling intentionally supported (with docs/tests) or should it be isolated/removed?
-- [ ] **Runtime/Toolchain Versioning (`.python-version`)**
+- [x] **Runtime/Toolchain Versioning (`.python-version`)**
     -   **Reproducibility:** Are toolchain pins aligned with CI and `pyproject` requirements?
