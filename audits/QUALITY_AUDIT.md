@@ -103,133 +103,133 @@ This document contains the findings of a comprehensive code audit of the `pytest
     -   **Architectural Consistency:** Does the `FixOrchestrator` cleanly manage the `FixSession` lifecycle?
     -   **Code Quality:** Is the multi-retry logic (with temperature scaling) clear and easy to follow?
 - [x] **Orchestration Exceptions (`exceptions.py`)**
-    -   **Error Handling:** Are exceptions typed and used consistently across orchestrator + fix service?
+    - **Error Handling:** Are exceptions typed and used consistently across orchestrator + fix service?
 - [x] **Orchestration Support Modules (`dispatcher.py` and `coordinator.py`)**
-    -   **Completeness:** Are these production code, intentionally stubbed, or dead code? Do they match documented architecture?
+    - **Completeness:** Are these production code, intentionally stubbed, or dead code? Do they match documented architecture?
 
 ### III. Infrastructure Services & External Interactions (`src/branch_fixer/services/`)
 
 - [x] **AI Manager (`ai/manager.py`)**
-    -   **Resilience:** How are LLM API errors (e.g., timeouts, key errors) and malformed responses handled?
-    -   **Code Quality:** Is the prompt construction logic clear? Is the response parsing robust?
+    - **Resilience:** How are LLM API errors (e.g., timeouts, key errors) and malformed responses handled?
+    - **Code Quality:** Is the prompt construction logic clear? Is the response parsing robust?
 - [x] **Code Applier (`code/change_applier.py`)**
-    -   **Resilience:** Is the backup-and-restore mechanism safe and atomic? What happens if the backup or restore operation itself fails?
-    -   **Code Quality:** Is the syntax validation (`compile()`) sufficient for its purpose?
- - [x] **Git Repository (`git/`)**
-     -   **Resilience:** Are `subprocess` and `GitPython` errors handled gracefully and wrapped in custom exceptions?
-     -   **Code Quality:** Is the state management clean (i.e., does the tool reliably return the user to their original branch)?
- - [x] **Pytest Runner (`pytest/`)**
-     -   **Architectural Consistency:** Review `runner.py`. Is the data capture via the custom plugin robust?
-     -   **Code Quality:** Review `error_processor.py`. Is the mapping from a `SessionResult` to domain `TestError`s complete and correct?
- - [x] **Git PR Management + Models (`git/pr_manager.py` and `git/models.py`)**
-     -   **Completeness:** Are PR operations implemented (or explicitly non-goals) and validated?
-     -   **Code Quality:** Are Git-related models coherent and used consistently across services?
- - [x] **Pytest Data Contracts (`pytest/models.py`, `pytest/exceptions.py`, `pytest/error_info.py`, `pytest/config.py`)**
-     -   **Architectural Consistency:** Are result/error schemas stable and complete for downstream consumers (orchestration, prompts, persistence)?
-     -   **Resilience:** Are exceptions typed and actionable (retryable vs fatal)? Is configuration actually used?
- - [x] **Pytest Parsers (`pytest/parsers/`)**
-     -   **Correctness:** Do parsers handle real-world edge cases and remain consistent with the plugin-based capture?
-     -   **Usage/Compatibility:** The parser stack is effectively unused and likely incompatible with the current captured output. 
- - [x] **Non-runtime / Draft Modules (`ai/manager_design_draft.py`)**
-     -   **Maintainability:** Is draft code clearly isolated/excluded from runtime/lint/test surfaces to avoid confusion?
+    - **Resilience:** Is the backup-and-restore mechanism safe and atomic? What happens if the backup or restore operation itself fails?
+    - **Code Quality:** Is the syntax validation (`compile()`) sufficient for its purpose?
+- [x] **Git Repository (`git/`)**
+    - **Resilience:** Are `subprocess` and `GitPython` errors handled gracefully and wrapped in custom exceptions?
+    - **Code Quality:** Is the state management clean (i.e., does the tool reliably return the user to their original branch)?
+- [x] **Pytest Runner (`pytest/`)**
+    - **Architectural Consistency:** Review `runner.py`. Is the data capture via the custom plugin robust?
+    - **Code Quality:** Review `error_processor.py`. Is the mapping from a `SessionResult` to domain `TestError`s complete and correct?
+- [x] **Git PR Management + Models (`git/pr_manager.py` and `git/models.py`)**
+    - **Completeness:** Are PR operations implemented (or explicitly non-goals) and validated?
+    - **Code Quality:** Are Git-related models coherent and used consistently across services?
+- [x] **Pytest Data Contracts (`pytest/models.py`, `pytest/exceptions.py`, `pytest/error_info.py`, `pytest/config.py`)**
+    - **Architectural Consistency:** Are result/error schemas stable and complete for downstream consumers (orchestration, prompts, persistence)?
+    - **Resilience:** Are exceptions typed and actionable (retryable vs fatal)? Is configuration actually used?
+- [x] **Pytest Parsers (`pytest/parsers/`)**
+    - **Correctness:** Do parsers handle real-world edge cases and remain consistent with the plugin-based capture?
+    - **Usage/Compatibility:** The parser stack is effectively unused and likely incompatible with the current captured output. 
+- [x] **Non-runtime / Draft Modules (`ai/manager_design_draft.py`)**
+    - **Maintainability:** Is draft code clearly isolated/excluded from runtime/lint/test surfaces to avoid confusion?
 
 ### IV. Persistence, State, and Recovery (`src/branch_fixer/storage/`)
 
 - [x] **Session Storage (`session_store.py`)**
-    -   **Resilience:** How does the store handle a missing or corrupt `sessions.json` file?
-    -   **Code Quality:** Are all `FixSession` fields correctly serialized and deserialized?
+    - **Resilience:** How does the store handle a missing or corrupt `sessions.json` file?
+    - **Code Quality:** Are all `FixSession` fields correctly serialized and deserialized?
 - [x] **State Machine (`state_manager.py`)**
-    -   **Architectural Consistency:** Is the state machine logic correctly enforcing valid transitions?
+    - **Architectural Consistency:** Is the state machine logic correctly enforcing valid transitions?
 - [x] **Recovery & Checkpointing (`recovery.py`)**
-    -   **Resilience:** Are checkpoints created/restored atomically? Is sync/async usage consistent with callers?
+    - **Resilience:** Are checkpoints created/restored atomically? Is sync/async usage consistent with callers?
 
 ### V. Test Suite Quality (`tests/`)
 
 - [x] **Unit Tests (`tests/unit/`)**
-    -   **Test Quality:** Do tests cover edge cases and error conditions, or just the happy path? Are mocks used effectively?
+    - **Test Quality:** Do tests cover edge cases and error conditions, or just the happy path? Are mocks used effectively?
 - [x] **Integration Tests (`tests/integration/`)**
-    -   **Test Quality:** Do the tests cover key interactions between layers (e.g., `Orchestrator` -> `Service` -> `AIManager`)?
+    - **Test Quality:** Do the tests cover key interactions between layers (e.g., `Orchestrator` -> `Service` -> `AIManager`)?
 - [x] **Test Infrastructure (`tests/fixtures/` and `tests/conftest.py`)**
-    -   **Code Quality:** Are the fixtures easy to understand and use? Do they set up and tear down state reliably?
+    - **Code Quality:** Are the fixtures easy to understand and use? Do they set up and tear down state reliably?
 - [x] **Top-level Tests (`tests/*.py`)**
-    -   **Test Quality:** Are top-level tests stable, intentional, and aligned with CI expectations?
+    - **Test Quality:** Are top-level tests stable, intentional, and aligned with CI expectations?
 - [x] **Intentional Failure / Demo Tests Policy**
-    -   **Resilience:** Are any intentionally failing tests marked/isolated so they don’t break normal `pytest`/CI runs?
+    - **Resilience:** Are any intentionally failing tests marked/isolated so they don’t break normal `pytest`/CI runs?
 - [x] **Dev Tooling Tests (`tests/test_generator/`)**
-    -   **Completeness:** Does dev tooling have an explicit test strategy, or should these stubs be removed?
+    - **Completeness:** Does dev tooling have an explicit test strategy, or should these stubs be removed?
 
 ### VI. Cross-Cutting Concerns
 
 - [x] **Configuration & CLI (`utils/run_cli.py` and `utils/cli.py`)**
-    -   **Architectural Consistency:** How are configuration settings propagated through the system?
-    -   **Resilience:** Is user input validated? How are CLI-level errors reported?
+    - **Architectural Consistency:** How are configuration settings propagated through the system?
+    - **Resilience:** Is user input validated? How are CLI-level errors reported?
 - [x] **Logging (`config/logging_config.py`)**
-    -   **Documentation Alignment:** Do log messages provide a clear and useful trace of the application's execution? Are there any potential secrets being logged?
+    - **Documentation Alignment:** Do log messages provide a clear and useful trace of the application's execution? Are there any potential secrets being logged?
 - [x] **Dependencies (`pyproject.toml` and `uv.lock`)**
-    -   **Architectural Consistency:** Are the dependencies well-chosen? Are there any that seem unnecessary?
+    - **Architectural Consistency:** Are the dependencies well-chosen? Are there any that seem unnecessary?
 - [x] **Operational & Security Posture (Cross-Cutting)**
-    -   **Secret handling:** Are API keys/config handled via env vars/.env without being logged or persisted?
-    -   **Idempotency:** Are repeated runs safe (logging setup, snoop setup, cleanup)?
-    -   **Operational outputs:** Are backups/sessions/logs created under predictable, gitignored locations?
-    -   **Performance constraints:** Are there hot paths (subprocess-heavy loops, verbose stdout) that may not scale?
+    - **Secret handling:** Are API keys/config handled via env vars/.env without being logged or persisted?
+    - **Idempotency:** Are repeated runs safe (logging setup, snoop setup, cleanup)?
+    - **Operational outputs:** Are backups/sessions/logs created under predictable, gitignored locations?
+    - **Performance constraints:** Are there hot paths (subprocess-heavy loops, verbose stdout) that may not scale?
 
 ### VII. Repository Tooling, CI/CD, and Documentation
 
 - [x] **Entry Point (`src/branch_fixer/main.py`)**
-    -   **Correctness:** Does startup have side effects (e.g., `sys.path` changes) that could break packaging or user environments?
-    -   **Observability:** Is logging/snoop configuration idempotent and correctly scoped to debug/dev modes?
+    - **Correctness:** Does startup have side effects (e.g., `sys.path` changes) that could break packaging or user environments?
+    - **Observability:** Is logging/snoop configuration idempotent and correctly scoped to debug/dev modes?
 - [x] **Workspace Validation (`src/branch_fixer/utils/workspace.py`)**
-    -   **Resilience:** Are Git discovery, permission checks, and dependency checks accurate and user-actionable?
+    - **Resilience:** Are Git discovery, permission checks, and dependency checks accurate and user-actionable?
 - [x] **Configuration Modules (`src/branch_fixer/config/settings.py` and `defaults.py`)**
-    -   **Security:** Are secrets and debug flags handled safely (no hardcoded secrets, safe defaults)?
-    -   **Consistency:** Do defaults align with CLI flags and documentation?
+    - **Security:** Are secrets and debug flags handled safely (no hardcoded secrets, safe defaults)?
+    - **Consistency:** Do defaults align with CLI flags and documentation?
 - [x] **Packaging Consistency (`pyproject.toml` and `setup.py`)**
-    -   **Correctness:** Is there a single source of truth for dependencies and entry points across dev/CI installs?
+    - **Correctness:** Is there a single source of truth for dependencies and entry points across dev/CI installs?
 - [x] **Test Configuration (`pytest.ini`)**
-    -   **Correctness:** Do markers, addopts, and pythonpath settings match the intended test execution environment?
+    - **Correctness:** Do markers, addopts, and pythonpath settings match the intended test execution environment?
 - [x] **CI/CD Workflows (`.github/workflows/*.yml`)**
-    -   **Reliability:** Do workflows reference existing files and install dependencies in a way that matches local development?
-    -   **Security:** Are secrets handled safely and logs/artifacts free of sensitive data?
+    - **Reliability:** Do workflows reference existing files and install dependencies in a way that matches local development?
+    - **Security:** Are secrets handled safely and logs/artifacts free of sensitive data?
 - [x] **Task Runner (`Taskfile.yml`)**
-    -   **Dev Workflow Consistency:** Do tasks match documented setup, CI behavior, and the actual entry points?
+    - **Dev Workflow Consistency:** Do tasks match documented setup, CI behavior, and the actual entry points?
 - [x] **Docs Build & Alignment (`mkdocs.yml`, `docs/**`, `README.md`)**
-    -   **Doc Alignment:** Do docs accurately describe installation/configuration (e.g., `.env` keys) and CLI behavior?
- - [x] **Generated Artifacts & Secrets Hygiene (`.gitignore`, `.env`, operational outputs)**
-    -   **Hygiene:** Are backups/logs/session data and other generated artifacts consistently gitignored and cleaned up?
-    -   **Concrete artifacts:** Are `.DS_Store`, `.coverage*`, `.pytest_cache/`, `.hypothesis/`, and `.venv/` ignored and kept out of commits?
- - [x] **Dev Tooling (`src/dev/**`)**
-    -   **Scope & Maintenance:** Is dev tooling intentionally supported (with docs/tests) or should it be isolated/removed?
- - [x] **Test Generation Dev Tooling (`src/dev/test_generator/**`)**
-     -   **Completeness:** Is test generation supported vs experimental/stub, and is there a minimal, documented contract?
-     -   **Safety & Determinism:** Does it avoid executing untrusted code, and are outputs/config/seeds deterministic and controlled?
-     -   **Operational hygiene:** Where are generated tests written, and is there a cleanup/overwrite policy?
-     -   **Packaging:** Is it excluded from runtime packaging unless intentionally supported?
- - [x] **Runtime/Toolchain Versioning (`.python-version`)**
-    -   **Reproducibility:** Are toolchain pins aligned with CI and `pyproject` requirements?
- - [x] **Project Scripts (`scripts/**`)**
-     -   **Intended usage:** Are scripts maintained vs legacy, and are they referenced by docs/Taskfile?
-     -   **Safety:** Do scripts avoid unsafe defaults (destructive operations, network installs) and require confirmation/dry-run?
-     -   **Portability:** Are there hardcoded absolute paths or OS-specific assumptions?
-     -   **Tracking policy:** Are scripts intentionally tracked, and does `.gitignore` avoid masking new scripts/changes?
- - [x] **Task Master Workflow Artifacts (`.taskmaster/**`)**
-     -   **Correctness:** Are Task Master paths and assumptions aligned with how the repo is actually managed?
-     -   **Versioning policy:** Which files are committed (`docs/prd.txt`, tasks) vs local-only (`config.json`), and is that documented?
-     -   **Privacy/security:** Are telemetry/user identifiers and keys avoided in committed artifacts?
- - [x] **Agent/IDE Rules (`.windsurfrules`)**
-     -   **Consistency:** Are rules deduplicated and aligned with the actual dev workflow (e.g., `task-master` vs missing `scripts/dev.js`)?
-     -   **Security:** Do rules avoid encouraging unsafe automation (secrets, arbitrary command execution)?
- - [x] **Contributor Docs (`CONTRIBUTING.md`)**
-     -   **Alignment:** Does it match README/docs, the Taskfile, and the actual packaging/CI expectations?
-     -   **Reproducibility:** Does it clearly state the supported Python version and lockfile policy?
- - [x] **Licensing (`LICENSE`)**
-     -   **Correctness:** Is the license text correct and consistent with project claims?
-     -   **Compatibility:** Are dependencies/license obligations understood and compatible with the chosen license?
- - [x] **Git Attributes (`.gitattributes`)**
-     -   **Line endings:** Are cross-platform line-ending rules explicit enough for deterministic behavior?
- - [x] **Build Artifacts Hygiene (`src/*egg-info/`)**
-     -   **Hygiene:** Are build artifacts kept out of the source tree (or at least never committed), and is cleanup documented?
- - [x] **Idea/Prototype Folders (`ai-manager-ideas/`)**
-     -   **Intent:** Is this directory intentionally part of the repo surface or a local/experimental area?
-     -   **Git correctness:** If it uses submodules, is `.gitmodules` present and are init/update steps documented?
- - [x] **Audit Artifact Hygiene (`audits/**`)**
-     -   **Staleness policy:** How are audits kept current, and how are old findings/version snapshots identified?
+    - **Doc Alignment:** Do docs accurately describe installation/configuration (e.g., `.env` keys) and CLI behavior?
+- [x] **Generated Artifacts & Secrets Hygiene (`.gitignore`, `.env`, operational outputs)**
+    - **Hygiene:** Are backups/logs/session data and other generated artifacts consistently gitignored and cleaned up?
+    - **Concrete artifacts:** Are `.DS_Store`, `.coverage*`, `.pytest_cache/`, `.hypothesis/`, and `.venv/` ignored and kept out of commits?
+- [x] **Dev Tooling (`src/dev/**`)**
+    - **Scope & Maintenance:** Is dev tooling intentionally supported (with docs/tests) or should it be isolated/removed?
+- [x] **Test Generation Dev Tooling (`src/dev/test_generator/**`)**
+    - **Completeness:** Is test generation supported vs experimental/stub, and is there a minimal, documented contract?
+    - **Safety & Determinism:** Does it avoid executing untrusted code, and are outputs/config/seeds deterministic and controlled?
+    - **Operational hygiene:** Where are generated tests written, and is there a cleanup/overwrite policy?
+    - **Packaging:** Is it excluded from runtime packaging unless intentionally supported?
+- [x] **Runtime/Toolchain Versioning (`.python-version`)**
+    - **Reproducibility:** Are toolchain pins aligned with CI and `pyproject` requirements?
+- [x] **Project Scripts (`scripts/**`)**
+    - **Intended usage:** Are scripts maintained vs legacy, and are they referenced by docs/Taskfile?
+    - **Safety:** Do scripts avoid unsafe defaults (destructive operations, network installs) and require confirmation/dry-run?
+    - **Portability:** Are there hardcoded absolute paths or OS-specific assumptions?
+    - **Tracking policy:** Are scripts intentionally tracked, and does `.gitignore` avoid masking new scripts/changes?
+- [x] **Task Master Workflow Artifacts (`.taskmaster/**`)**
+    - **Correctness:** Are Task Master paths and assumptions aligned with how the repo is actually managed?
+    - **Versioning policy:** Which files are committed (`docs/prd.txt`, tasks) vs local-only (`config.json`), and is that documented?
+    - **Privacy/security:** Are telemetry/user identifiers and keys avoided in committed artifacts?
+- [x] **Agent/IDE Rules (`.windsurfrules`)**
+    - **Consistency:** Are rules deduplicated and aligned with the actual dev workflow (e.g., `task-master` vs missing `scripts/dev.js`)?
+    - **Security:** Do rules avoid encouraging unsafe automation (secrets, arbitrary command execution)?
+- [x] **Contributor Docs (`CONTRIBUTING.md`)**
+    - **Alignment:** Does it match README/docs, the Taskfile, and the actual packaging/CI expectations?
+    - **Reproducibility:** Does it clearly state the supported Python version and lockfile policy?
+- [x] **Licensing (`LICENSE`)**
+    - **Correctness:** Is the license text correct and consistent with project claims?
+    - **Compatibility:** Are dependencies/license obligations understood and compatible with the chosen license?
+- [x] **Git Attributes (`.gitattributes`)**
+    - **Line endings:** Are cross-platform line-ending rules explicit enough for deterministic behavior?
+- [x] **Build Artifacts Hygiene (`src/*egg-info/`)**
+    - **Hygiene:** Are build artifacts kept out of the source tree (or at least never committed), and is cleanup documented?
+- [x] **Idea/Prototype Folders (`ai-manager-ideas/`)**
+    - **Intent:** Is this directory intentionally part of the repo surface or a local/experimental area?
+    - **Git correctness:** If it uses submodules, is `.gitmodules` present and are init/update steps documented?
+- [x] **Audit Artifact Hygiene (`audits/**`)**
+    - **Staleness policy:** How are audits kept current, and how are old findings/version snapshots identified?
