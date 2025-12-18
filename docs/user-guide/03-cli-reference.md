@@ -30,6 +30,7 @@ python -m src.branch_fixer.main fix [OPTIONS]
 | `--fast-run` | `FLAG` | `False` | A debugging mode that only attempts to fix the *first* failing test it finds, then exits. |
 | `--cleanup-only` | `FLAG` | `False` | Skips the fixing workflow and only runs the cleanup process to remove any leftover `fix-...` branches. |
 | `--dev-force-success` | `FLAG` | `False` | A development flag that marks all fix attempts as successful without calling the AI, useful for testing the workflow logic. |
+| `--version` | `FLAG` | `False` | Show the version number and exit. |
 | `--help` | `FLAG` | `False` | Show the help message and exit. |
 
 ---
