@@ -19,6 +19,10 @@
 
 Everything below lists **coverage gaps** (or “coverage uncertainty”) with a concrete checklist addition to close each gap.
 
+## Status update (2025-12-18)
+
+All checklist additions proposed in sections **A–G** have been incorporated into `audits/QUALITY_AUDIT.md` (including the repo-tooling items in Section VII and an explicit cross-cutting item for **Operational & Security Posture**). Treat the “Coverage status” column below as a historical snapshot from the time this document was written.
+
 ---
 
 ## A. Runtime code gaps (`src/branch_fixer/`) not named in the checklist
