@@ -398,28 +398,6 @@ def test_process_interactive_error(cli_instance: CLI, mock_test_error: TestError
 
 def test_process_errors_interactive_quit(cli_instance: CLI, mock_test_error: TestError, capsys: pytest.CaptureFixture) -> None:
     errors = [mock_test_error, mock_test_error]
-
-
-# -----------------------------------------------------------------------------
-# TEST: --version flag
-# -----------------------------------------------------------------------------
-
-@patch("src.branch_fixer.utils.run_cli.get_version", return_value="1.2.3-test")
-def test_cli_version_flag(mock_get_version) -> None:
-    """
-    Test that the '--version' flag prints the version and exits cleanly.
-    """
-    runner = CliRunner()
-    result = runner.invoke(cli_entry_point, ["--version"])
-
-    # 1. Verify the command succeeded (exit code 0)
-    assert result.exit_code == 0, f"CLI exited with code {result.exit_code}"
-    
-    # 2. Verify the output is exactly the version string from the callback
-    # The original implementation used `version_proc`, which has a different output format.
-    # This test is now aligned with the `@click.version_option` default output.
-    expected_output = "pytest-fixer, version 1.2.3-test\n"
-    assert result.output == expected_output, f"Output was:\n{result.output}"
     with patch.object(cli_instance, "_process_interactive_error", side_effect=[False]), \
          patch.object(cli_instance, "setup_signal_handlers"), \
          patch.object(cli_instance, "cleanup"):
@@ -430,6 +408,23 @@ def test_cli_version_flag(mock_get_version) -> None:
 
     out = capsys.readouterr().out
     assert "Starting fix attempts for 2 failing tests." in out
+
+
+# -----------------------------------------------------------------------------
+# TEST: --version flag
+# -----------------------------------------------------------------------------
+
+def test_cli_version_flag() -> None:
+    """
+    Test that the '--version' flag prints the installed version and exits cleanly.
+    """
+    from branch_fixer.utils.run_cli import get_version
+    runner = CliRunner()
+    result = runner.invoke(cli_entry_point, ["--version"])
+
+    assert result.exit_code == 0, f"CLI exited with code {result.exit_code}"
+    expected_output = f"pytest-fixer, version {get_version()}\n"
+    assert result.output == expected_output, f"Output was:\n{result.output}"
 
 
 def test_process_errors_non_interactive(cli_instance: CLI, mock_test_error: TestError) -> None:
