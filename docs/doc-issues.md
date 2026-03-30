@@ -6,76 +6,118 @@ Audit conducted 2026-03-30. Critical user-guide fixes already applied.
 
 ## Project Feature Status
 
-This project has TWO intended features, only ONE of which is implemented:
+This project has TWO features. Both exist, but in different states of integration.
 
-### Feature 1: Test Fixing — IMPLEMENTED
+### Feature 1: Test Fixing — FULLY INTEGRATED
 Entry point: `.venv/bin/python -m branch_fixer.main fix`
-Code lives in: `src/branch_fixer/`
+Code: `src/branch_fixer/` — full DDD architecture, wired to CLI, tests exist
 
-### Feature 2: Test Generation — SCAFFOLD ONLY, NOT IMPLEMENTED
-Entry point: `src/dev/cli/generate.py` — empty file
-Code lives in: `src/dev/test_generator/` — every single file is 0 bytes
+### Feature 2: Test Generation — WORKING SCRIPT, NOT YET INTEGRATED
+The actual implementation lives in `scripts/hypot_test_gen.py` — it is real,
+working code. The `src/dev/test_generator/` directory is empty scaffolding
+created afterwards to receive a cleaned-up version of this script.
 
-The full intended architecture for test generation:
-- `src/dev/test_generator/analyze/parser.py` — parse source to find untested functions
-- `src/dev/test_generator/analyze/extractor.py` — extract function signatures/docstrings
-- `src/dev/test_generator/generate/strategies/hypothesis.py` — property-based test generation
-- `src/dev/test_generator/generate/strategies/pynguin.py` — automated test synthesis
-- `src/dev/test_generator/generate/strategies/fabric.py` — LLM-based test generation
-- `src/dev/test_generator/generate/templates.py` — test templates
-- `src/dev/test_generator/generate/optimizer.py` — deduplicate/optimize generated tests
-- `src/dev/test_generator/output/formatter.py` — format output
-- `src/dev/test_generator/output/writer.py` — write to disk
-- `src/dev/shared/` — shared git, logging, testing utilities (also empty)
+**What `scripts/hypot_test_gen.py` actually does:**
+- Parses a Python source file with AST (`ModuleParser`) to discover all
+  public classes, methods, and functions (`TestableEntity`)
+- Calls `hypothesis write <module.path.Entity>` for each entity to auto-generate
+  property-based tests
+- Applies smart variant selection based on method name patterns:
+  - `encode`/`decode` → roundtrip tests
+  - `transform`/`convert` → idempotent tests
+  - `validate`/`verify` → errors-equivalent tests
+  - `add`/`multiply` → binary-op tests
+- Post-processes output with an AST transformer (`TestFixer`) that fixes duplicate
+  `self` parameters that `hypothesis write` sometimes emits
+- Writes generated tests to `generated_tests/` directory
+- Entry point: `python scripts/hypot_test_gen.py <path/to/source.py>`
+
+**What `src/dev/test_generator/` is:**
+Empty placeholder files for the planned refactored/integrated version:
+- `analyze/parser.py` ← will replace `ModuleParser` in hypot_test_gen.py
+- `analyze/extractor.py` ← will replace `get_module_contents`
+- `generate/strategies/hypothesis.py` ← will replace `TestGenerator.run_hypothesis_write`
+- `generate/strategies/pynguin.py` ← planned alternative: Pynguin automated test synthesis
+- `generate/strategies/fabric.py` ← planned LLM-based generation (uses prompts/ templates)
+- `generate/templates.py` ← planned for LLM prompt templates
+- `generate/optimizer.py` ← planned deduplication/optimization pass
+- `output/formatter.py`, `output/writer.py` ← planned to replace direct file writes
+- `cli/generate.py` ← planned CLI entry point (currently no `generate` subcommand)
+
+**What the `docs/developer-guide/prompts/` folder is for:**
+These are the AI prompt templates intended for `strategies/fabric.py` (LLM-based
+generation strategy), which is not yet implemented:
+- `pytest-generation.md` — system prompt for generating tests from a function
+- `test-refactoring.md` — prompt for consolidating/improving generated tests
+- `Structured-Test-Development-Process.md` — pre-analysis checklist before generation
+- `Code-Refactoring-Instructions.md` — refactoring reference baked into the refactor prompt
+
+**What `scripts/analyze_code.sh` is:**
+The developer workflow tool that ties everything together today (before the CLI
+integration exists):
+1. Runs CodeScene (code complexity/health analysis) on a source file
+2. Runs Mypy (type checking)
+3. Runs Ruff (linting + formatting, auto-fix)
+4. Detects if a test file exists and runs coverage
+5. If coverage < 100%, auto-activates test mode
+6. Appends the appropriate AI prompt (test generation or refactoring) to the analysis
+7. Copies the full combined report to clipboard — ready to paste into an AI assistant
+
+So the current workflow is: `analyze_code.sh file.py` → clipboard → paste into AI →
+AI writes tests or refactors → developer reviews. The `src/dev/` scaffold is meant
+to automate this loop inside the CLI as a `generate` subcommand.
 
 ---
 
-## What Each Doc Is Actually For
+## What Each Doc Is Actually For (Corrected)
 
 ### User Guide — operational docs for Feature 1 (fix)
-- `01-installation.md` — setup. Fixed.
-- `02-quickstart.md` — example run. Fixed.
-- `03-cli-reference.md` — CLI options for `fix` command. Fixed.
+- `01-installation.md` — setup. Fixed in this audit.
+- `02-quickstart.md` — example run of `fix`. Fixed in this audit.
+- `03-cli-reference.md` — CLI options for `fix`. Fixed in this audit.
+  Note: missing documentation of the planned `generate` subcommand entirely.
 
-### Developer Guide — architecture and process docs
+### Developer Guide
 - `01-architecture.md` — accurate reference for Feature 1's layer design
-- `02-contribution-guide.md` — PR/linting workflow. Minor issue: says `pytest` not `.venv/bin/python -m pytest`
-- `03-testing-strategy.md` — SPLIT: first half (philosophy, layer descriptions) is valid; second half (lines 68–317) is pre-implementation pseudocode for Feature 1 that was never cleaned up. Imports/classes all wrong.
-- `04-execution-flow.md` — call chain walkthrough for Feature 1. Mostly accurate, a few stale code snippets.
+- `02-contribution-guide.md` — PR/linting workflow. Says `pytest` not `.venv/bin/python -m pytest`
+- `03-testing-strategy.md` — SPLIT: first half (philosophy, layer descriptions) valid;
+  second half (lines 68–317) is pre-implementation pseudocode for Feature 1, never cleaned up
+- `04-execution-flow.md` — call chain for Feature 1. Mostly accurate, a few stale snippets
 
-### Developer Guide / prompts — design specs for Feature 2 (generate)
-These are the intended prompts that `src/dev/test_generator/generate/strategies/fabric.py` would use once implemented. Not wired to anything yet.
-- `pytest-generation.md` — system prompt for LLM-based test generation
-- `test-refactoring.md` — prompt for consolidating/improving generated tests
-- `Structured-Test-Development-Process.md` — pre-analysis checklist before generating tests
-- `Code-Refactoring-Instructions.md` — refactoring types reference; also relevant to test improvement step
+### Developer Guide / prompts — AI prompt templates for Feature 2's LLM strategy
+Intended for `strategies/fabric.py`. Currently used manually via `analyze_code.sh`.
 
-### Design and Research — strategic vision for both features
-- `01-strategic-analysis.md` — full outside-in assessment of the project. Covers both features, their purpose, and fit within the "Cultivation" ecosystem. One stale reference: mentions deleted `manager_design_draft.py`.
-- `02-swe-bench-strategy.md` — raw AI conversation about using Feature 1 against the SWE-bench benchmark. Not a structured document but contains real strategic ideas.
-- `03-git-api-design.md` — raw AI conversation about git operation gaps. Relevant backlog for `src/dev/shared/git.py` once Feature 2 is built.
+### Design and Research
+- `01-strategic-analysis.md` — full assessment of both features and their strategic context.
+  References deleted `manager_design_draft.py`.
+- `02-swe-bench-strategy.md` — raw AI conversation about using Feature 1 against SWE-bench
+- `03-git-api-design.md` — raw AI conversation; backlog for `src/dev/shared/git.py`
 
-### Reference — background knowledge that informed the design
-- `ddd-principles.md` — explains why `src/branch_fixer/` is organized the way it is (aggregates, value objects, etc.)
-- `debugging-workflow.md` — systematic debugging methodology that shaped how Feature 1 approaches error analysis
-- `bug-taxonomy.md` — defect classification background; relevant to how Feature 2 would categorize what kinds of tests to generate
-- `hypothesis-guide.md` — practical guide for the Hypothesis strategy in `src/dev/test_generator/generate/strategies/hypothesis.py` once it's implemented
-- `target-audience.md` — user persona analysis (Alex the engineer, Maria the tech lead, Ren the researcher)
+### Reference
+- `ddd-principles.md` — explains Feature 1's architecture choices
+- `debugging-workflow.md` — systematic debugging methodology behind Feature 1's design
+- `bug-taxonomy.md` — defect classification background for Feature 2's test targeting
+- `hypothesis-guide.md` — practical guide for Feature 2's `strategies/hypothesis.py`
+- `target-audience.md` — user persona analysis. Wrong command at line 60.
 
 ---
 
 ## Remaining Accuracy Issues
 
 ### High
-- `developer-guide/03-testing-strategy.md` lines 68–317: planning pseudocode with wrong imports, wrong class names, wrong field names. Delete or replace with real examples.
-- `developer-guide/04-execution-flow.md`: `envvar='OPENAI_API_KEY'` in code snippet (wrong), mentions `marvin` (deleted), shows `async run_command` (actually sync).
+- `developer-guide/03-testing-strategy.md` lines 68–317: planning pseudocode with
+  wrong imports (`src.domain.models`), wrong class names, wrong field names.
+- `developer-guide/04-execution-flow.md`: `envvar='OPENAI_API_KEY'` (wrong),
+  mentions `marvin` (deleted), shows `async run_command` (actually sync).
 
 ### Medium
-- `design-and-research/01-strategic-analysis.md`: references deleted `manager_design_draft.py`.
-- `reference/target-audience.md` line 60: wrong command `python -m src.branch_fixer.main fix`.
-- `developer-guide/02-contribution-guide.md`: says `pytest` not `.venv/bin/python -m pytest`.
+- `design-and-research/01-strategic-analysis.md`: references deleted `manager_design_draft.py`
+- `reference/target-audience.md` line 60: wrong command `python -m src.branch_fixer.main fix`
+- `developer-guide/02-contribution-guide.md`: says `pytest` not `.venv/bin/python -m pytest`
+- No documentation anywhere for Feature 2's current entry point (`scripts/hypot_test_gen.py`)
+  or the developer workflow (`scripts/analyze_code.sh`)
 
 ### Minor
-- `reference/ddd-principles.md`: mentions `GenerationStrategy` — doesn't exist in code yet (would be part of Feature 2).
-- `developer-guide/prompts/test-refactoring.md`: says "ready-to-run with `python -m unittest`" — project uses pytest.
-- `reference/hypothesis-guide.md`: `reversed(reversed(xs)) == xs` in example fails — `reversed()` returns an iterator.
+- `reference/ddd-principles.md`: mentions `GenerationStrategy` — doesn't exist yet
+- `developer-guide/prompts/test-refactoring.md`: says "ready-to-run with `python -m unittest`"
+- `reference/hypothesis-guide.md`: `reversed(reversed(xs)) == xs` fails (iterator, not list)
