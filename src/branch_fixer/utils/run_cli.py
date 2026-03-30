@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Optional
 
 import click
-import snoop
 from branch_fixer.config.logging_config import setup_logging
 from branch_fixer.utils.cli import CLI, ComponentSettings
 
@@ -27,7 +26,7 @@ def get_version() -> str:
 
 @click.group()
 @click.version_option(
-    version=get_version,
+    version=get_version(),
     prog_name="pytest-fixer"
 )
 def cli():
