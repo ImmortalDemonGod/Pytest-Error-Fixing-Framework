@@ -67,9 +67,11 @@ class ChangeApplier:
             # Clean up code markers from AI response
             modified_code = changes.modified_code
             if modified_code.startswith('```python'):
-                modified_code = modified_code[8:]  # Remove ```python
+                modified_code = modified_code[9:]  # Remove ```python (9 chars)
+            elif modified_code.startswith('```'):
+                modified_code = modified_code[3:]   # Remove ``` (3 chars)
             if modified_code.endswith('```'):
-                modified_code = modified_code[:-3]  # Remove ```
+                modified_code = modified_code[:-3]  # Remove trailing ```
             modified_code = modified_code.strip()
 
             # Overwrite the file
