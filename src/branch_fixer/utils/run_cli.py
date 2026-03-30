@@ -38,9 +38,9 @@ def cli():
 @cli.command()
 @click.option(
     "--api-key",
-    envvar="OPENAI_API_KEY",
+    envvar="OPENROUTER_API_KEY",
     required=True,
-    help="OpenAI API key (or set OPENAI_API_KEY env var)",
+    help="OpenRouter API key (or set OPENROUTER_API_KEY env var)",
 )
 @click.option(
     "--max-retries",
