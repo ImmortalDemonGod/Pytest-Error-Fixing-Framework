@@ -308,7 +308,8 @@ class FixOrchestrator:
             self._session.state = FixSessionState.FAILED
             return False
 
-        self._session.completed_errors.append(error)
+        if error not in self._session.completed_errors:
+            self._session.completed_errors.append(error)
         return True
 
     def fix_error(self, error: TestError) -> bool:
