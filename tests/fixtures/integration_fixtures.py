@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 from typing import List
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import Mock, MagicMock
 
 from branch_fixer.core.models import TestError, ErrorDetails
 from branch_fixer.orchestration.fix_service import FixService
@@ -47,7 +47,7 @@ def service_factory():
         max_retries: int = 3
     ) -> FixService:
         # Setup AI manager
-        ai_manager = AsyncMock(spec=AIManager)
+        ai_manager = MagicMock(spec=AIManager)
         ai_manager.generate_fix.side_effect = ai_responses or [
             {"original": "old", "modified": "new"}
         ]
@@ -58,12 +58,12 @@ def service_factory():
 
         # Setup change applier
         change_applier = Mock(spec=ChangeApplier)
-        change_applier.apply_changes.return_value = True
+        change_applier.apply_changes_with_backup.return_value = (True, None)
 
         # Setup git repo
         git_repo = Mock(spec=GitRepository)
-        git_repo.create_branch.return_value = branch_success
-        git_repo.create_pull_request.return_value = True
+        git_repo.create_fix_branch.return_value = branch_success
+        git_repo.create_pull_request_sync.return_value = True
 
         return FixService(
             ai_manager=ai_manager,
