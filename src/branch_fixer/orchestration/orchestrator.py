@@ -16,7 +16,7 @@ from branch_fixer.services.pytest.runner import TestRunner
 
 # Recovery-related imports retained for potential use
 from branch_fixer.storage.recovery import CheckpointError, RecoveryManager
-from branch_fixer.storage import state_manager
+from branch_fixer.storage.state_manager import StateManager
 
 logger = logging.getLogger(__name__)
 
@@ -154,7 +154,7 @@ class FixOrchestrator:
         interactive: bool = True,
         recovery_manager: Optional[RecoveryManager] = None,
         session_store: Optional[Any] = None,  # Type can be specified based on implementation
-        state_manager: Optional[state_manager.StateManager] = None,
+        state_manager: Optional[StateManager] = None,
     ):
         """
         Initialize orchestrator with required components and settings.
@@ -340,8 +340,8 @@ class FixOrchestrator:
                 change_applier=self.change_applier,
                 git_repo=self.git_repo,
                 dev_force_success=False,  # Placeholder for logic
-                session_store=self.session_store,  # Pass session_store if needed
-                state_manager=state_manager,  # Placeholder for state management
+                session_store=self.session_store,
+                state_manager=self.state_manager,
                 session=self._session,
             )
 
