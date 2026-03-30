@@ -3,6 +3,7 @@
 import logging
 import shutil
 import subprocess
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -439,7 +440,7 @@ class PytestRunner:
 
         try:
             # Create subprocess command
-            args = ["pytest", "--override-ini=addopts=", "-p", "no:terminal"]
+            args = [sys.executable, "-m", "pytest", "--override-ini=addopts=", "-p", "no:terminal"]
             if self.working_dir:
                 args.extend(["--rootdir", str(self.working_dir)])
             args.append(f"{str(test_file)}::{test_function}")
