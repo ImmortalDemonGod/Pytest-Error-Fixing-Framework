@@ -2,7 +2,7 @@
 import os
 import pytest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, call
 
 from branch_fixer.core.models import CodeChanges, ErrorDetails, TestError
 from branch_fixer.services.ai.manager import (
@@ -39,10 +39,19 @@ def make_mock_response(content: str):
     return response
 
 
+# Response using new format: Explanation / Confidence / Modified code
 VALID_RESPONSE = (
-    "Original code: def test_add():\n    assert add(2,3) == 5\n"
-    "Modified code: def test_add():\n    assert add(2,3) == 5  # fixed"
+    "Explanation: Changed assert to use correct expected value.\n"
+    "Confidence: 0.9\n"
+    "Modified code:\n"
+    "```python\n"
+    "def test_add():\n"
+    "    assert add(2, 3) == 5\n"
+    "```"
 )
+
+# Minimal valid response — just Modified code block
+MINIMAL_RESPONSE = "Modified code:\n```python\ndef test_add():\n    assert True\n```"
 
 
 # ---------------------------------------------------------------------------
@@ -78,9 +87,16 @@ class TestInit:
     def test_unknown_provider_does_not_set_env(self):
         before = os.environ.copy()
         AIManager(api_key="key", model="ollama/codellama")
-        # ollama has no env var mapping — should not add any new keys
         new_keys = set(os.environ) - set(before)
         assert not new_keys
+
+    def test_thread_starts_empty(self):
+        m = AIManager(api_key=None)
+        assert m._messages == []
+
+    def test_current_error_id_starts_none(self):
+        m = AIManager(api_key=None)
+        assert m._current_error_id is None
 
 
 # ---------------------------------------------------------------------------
@@ -98,14 +114,18 @@ class TestGenerateFixTemperature:
         with pytest.raises(ValueError):
             m.generate_fix(error, temperature=1.1)
 
-    def test_boundary_zero_is_accepted(self, error):
+    def test_boundary_zero_is_accepted(self, error, tmp_path):
+        (tmp_path / "test_math.py").write_text("def test_add(): pass")
+        error.test_file = tmp_path / "test_math.py"
         m = AIManager(api_key=None)
         with patch("branch_fixer.services.ai.manager.completion") as mock_c:
             mock_c.return_value = make_mock_response(VALID_RESPONSE)
             result = m.generate_fix(error, temperature=0.0)
         assert isinstance(result, CodeChanges)
 
-    def test_boundary_one_is_accepted(self, error):
+    def test_boundary_one_is_accepted(self, error, tmp_path):
+        (tmp_path / "test_math.py").write_text("def test_add(): pass")
+        error.test_file = tmp_path / "test_math.py"
         m = AIManager(api_key=None)
         with patch("branch_fixer.services.ai.manager.completion") as mock_c:
             mock_c.return_value = make_mock_response(VALID_RESPONSE)
@@ -118,30 +138,52 @@ class TestGenerateFixTemperature:
 # ---------------------------------------------------------------------------
 
 class TestGenerateFixIntegration:
-    def test_calls_completion_with_correct_model(self, error):
+    def test_calls_completion_with_correct_model(self, error, tmp_path):
+        # generate_fix calls completion twice: once for analysis, once for fix
+        (tmp_path / "test_math.py").write_text("def test_add(): pass")
+        error.test_file = tmp_path / "test_math.py"
         m = AIManager(api_key=None, model="openrouter/openai/gpt-4o-mini")
         with patch("branch_fixer.services.ai.manager.completion") as mock_c:
             mock_c.return_value = make_mock_response(VALID_RESPONSE)
             m.generate_fix(error, temperature=0.4)
-        mock_c.assert_called_once()
-        call_kwargs = mock_c.call_args.kwargs
-        assert call_kwargs["model"] == "openrouter/openai/gpt-4o-mini"
+        # Both calls use the same model
+        for c in mock_c.call_args_list:
+            assert c.kwargs["model"] == "openrouter/openai/gpt-4o-mini"
 
-    def test_calls_completion_with_correct_temperature(self, error):
+    def test_fix_call_uses_requested_temperature(self, error, tmp_path):
+        (tmp_path / "test_math.py").write_text("def test_add(): pass")
+        error.test_file = tmp_path / "test_math.py"
         m = AIManager(api_key=None)
         with patch("branch_fixer.services.ai.manager.completion") as mock_c:
             mock_c.return_value = make_mock_response(VALID_RESPONSE)
             m.generate_fix(error, temperature=0.7)
-        assert mock_c.call_args.kwargs["temperature"] == 0.7
+        # Last call (the fix call) uses the requested temperature
+        fix_call = mock_c.call_args_list[-1]
+        assert fix_call.kwargs["temperature"] == 0.7
 
-    def test_returns_code_changes_on_success(self, error):
+    def test_analysis_call_uses_low_temperature(self, error, tmp_path):
+        (tmp_path / "test_math.py").write_text("def test_add(): pass")
+        error.test_file = tmp_path / "test_math.py"
+        m = AIManager(api_key=None)
+        with patch("branch_fixer.services.ai.manager.completion") as mock_c:
+            mock_c.return_value = make_mock_response(VALID_RESPONSE)
+            m.generate_fix(error, temperature=0.7)
+        # First call (analysis) uses temperature=0.1
+        analysis_call = mock_c.call_args_list[0]
+        assert analysis_call.kwargs["temperature"] == 0.1
+
+    def test_returns_code_changes_on_success(self, error, tmp_path):
+        (tmp_path / "test_math.py").write_text("def test_add(): pass")
+        error.test_file = tmp_path / "test_math.py"
         m = AIManager(api_key=None)
         with patch("branch_fixer.services.ai.manager.completion") as mock_c:
             mock_c.return_value = make_mock_response(VALID_RESPONSE)
             result = m.generate_fix(error, temperature=0.4)
         assert isinstance(result, CodeChanges)
 
-    def test_wraps_litellm_exception_as_completion_error(self, error):
+    def test_wraps_litellm_exception_as_completion_error(self, error, tmp_path):
+        (tmp_path / "test_math.py").write_text("def test_add(): pass")
+        error.test_file = tmp_path / "test_math.py"
         m = AIManager(api_key=None)
         with patch("branch_fixer.services.ai.manager.completion", side_effect=RuntimeError("timeout")):
             with pytest.raises(CompletionError):
@@ -149,49 +191,104 @@ class TestGenerateFixIntegration:
 
 
 # ---------------------------------------------------------------------------
-# _construct_messages
+# Thread persistence — new error vs retry behaviour
 # ---------------------------------------------------------------------------
 
-class TestConstructMessages:
-    def test_returns_two_messages(self, error):
+class TestThreadPersistence:
+    def test_thread_resets_for_new_error(self, tmp_path):
+        f = tmp_path / "test_foo.py"
+        f.write_text("def test_foo(): pass")
+        error1 = TestError(
+            test_file=f,
+            test_function="test_foo",
+            error_details=ErrorDetails(error_type="AssertionError", message="fail"),
+        )
+        error2 = TestError(
+            test_file=f,
+            test_function="test_bar",
+            error_details=ErrorDetails(error_type="AssertionError", message="fail2"),
+        )
         m = AIManager(api_key=None)
-        messages = m._construct_messages(error)
-        assert len(messages) == 2
+        with patch("branch_fixer.services.ai.manager.completion") as mock_c:
+            mock_c.return_value = make_mock_response(VALID_RESPONSE)
+            m.generate_fix(error1, temperature=0.4)
+            msg_count_after_first = len(m._messages)
+            m.generate_fix(error2, temperature=0.4)
+            # Thread reset: message count should be back to a small number, not accumulated
+            assert len(m._messages) <= msg_count_after_first
 
-    def test_first_message_is_system(self, error):
+    def test_retry_appends_failure_feedback_to_thread(self, tmp_path):
+        f = tmp_path / "test_foo.py"
+        f.write_text("def test_foo(): pass")
+        error = TestError(
+            test_file=f,
+            test_function="test_foo",
+            error_details=ErrorDetails(error_type="AssertionError", message="fail"),
+        )
         m = AIManager(api_key=None)
-        messages = m._construct_messages(error)
-        assert messages[0]["role"] == "system"
+        with patch("branch_fixer.services.ai.manager.completion") as mock_c:
+            mock_c.return_value = make_mock_response(VALID_RESPONSE)
+            m.generate_fix(error, temperature=0.4)
+            messages_after_first = len(m._messages)
+            m.generate_fix(error, temperature=0.5)
+            # Thread grew: retry feedback + new user prompt + assistant reply
+            assert len(m._messages) > messages_after_first
 
-    def test_second_message_is_user(self, error):
+    def test_retry_does_not_reset_error_id(self, tmp_path):
+        f = tmp_path / "test_foo.py"
+        f.write_text("def test_foo(): pass")
+        error = TestError(
+            test_file=f,
+            test_function="test_foo",
+            error_details=ErrorDetails(error_type="AssertionError", message="fail"),
+        )
         m = AIManager(api_key=None)
-        messages = m._construct_messages(error)
-        assert messages[1]["role"] == "user"
+        with patch("branch_fixer.services.ai.manager.completion") as mock_c:
+            mock_c.return_value = make_mock_response(VALID_RESPONSE)
+            m.generate_fix(error, temperature=0.4)
+            m.generate_fix(error, temperature=0.5)
+        assert m._current_error_id == str(error.id)
 
-    def test_user_message_contains_test_function(self, error):
+
+# ---------------------------------------------------------------------------
+# _build_initial_prompt
+# ---------------------------------------------------------------------------
+
+class TestBuildInitialPrompt:
+    def test_contains_test_function(self, error):
         m = AIManager(api_key=None)
-        messages = m._construct_messages(error)
-        assert error.test_function in messages[1]["content"]
+        prompt = m._build_initial_prompt(error, "analysis text", "def test_add(): pass")
+        assert error.test_function in prompt
 
-    def test_user_message_contains_error_type(self, error):
+    def test_contains_error_type(self, error):
         m = AIManager(api_key=None)
-        messages = m._construct_messages(error)
-        assert error.error_details.error_type in messages[1]["content"]
+        prompt = m._build_initial_prompt(error, "analysis text", "def test_add(): pass")
+        assert error.error_details.error_type in prompt
 
-    def test_user_message_contains_error_message(self, error):
+    def test_contains_error_message(self, error):
         m = AIManager(api_key=None)
-        messages = m._construct_messages(error)
-        assert error.error_details.message in messages[1]["content"]
+        prompt = m._build_initial_prompt(error, "analysis text", "def test_add(): pass")
+        assert error.error_details.message in prompt
 
-    def test_stack_trace_none_handled_gracefully(self):
+    def test_contains_analysis(self, error):
+        m = AIManager(api_key=None)
+        prompt = m._build_initial_prompt(error, "root cause: off-by-one", "code here")
+        assert "root cause: off-by-one" in prompt
+
+    def test_contains_current_code(self, error):
+        m = AIManager(api_key=None)
+        prompt = m._build_initial_prompt(error, "analysis", "def test_add(): assert 1==2")
+        assert "def test_add(): assert 1==2" in prompt
+
+    def test_stack_trace_none_handled(self):
         m = AIManager(api_key=None)
         error_no_trace = TestError(
             test_file=Path("test_foo.py"),
             test_function="test_foo",
             error_details=ErrorDetails(error_type="AssertionError", message="fail"),
         )
-        messages = m._construct_messages(error_no_trace)
-        assert "None" in messages[1]["content"]
+        prompt = m._build_initial_prompt(error_no_trace, "analysis", "code")
+        assert "None" in prompt
 
 
 # ---------------------------------------------------------------------------
@@ -199,30 +296,30 @@ class TestConstructMessages:
 # ---------------------------------------------------------------------------
 
 class TestParseResponse:
-    def test_parses_well_formed_response(self):
+    def test_parses_modified_code_marker(self):
         m = AIManager(api_key=None)
-        response = "Original code: old code\nModified code: new code"
-        result = m._parse_response(response)
-        assert result.original_code == "old code"
-        assert result.modified_code == "new code"
+        result = m._parse_response(VALID_RESPONSE)
+        assert isinstance(result, CodeChanges)
+        assert "def test_add" in result.modified_code
+
+    def test_parses_minimal_response(self):
+        m = AIManager(api_key=None)
+        result = m._parse_response(MINIMAL_RESPONSE)
+        assert isinstance(result, CodeChanges)
+
+    def test_fallback_on_no_marker(self):
+        m = AIManager(api_key=None)
+        # No "Modified code:" marker — should fall back to whole response, not raise
+        result = m._parse_response("def test_foo(): pass")
+        assert result.modified_code == "def test_foo(): pass"
 
     def test_parses_multiline_modified_code(self):
         m = AIManager(api_key=None)
-        response = "Original code: x = 1\nModified code: x = 1\ny = 2\nz = 3"
+        response = "Modified code:\n```python\nx = 1\ny = 2\nz = 3\n```"
         result = m._parse_response(response)
         assert "y = 2" in result.modified_code
 
-    def test_raises_on_missing_original_code_marker(self):
+    def test_original_code_is_empty_string(self):
         m = AIManager(api_key=None)
-        with pytest.raises(ValueError):
-            m._parse_response("Modified code: new code")
-
-    def test_raises_on_missing_modified_code_marker(self):
-        m = AIManager(api_key=None)
-        with pytest.raises(ValueError):
-            m._parse_response("Original code: old code")
-
-    def test_raises_on_empty_response(self):
-        m = AIManager(api_key=None)
-        with pytest.raises(ValueError):
-            m._parse_response("")
+        result = m._parse_response(VALID_RESPONSE)
+        assert result.original_code == ""
