@@ -53,6 +53,27 @@ class AIManager:
             api_key="sk-or-...",
             model="openrouter/openai/gpt-4o-mini"
         )
+
+    # -------------------------------------------------------------------------
+    # Not yet implemented (from manager_design_draft.py):
+    #
+    # - Flaky test detection: run a test N times before fixing; if it has mixed
+    #   pass/fail results it's flaky and shouldn't be "fixed" at all.
+    #
+    # - Line-level surgical edits: instead of replacing the whole file, generate
+    #   LineChange(action, line_number, content) objects and apply in reverse line
+    #   order to avoid index shifting. Requires a model that reliably produces
+    #   structured diffs (current OpenRouter models don't).
+    #
+    # - Confidence-gated retry: if confidence score < threshold, skip straight to
+    #   the next retry rather than applying a low-confidence fix.
+    #
+    # - Docker isolation: run verification tests inside a container so the fix
+    #   doesn't depend on the local venv state.
+    #
+    # - ManagerState.success_rate: track all FixAttempt outcomes across a session
+    #   to report per-model fix rates.
+    # -------------------------------------------------------------------------
     """
 
     def __init__(
