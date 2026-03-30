@@ -301,11 +301,13 @@ class PytestRunner:
             if not result:
                 # Safely extract test_path and test_function with defaults
                 test_path = Path(report.fspath) if report.fspath else Path("unknown")
-                test_function = (
-                    report.function.__name__
-                    if hasattr(report, "function")
-                    else "unknown"
-                )
+                # report.function exists in some contexts; fall back to nodeid parsing
+                if hasattr(report, "function") and report.function is not None:
+                    test_function = report.function.__name__
+                elif "::" in report.nodeid:
+                    test_function = report.nodeid.split("::")[-1]
+                else:
+                    test_function = "unknown"
 
                 result = TestResult(
                     nodeid=report.nodeid,
