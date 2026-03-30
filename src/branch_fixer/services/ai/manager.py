@@ -175,12 +175,36 @@ class AIManager:
     def _reset_thread(self) -> None:
         self._messages = [{"role": "system", "content": _SYSTEM_PROMPT}]
 
+    @staticmethod
+    def _clean_stack_trace(stack_trace: Optional[str]) -> str:
+        """
+        Strip internal pytest frames from a longrepr string.
+
+        The in-process runner with -p no:terminal causes pytest assertion
+        introspection to fail, polluting the longrepr with internal venv
+        tracebacks after the first '_ _ _' separator line.
+        Only the section before that separator is relevant to the test author.
+        """
+        if not stack_trace:
+            return "None"
+        # Split on the separator line (underscores with spaces, e.g. "_ _ _ _ _")
+        import re
+        parts = re.split(r"\n[_ ]{10,}\n", stack_trace, maxsplit=1)
+        cleaned = parts[0].strip()
+        # Also strip lines that reference .venv internals as a fallback
+        lines = [
+            line for line in cleaned.splitlines()
+            if ".venv/" not in line
+        ]
+        return "\n".join(lines).strip() or stack_trace[:300]
+
     def _analyze_error(self, error: TestError) -> str:
         """
         Quick analysis call — NOT added to the main fix thread.
         Returns a short description of root cause and fix strategy.
         Uses temperature=0.1 for factual, deterministic output.
         """
+        stack_trace = self._clean_stack_trace(error.error_details.stack_trace)
         messages = [
             {
                 "role": "system",
@@ -194,7 +218,7 @@ class AIManager:
                     f"Test: {error.test_function} in {error.test_file}\n"
                     f"Error type: {error.error_details.error_type}\n"
                     f"Error message: {error.error_details.message}\n"
-                    f"Stack trace: {error.error_details.stack_trace or 'None'}"
+                    f"Stack trace: {stack_trace}"
                 ),
             },
         ]
@@ -208,6 +232,7 @@ class AIManager:
     def _build_initial_prompt(
         self, error: TestError, analysis: str, current_code: str
     ) -> str:
+        stack_trace = self._clean_stack_trace(error.error_details.stack_trace)
         return (
             f"Fix this failing test.\n\n"
             f"Root cause analysis: {analysis}\n\n"
@@ -215,7 +240,7 @@ class AIManager:
             f"Test file: {error.test_file}\n"
             f"Error type: {error.error_details.error_type}\n"
             f"Error message: {error.error_details.message}\n"
-            f"Stack trace: {error.error_details.stack_trace or 'None'}\n\n"
+            f"Stack trace:\n{stack_trace}\n\n"
             f"Current file content:\n```python\n{current_code}\n```\n\n"
             f"Provide the complete fixed file."
         )
