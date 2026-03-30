@@ -40,12 +40,12 @@ class StateManager:
 
         # Valid transitions based on state strings
         self.valid_transitions: Dict[str, Set[str]] = {
-            'INITIALIZING': {'RUNNING', 'FAILED'},
-            'RUNNING': {'PAUSED', 'COMPLETED', 'FAILED', 'ERROR'},
-            'PAUSED': {'RUNNING', 'FAILED'},
-            'ERROR': {'RUNNING', 'FAILED'},
-            'FAILED': set(),      # Terminal state
-            'COMPLETED': set()    # Terminal state
+            'initializing': {'running', 'failed'},
+            'running': {'paused', 'completed', 'failed', 'error'},
+            'paused': {'running', 'failed'},
+            'error': {'running', 'failed'},
+            'failed': set(),      # Terminal state
+            'completed': set()    # Terminal state
         }
         self._transitions: Dict[UUID, List[StateTransition]] = {}
 
@@ -139,7 +139,7 @@ class StateManager:
             bool indicating if state is valid
         """
         # Example logic:
-        if session.state.value == "COMPLETED":
+        if session.state.value == "completed":
             # Validate that all errors are done
             if len(session.completed_errors) < len(session.errors):
                 raise StateValidationError("Session is marked COMPLETED but not all errors are fixed.")
