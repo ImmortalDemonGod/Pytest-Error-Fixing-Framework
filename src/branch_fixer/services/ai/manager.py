@@ -40,7 +40,7 @@ class AIManager:
     def __init__(
         self,
         api_key: Optional[str],
-        model: str = "openai/gpt-4o-mini",
+        model: str = "openrouter/openai/gpt-4o-mini",
         base_temperature: float = 0.4,
     ):
         """
@@ -48,22 +48,28 @@ class AIManager:
 
         Args:
             api_key: API key (optional for some providers like Ollama)
-            model: Model identifier in format "provider/model" 
+            model: Model identifier in format "provider/model"
+                   e.g. "openrouter/openai/gpt-4o-mini",
+                        "openrouter/anthropic/claude-3-5-sonnet",
+                        "ollama/codellama"
             base_temperature: Default temperature for generations
         """
+        import os
         self.api_key = api_key
         self.model = model
         self.base_temperature = base_temperature
 
-        # Set API key for providers that need it
+        # Set API key env var scoped to the provider prefix
         if api_key:
-            import os
             provider = model.split('/')[0].lower()
-            if provider == 'openai':
-                os.environ["OPENAI_API_KEY"] = api_key
-            elif provider == 'anthropic':
-                os.environ["ANTHROPIC_API_KEY"] = api_key
-            # Add other providers as needed
+            env_var_map = {
+                'openrouter': 'OPENROUTER_API_KEY',
+                'openai': 'OPENAI_API_KEY',
+                'anthropic': 'ANTHROPIC_API_KEY',
+            }
+            env_var = env_var_map.get(provider)
+            if env_var:
+                os.environ[env_var] = api_key
 
     def generate_fix(self, error: TestError, temperature: float) -> CodeChanges:
         """
