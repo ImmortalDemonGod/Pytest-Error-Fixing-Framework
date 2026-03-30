@@ -11,7 +11,7 @@ The primary command for running the test-fixing workflow.
 **Usage:**
 
 ```bash
-python -m src.branch_fixer.main fix [OPTIONS]
+.venv/bin/python -m branch_fixer.main fix [OPTIONS]
 ```
 
 ---
@@ -20,7 +20,7 @@ python -m src.branch_fixer.main fix [OPTIONS]
 
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `--api-key` | `STRING` | (env var) | Your LLM provider API key. Can also be set via the `OPENAI_API_KEY` environment variable. **(Required)** |
+| `--api-key` | `STRING` | (env var) | Your OpenRouter API key. Can also be set via the `OPENROUTER_API_KEY` environment variable. **(Required)** |
 | `--test-path` | `PATH` | (none) | The specific test file or directory to run fixes on. If not provided, `pytest` will discover tests from the root. |
 | `--test-function` | `STRING` | (none) | The specific test function to fix (e.g., `test_add`). Requires `--test-path` to also be set. |
 | `--non-interactive`| `FLAG` | `False` | Runs the tool in fully automated mode without prompting the user for decisions. |
