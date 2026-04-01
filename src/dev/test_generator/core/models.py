@@ -91,7 +91,7 @@ class TestableEntity:
 
     name: str
     module_path: str  # dotted import path, e.g. "branch_fixer.core.models.TestError"
-    entity_type: Literal["class", "method", "function", "instance_method"]
+    entity_type: Literal["class", "method", "function", "instance_method", "module"]
     parent_class: Optional[str] = None
 
     @property
