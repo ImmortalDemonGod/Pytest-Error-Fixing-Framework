@@ -72,23 +72,18 @@ class TestInit:
         AIManager(api_key=None)
         assert os.environ.get("OPENROUTER_API_KEY") == before.get("OPENROUTER_API_KEY")
 
-    def test_openrouter_key_set_in_env(self):
-        AIManager(api_key="or-test-key", model="openrouter/openai/gpt-4o-mini")
-        assert os.environ.get("OPENROUTER_API_KEY") == "or-test-key"
-
-    def test_openai_key_set_in_env(self):
-        AIManager(api_key="sk-test", model="openai/gpt-4o")
-        assert os.environ.get("OPENAI_API_KEY") == "sk-test"
-
-    def test_anthropic_key_set_in_env(self):
-        AIManager(api_key="ant-test", model="anthropic/claude-3")
-        assert os.environ.get("ANTHROPIC_API_KEY") == "ant-test"
-
-    def test_unknown_provider_does_not_set_env(self):
+    def test_api_key_stored_on_instance(self):
+        # API key is no longer injected into os.environ — it's passed per-call
         before = os.environ.copy()
-        AIManager(api_key="key", model="ollama/codellama")
-        new_keys = set(os.environ) - set(before)
-        assert not new_keys
+        mgr = AIManager(api_key="or-test-key", model="openrouter/openai/gpt-4o-mini")
+        assert mgr.api_key == "or-test-key"
+        # os.environ must not have been mutated
+        assert os.environ == before
+
+    def test_api_key_none_does_not_mutate_env(self):
+        before = os.environ.copy()
+        AIManager(api_key=None, model="ollama/codellama")
+        assert os.environ == before
 
     def test_thread_starts_empty(self):
         m = AIManager(api_key=None)

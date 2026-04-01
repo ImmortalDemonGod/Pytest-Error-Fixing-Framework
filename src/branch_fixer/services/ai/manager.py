@@ -94,8 +94,6 @@ class AIManager:
                         "ollama/codellama"
             base_temperature: Default temperature for generations
         """
-        import os
-
         self.api_key = api_key
         self.model = model
         self.base_temperature = base_temperature
@@ -103,18 +101,6 @@ class AIManager:
         # Persistent conversation thread — grows across retries for the same error
         self._messages: List[Dict[str, str]] = []
         self._current_error_id: Optional[str] = None
-
-        # Set API key env var scoped to the provider prefix
-        if api_key:
-            provider = model.split("/")[0].lower()
-            env_var_map = {
-                "openrouter": "OPENROUTER_API_KEY",
-                "openai": "OPENAI_API_KEY",
-                "anthropic": "ANTHROPIC_API_KEY",
-            }
-            env_var = env_var_map.get(provider)
-            if env_var:
-                os.environ[env_var] = api_key
 
     # ------------------------------------------------------------------
     # Public API
@@ -193,6 +179,7 @@ class AIManager:
                 model=self.model,
                 messages=self._messages,
                 temperature=temperature,
+                api_key=self.api_key,
             )
 
             reply = response.choices[0].message.content
@@ -259,7 +246,7 @@ class AIManager:
             },
         ]
         try:
-            response = completion(model=self.model, messages=messages, temperature=0.1)
+            response = completion(model=self.model, messages=messages, temperature=0.1, api_key=self.api_key)
             return response.choices[0].message.content.strip()
         except Exception as e:
             logger.warning(f"Analysis step failed (non-fatal): {e}")
