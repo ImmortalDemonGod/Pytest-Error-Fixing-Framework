@@ -26,6 +26,8 @@ class ChangeApplier:
     """
 
     BACKUP_DIRNAME = ".backups"
+    # Keep at most this many backups per source file; oldest are pruned first.
+    MAX_BACKUPS_PER_FILE = 5
 
     def apply_changes_with_backup(self, test_file: Path, changes: CodeChanges) -> (bool, Path):
         """
@@ -124,9 +126,22 @@ class ChangeApplier:
         try:
             shutil.copy2(file_path, backup_path)
             logger.info(f"Created backup: {backup_path}")
+            self._prune_backups(backups_root, file_path.name)
             return backup_path
         except Exception as e:
             raise BackupError(f"Failed to create backup for {file_path}: {e}") from e
+
+    def _prune_backups(self, backups_root: Path, source_name: str) -> None:
+        """Delete oldest backups for *source_name* beyond MAX_BACKUPS_PER_FILE."""
+        pattern = f"{source_name}-*.bak"
+        existing = sorted(backups_root.glob(pattern), key=lambda p: p.stat().st_mtime)
+        excess = len(existing) - self.MAX_BACKUPS_PER_FILE
+        for old in existing[:excess]:
+            try:
+                old.unlink()
+                logger.debug(f"Pruned old backup: {old.name}")
+            except Exception as exc:
+                logger.warning(f"Could not prune backup {old}: {exc}")
 
     def _restore_backup(self, file_path: Path, backup_path: Path) -> bool:
         """
