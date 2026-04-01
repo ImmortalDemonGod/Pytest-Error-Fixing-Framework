@@ -8,6 +8,7 @@ All tools fail gracefully: if a tool is unavailable or times out the
 corresponding field in AnalysisContext is left empty.
 """
 
+import ast
 import json
 import subprocess
 import sys
@@ -42,6 +43,7 @@ class ContextGatherer:
             mypy_issues=self._gather_mypy(source_path),
             ruff_issues=self._gather_ruff(source_path),
             coverage_gaps=self._gather_coverage(source_path),
+            dependency_code=_gather_dependency_code(source_path, source_code),
         )
 
     # ------------------------------------------------------------------
@@ -112,6 +114,73 @@ class ContextGatherer:
 # ---------------------------------------------------------------------------
 # Module-level pure helpers (testable without instantiating the class)
 # ---------------------------------------------------------------------------
+
+
+def _gather_dependency_code(source_path: Path, source_code: str) -> str:
+    """Return source snippets of classes/functions imported from project modules.
+
+    Parses the source file's imports, finds project-internal modules (same src/
+    root), reads their source, and extracts class/function definitions that are
+    referenced in the source file. This gives the LLM constructor signatures
+    for types it would otherwise not be able to see.
+
+    Returns an empty string if nothing useful is found or on any error.
+    """
+    try:
+        tree = ast.parse(source_code)
+    except SyntaxError:
+        return ""
+
+    # Collect names imported from project-internal modules
+    imported: dict[str, str] = {}  # name -> dotted_module
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module:
+            for alias in node.names:
+                name = alias.asname or alias.name
+                imported[name] = node.module
+
+    if not imported:
+        return ""
+
+    # Find the project root (the directory containing 'src' or the source root)
+    resolved = source_path.resolve()
+    parts = resolved.parts
+    if "src" in parts:
+        src_index = len(parts) - 1 - parts[::-1].index("src")
+        src_root = Path(*parts[: src_index + 1])
+    else:
+        src_root = resolved.parent
+
+    snippets: list[str] = []
+    seen_modules: set[str] = set()
+
+    for _name, module_dotted in imported.items():
+        if module_dotted in seen_modules:
+            continue
+        seen_modules.add(module_dotted)
+
+        # Try to resolve dotted module to a file under src_root
+        rel_path = Path(module_dotted.replace(".", "/") + ".py")
+        candidate = src_root / rel_path
+        if not candidate.exists():
+            continue
+
+        try:
+            dep_source = candidate.read_text(encoding="utf-8")
+            dep_tree = ast.parse(dep_source)
+        except (OSError, SyntaxError):
+            continue
+
+        # Extract only class/function definitions (not the full file)
+        dep_lines = dep_source.splitlines()
+        for node in ast.walk(dep_tree):
+            if isinstance(node, (ast.ClassDef, ast.FunctionDef)):
+                end = getattr(node, "end_lineno", None)
+                if end:
+                    block = "\n".join(dep_lines[node.lineno - 1: end])
+                    snippets.append(f"# from {module_dotted}\n{block}")
+
+    return "\n\n".join(snippets)
 
 
 def find_test_file(source_path: Path) -> Optional[Path]:
