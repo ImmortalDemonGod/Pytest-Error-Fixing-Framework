@@ -174,26 +174,29 @@ class TestCLI:
         branch = cli._create_fix_branch(sample_error)
         assert branch is None
 
-    # _generate_and_apply_fix
-    def test__generate_and_apply_fix_success(self, cli, sample_error, mock_service):
-        mock_service.attempt_fix.return_value = True
-        cli.service = mock_service
+    # _generate_and_apply_fix — now delegates to orchestrator.fix_error (full retry loop)
+    def test__generate_and_apply_fix_success(self, cli, sample_error):
+        mock_orch = Mock()
+        mock_orch.fix_error.return_value = True
+        cli.orchestrator = mock_orch
         assert cli._generate_and_apply_fix(sample_error) is True
+        mock_orch.start_session.assert_called_once_with([sample_error])
+        mock_orch.fix_error.assert_called_once_with(sample_error)
 
-    def test__generate_and_apply_fix_failure_returns_false(self, cli, sample_error, mock_service):
-        mock_service.attempt_fix.return_value = False
-        cli.service = mock_service
+    def test__generate_and_apply_fix_failure_returns_false(self, cli, sample_error):
+        mock_orch = Mock()
+        mock_orch.fix_error.return_value = False
+        cli.orchestrator = mock_orch
         assert cli._generate_and_apply_fix(sample_error) is False
 
-    def test__generate_and_apply_fix_no_service_returns_false(self, cli, sample_error):
-        cli.service = None
+    def test__generate_and_apply_fix_no_orchestrator_returns_false(self, cli, sample_error):
+        cli.orchestrator = None
         assert cli._generate_and_apply_fix(sample_error) is False
 
-    def test__generate_and_apply_fix_attempt_raises_propagates(self, cli, sample_error, mock_service):
-        def raise_err(*args, **kwargs):
-            raise ValueError("boom")
-        mock_service.attempt_fix.side_effect = raise_err
-        cli.service = mock_service
+    def test__generate_and_apply_fix_fix_error_raises_propagates(self, cli, sample_error):
+        mock_orch = Mock()
+        mock_orch.fix_error.side_effect = ValueError("boom")
+        cli.orchestrator = mock_orch
         with pytest.raises(ValueError):
             cli._generate_and_apply_fix(sample_error)
 
