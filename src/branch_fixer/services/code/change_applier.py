@@ -1,4 +1,5 @@
 # branch_fixer/services/code/change_applier.py
+import ast
 from pathlib import Path
 import shutil
 from logging import getLogger
@@ -64,6 +65,9 @@ class ChangeApplier:
           - reverts if syntax fails
         """
         try:
+            # Read original before overwriting (needed for AST guard)
+            original_source = test_file.read_text(encoding='utf-8') if test_file.exists() else ""
+
             # Clean up code markers from AI response
             modified_code = changes.modified_code
             if modified_code.startswith('```python'):
@@ -78,8 +82,8 @@ class ChangeApplier:
             test_file.write_text(modified_code, encoding='utf-8')
             logger.debug(f"Wrote changes to {test_file}")
 
-            # Syntax verification
-            if not self._verify_changes(test_file):
+            # Syntax + AST scope verification
+            if not self._verify_changes(test_file, original_source):
                 logger.warning(
                     f"Changes to {test_file} did not pass local syntax verification. Restoring backup..."
                 )
@@ -137,13 +141,35 @@ class ChangeApplier:
         except Exception as e:
             raise BackupError(f"Failed to restore {file_path} from {backup_path}: {e}") from e
 
-    def _verify_changes(self, file_path: Path) -> bool:
+    def _verify_changes(self, file_path: Path, original_source: str = "") -> bool:
         """
-        Verify file is valid after changes (simple Python syntax check).
+        Verify file is valid after changes.
+
+        Checks:
+        1. Syntax must compile.
+        2. If original_source is provided and was a test file (contained
+           assert statements), the modified version must not reduce assert
+           count to zero — guards against AI deleting all assertions.
         """
         try:
             updated_source = file_path.read_text(encoding='utf-8')
             compile(updated_source, file_path.name, 'exec')
+
+            if original_source:
+                try:
+                    orig_tree = ast.parse(original_source)
+                    new_tree = ast.parse(updated_source)
+                    orig_asserts = sum(1 for n in ast.walk(orig_tree) if isinstance(n, ast.Assert))
+                    new_asserts = sum(1 for n in ast.walk(new_tree) if isinstance(n, ast.Assert))
+                    if orig_asserts > 0 and new_asserts == 0:
+                        logger.error(
+                            f"AST guard: {file_path} had {orig_asserts} assert(s) "
+                            f"but modified version has 0 — rejecting to prevent test deletion"
+                        )
+                        return False
+                except SyntaxError:
+                    pass  # AST comparison is best-effort; syntax check above is authoritative
+
             return True
         except SyntaxError as e:
             logger.error(f"Syntax error in {file_path}: {e}")
