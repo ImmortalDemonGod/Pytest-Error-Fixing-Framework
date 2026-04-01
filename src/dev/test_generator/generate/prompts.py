@@ -52,6 +52,12 @@ _SHARED_RULES = """\
     Class-level patches (`monkeypatch.setattr(ClassName, "method", fn)`) pass
     `self` as the first argument — a function with 0 or 1 fixed args will raise
     TypeError. ALWAYS write: `def raise_err(*args, **kwargs): raise SomeError()`
+14. When using `patch("module.path.ClassName")`, the ClassName MUST actually
+    be an attribute of `module.path` (i.e. imported or defined there). To verify:
+    if `module/path.py` contains `from other.module import Foo`, patch as
+    `module.path.Foo`. If it only passes Foo as a parameter (no import), patch
+    `other.module.Foo` instead and inject the mock as a function argument.
+    NEVER patch a name in a module that doesn't import it.
 """
 
 # ---------------------------------------------------------------------------
