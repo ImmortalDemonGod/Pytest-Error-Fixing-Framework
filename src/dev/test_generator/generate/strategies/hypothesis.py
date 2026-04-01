@@ -9,6 +9,7 @@ Promotes the subprocess-calling logic from scripts/hypot_test_gen.py
 import os
 import subprocess
 import sys
+from pathlib import Path
 from typing import Optional
 
 from src.dev.test_generator.core.models import GenerationVariant, TestableEntity
@@ -35,11 +36,16 @@ class HypothesisStrategy:
     """
 
     @staticmethod
-    def is_available() -> bool:
-        """Return True if the ``hypothesis`` CLI is reachable."""
+    def _hypothesis_bin() -> str:
+        """Return the absolute path to the hypothesis binary in the active venv."""
+        return str(Path(sys.executable).parent / "hypothesis")
+
+    @classmethod
+    def is_available(cls) -> bool:
+        """Return True if the ``hypothesis`` CLI is reachable in the active venv."""
         try:
             result = subprocess.run(
-                ["hypothesis", "--version"],
+                [cls._hypothesis_bin(), "--version"],
                 capture_output=True,
                 timeout=5,
             )
@@ -70,9 +76,10 @@ class HypothesisStrategy:
 
     def _run_hypothesis_write(self, args: str) -> Optional[str]:
         env = self._build_env()
+        cmd = f"{self._hypothesis_bin()} write {args}"
         try:
             result = subprocess.run(
-                f"hypothesis write {args}",
+                cmd,
                 shell=True,
                 capture_output=True,
                 text=True,
