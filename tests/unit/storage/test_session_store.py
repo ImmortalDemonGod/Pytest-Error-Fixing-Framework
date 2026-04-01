@@ -1,200 +1,494 @@
-"""Tests for SessionStore — TinyDB-backed session persistence with full round-trip."""
-import pytest
+import os
+from types import SimpleNamespace
 from pathlib import Path
-from uuid import uuid4
+from datetime import datetime
+from uuid import UUID, uuid4
 
-from branch_fixer.core.models import TestError, ErrorDetails
-from branch_fixer.orchestration.orchestrator import FixSession, FixSessionState
-from branch_fixer.storage.session_store import SessionStore, SessionPersistenceError
+import pytest
+from unittest.mock import patch
+
+import branch_fixer.storage.session_store as ss_mod
+from branch_fixer.storage.session_store import (
+    SessionStore,
+    StorageError,
+    SessionPersistenceError,
+    FixSessionState,
+)
 
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
+class TestStorageError:
+    def test_storage_error_is_exception_subclass_and_catchable(self):
+        assert issubclass(StorageError, Exception)
+        try:
+            raise StorageError("boom")
+        except Exception as e:
+            # Should be caught as a general Exception and specifically StorageError
+            assert isinstance(e, StorageError)
+            assert "boom" in str(e)
+
+    def test_storage_error_message_preserved(self):
+        err = StorageError("disk full")
+        assert "disk full" in str(err)
+
+
+class TestSessionPersistenceError:
+    def test_inheritance_chain(self):
+        assert issubclass(SessionPersistenceError, StorageError)
+        assert issubclass(SessionPersistenceError, Exception)
+
+    def test_message_preserved(self):
+        e = SessionPersistenceError("could not persist")
+        assert "could not persist" in str(e)
+
 
 @pytest.fixture
-def store(tmp_path):
-    return SessionStore(storage_dir=tmp_path / "sessions")
+def storage_dir(tmp_path):
+    # Default storage directory where parent exists
+    return tmp_path / "store"
 
 
-def make_error(name: str = "test_foo") -> TestError:
-    return TestError(
-        test_file=Path(f"tests/{name}.py"),
-        test_function=name,
-        error_details=ErrorDetails(error_type="AssertionError", message="fail"),
-    )
+@pytest.fixture
+def store_instance(storage_dir):
+    """
+    Create a SessionStore instance while patching TinyDB to avoid
+    creating actual DB files in the test environment.
+    """
+    # Create a simple FakeTinyDB that provides a .table() method
+    class FakeTinyDB:
+        def __init__(self, path):
+            self.path = path
+            self._tables = {}
+
+        def table(self, name):
+            tbl = self._tables.get(name)
+            if not tbl:
+                tbl = SimpleNamespace()
+                # default no-op methods to be replaced by tests as needed
+                tbl.get = lambda *args, **kwargs: None
+                tbl.insert = lambda *args, **kwargs: None
+                tbl.update = lambda *args, **kwargs: None
+                tbl.all = lambda *args, **kwargs: []
+                tbl.search = lambda *args, **kwargs: []
+                tbl.remove = lambda *args, **kwargs: []
+                self._tables[name] = tbl
+            return tbl
+
+    with patch("branch_fixer.storage.session_store.TinyDB", side_effect=lambda path: FakeTinyDB(path)):
+        store = SessionStore(storage_dir)
+    return store
 
 
-def make_session(state: FixSessionState = FixSessionState.RUNNING) -> FixSession:
-    s = FixSession()
-    s.state = state
-    return s
+class TestSessionStore:
+    def test_init_success_creates_dir_and_sets_db_and_table(self, storage_dir):
+        # Use patched TinyDB to avoid file creation
+        created = {}
 
+        class FakeTiny:
+            def __init__(self, path):
+                created["path"] = path
+                self._table = SimpleNamespace()
+                self._table.get = lambda *a, **k: None
 
-# ---------------------------------------------------------------------------
-# Initialisation
-# ---------------------------------------------------------------------------
+            def table(self, name):
+                return self._table
 
-class TestInit:
-    def test_creates_storage_dir(self, tmp_path):
-        target = tmp_path / "sessions"
-        SessionStore(storage_dir=target)
-        assert target.exists()
+        with patch("branch_fixer.storage.session_store.TinyDB", side_effect=lambda path: FakeTiny(path)):
+            store = SessionStore(storage_dir)
 
-    def test_raises_if_parent_missing(self, tmp_path):
-        with pytest.raises(ValueError):
-            SessionStore(storage_dir=tmp_path / "ghost" / "deep" / "sessions")
+        # Directory should be created
+        assert storage_dir.exists()
+        # db attribute should be set to our fake instance (has 'table' method)
+        assert hasattr(store, "db")
+        assert hasattr(store, "sessions")
+        # The stored db path should match
+        assert created["path"] == storage_dir / "sessions.json"
 
-    def test_creates_sessions_json(self, tmp_path):
-        store = SessionStore(storage_dir=tmp_path / "sessions")
-        assert (tmp_path / "sessions" / "sessions.json").exists()
+    def test_init_raises_value_error_when_parent_missing(self, tmp_path):
+        # Choose a storage_dir whose parent does not exist
+        storage_dir = tmp_path / "no_parent" / "store"
+        # Ensure parent does not exist
+        assert not (tmp_path / "no_parent").exists()
 
+        with pytest.raises(ValueError) as excinfo:
+            SessionStore(storage_dir)
+        assert "Parent directory does not exist" in str(excinfo.value)
 
-# ---------------------------------------------------------------------------
-# save_session / load_session round-trip
-# ---------------------------------------------------------------------------
+    def test_init_raises_permission_error_when_not_writable(self, storage_dir):
+        # storage_dir.parent exists (tmp_path), but simulate not writable
+        with patch("branch_fixer.storage.session_store.TinyDB", side_effect=lambda path: SimpleNamespace(table=lambda name: SimpleNamespace())):
+            with patch("branch_fixer.storage.session_store.os.access", return_value=False):
+                with pytest.raises(PermissionError) as excinfo:
+                    SessionStore(storage_dir)
+        assert "Storage directory not writable" in str(excinfo.value)
 
-class TestSaveLoad:
-    def test_load_returns_none_for_unknown_id(self, store):
-        assert store.load_session(uuid4()) is None
+    def test_init_propagates_tinydb_errors(self, storage_dir):
+        # Patch TinyDB to raise IOError during initialization
+        with patch("branch_fixer.storage.session_store.TinyDB", side_effect=IOError("db fail")):
+            with pytest.raises(IOError) as excinfo:
+                SessionStore(storage_dir)
+        assert "db fail" in str(excinfo.value)
 
-    def test_save_then_load_preserves_state(self, store):
-        session = make_session(FixSessionState.COMPLETED)
-        store.save_session(session)
-        loaded = store.load_session(session.id)
-        assert loaded.state == FixSessionState.COMPLETED
+    def test_save_session_inserts_when_not_existing(self, store_instance):
+        # Prepare a dummy session object
+        sid = uuid4()
 
-    def test_save_then_load_preserves_errors(self, store):
-        session = make_session()
-        error = make_error("test_add")
-        session.errors = [error]
-        store.save_session(session)
-        loaded = store.load_session(session.id)
-        assert len(loaded.errors) == 1
-        assert loaded.errors[0].test_function == "test_add"
+        class DummyState:
+            value = "running"
 
-    def test_save_then_load_preserves_completed_errors(self, store):
-        session = make_session()
-        error = make_error()
-        session.errors = [error]
-        session.completed_errors = [error]
-        store.save_session(session)
-        loaded = store.load_session(session.id)
-        assert len(loaded.completed_errors) == 1
+        class DummyError:
+            def __init__(self, name):
+                self.name = name
 
-    def test_save_then_load_preserves_current_error(self, store):
-        session = make_session()
-        error = make_error("test_current")
-        session.current_error = error
-        store.save_session(session)
-        loaded = store.load_session(session.id)
-        assert loaded.current_error is not None
-        assert loaded.current_error.test_function == "test_current"
+            def to_dict(self):
+                return {"id": self.name, "test_file": "f.py", "test_function": "t", "error_details": {"error_type": "E", "message": "m"}, "fix_attempts": [], "status": "unfixed"}
 
-    def test_save_then_load_current_error_none(self, store):
-        session = make_session()
-        session.current_error = None
-        store.save_session(session)
-        loaded = store.load_session(session.id)
-        assert loaded.current_error is None
+        dummy = SimpleNamespace(
+            id=sid,
+            state=DummyState(),
+            start_time=datetime(2020, 1, 1, 12, 0, 0),
+            error_count=1,
+            retry_count=0,
+            git_branch="main",
+            modified_files=[Path("a.py"), Path("b.py")],
+            errors=[DummyError("err1")],
+            completed_errors=[],
+            current_error=None,
+            total_tests=10,
+            passed_tests=5,
+            failed_tests=5,
+            environment_info={"os": "linux"},
+            warnings=["w1"],
+        )
 
-    def test_save_then_load_preserves_numeric_fields(self, store):
-        session = make_session()
-        session.total_tests = 10
-        session.passed_tests = 8
-        session.failed_tests = 2
-        session.retry_count = 3
-        store.save_session(session)
-        loaded = store.load_session(session.id)
+        inserted = {}
+
+        class FakeSessions:
+            def get(self, *args, **kwargs):
+                return None
+
+            def insert(self, data):
+                inserted["data"] = data
+                return 1
+
+            def update(self, *a, **k):
+                pytest.fail("update should not be called in insert scenario")
+
+        store_instance.sessions = FakeSessions()
+        store_instance.save_session(dummy)
+
+        assert "data" in inserted
+        data = inserted["data"]
+        assert data["id"] == str(sid)
+        assert data["state"] == "running"
+        assert data["start_time"] == datetime(2020, 1, 1, 12, 0, 0).isoformat()
+        assert data["modified_files"] == ["a.py", "b.py"]
+        assert isinstance(data["errors"], list) and data["errors"][0]["id"] == "err1"
+        assert data["current_error"] is None
+        assert data["environment_info"] == {"os": "linux"}
+        assert data["warnings"] == ["w1"]
+
+    def test_save_session_updates_when_existing(self, store_instance):
+        sid = uuid4()
+
+        class DummyState:
+            value = "paused"
+
+        class DummyError:
+            def to_dict(self):
+                return {"id": "e1", "test_file": "f.py", "test_function": "t", "error_details": {"error_type": "E", "message": "m"}, "fix_attempts": [], "status": "unfixed"}
+
+        dummy = SimpleNamespace(
+            id=sid,
+            state=DummyState(),
+            start_time=datetime.now(),
+            error_count=0,
+            retry_count=0,
+            git_branch=None,
+            modified_files=[],
+            errors=[DummyError()],
+            completed_errors=[],
+            current_error=DummyError(),
+            total_tests=0,
+            passed_tests=0,
+            failed_tests=0,
+            environment_info={},
+            warnings=[],
+        )
+
+        calls = {"update": 0, "insert": 0}
+
+        class FakeSessions:
+            def get(self, *args, **kwargs):
+                return {"id": str(sid)}  # truthy -> trigger update
+
+            def insert(self, *a, **k):
+                calls["insert"] += 1
+
+            def update(self, data, *a, **k):
+                calls["update"] += 1
+                # verify id included in data
+                assert data["id"] == str(sid)
+
+        store_instance.sessions = FakeSessions()
+        store_instance.save_session(dummy)
+
+        assert calls["update"] == 1
+        assert calls["insert"] == 0
+
+    def test_save_session_raises_SessionPersistenceError_on_db_error(self, store_instance):
+        sid = uuid4()
+
+        class DummyState:
+            value = "running"
+
+        dummy = SimpleNamespace(
+            id=sid,
+            state=DummyState(),
+            start_time=datetime.now(),
+            error_count=0,
+            retry_count=0,
+            git_branch=None,
+            modified_files=[],
+            errors=[],
+            completed_errors=[],
+            current_error=None,
+            total_tests=0,
+            passed_tests=0,
+            failed_tests=0,
+            environment_info={},
+            warnings=[],
+        )
+
+        class FakeSessions:
+            def get(self, *a, **k):
+                return None
+
+            def insert(self, *a, **k):
+                raise RuntimeError("insert boom")
+
+        store_instance.sessions = FakeSessions()
+        with pytest.raises(SessionPersistenceError) as excinfo:
+            store_instance.save_session(dummy)
+        assert str(sid) in str(excinfo.value)
+        assert "insert boom" in str(excinfo.value)
+
+    def test_load_session_returns_none_when_not_found(self, store_instance):
+        sid = uuid4()
+
+        class FakeSessions:
+            def get(self, *a, **k):
+                return None
+
+        store_instance.sessions = FakeSessions()
+        result = store_instance.load_session(sid)
+        assert result is None
+
+    def test_load_session_deserializes_fields_and_returns_fixsession(self, store_instance):
+        sid = uuid4()
+        iso = datetime(2021, 6, 1, 8, 30, 0).isoformat()
+        session_dict = {
+            "id": str(sid),
+            "state": FixSessionState.RUNNING.value,
+            "start_time": iso,
+            "error_count": 2,
+            "retry_count": 1,
+            "git_branch": "dev",
+            "modified_files": ["x.py", "y.py"],
+            "errors": [{"id": "e1"}],
+            "completed_errors": [{"id": "e2"}],
+            "current_error": {"id": "e1"},
+            "total_tests": 10,
+            "passed_tests": 7,
+            "failed_tests": 3,
+            "environment_info": {"py": "3.9"},
+            "warnings": ["w"],
+        }
+
+        class FakeSessions:
+            def get(self, *a, **k):
+                return session_dict
+
+        # Patch TestError.from_dict to return identifiable objects
+        def fake_from_dict(data):
+            return SimpleNamespace(from_id=data.get("id"))
+
+        with patch("branch_fixer.storage.session_store.TestError.from_dict", side_effect=fake_from_dict):
+            store_instance.sessions = FakeSessions()
+            loaded = store_instance.load_session(sid)
+
+        assert loaded is not None
+        assert loaded.id == sid
+        assert loaded.state == FixSessionState(FixSessionState.RUNNING.value)
+        assert loaded.start_time == datetime.fromisoformat(iso)
+        assert loaded.error_count == 2
+        assert loaded.retry_count == 1
+        assert loaded.git_branch == "dev"
+        assert all(isinstance(p, Path) for p in loaded.modified_files)
+        assert [str(p) for p in loaded.modified_files] == ["x.py", "y.py"]
+        assert len(loaded.errors) == 1 and hasattr(loaded.errors[0], "from_id") and loaded.errors[0].from_id == "e1"
+        assert len(loaded.completed_errors) == 1 and loaded.completed_errors[0].from_id == "e2"
+        assert loaded.current_error.from_id == "e1"
         assert loaded.total_tests == 10
-        assert loaded.passed_tests == 8
-        assert loaded.failed_tests == 2
-        assert loaded.retry_count == 3
+        assert loaded.passed_tests == 7
+        assert loaded.failed_tests == 3
+        assert loaded.environment_info == {"py": "3.9"}
+        assert loaded.warnings == ["w"]
 
-    def test_save_then_load_preserves_environment_info(self, store):
-        session = make_session()
-        session.environment_info = {"os": "darwin", "python": "3.13"}
-        store.save_session(session)
-        loaded = store.load_session(session.id)
-        assert loaded.environment_info == {"os": "darwin", "python": "3.13"}
+    def test_load_session_raises_SessionPersistenceError_on_deserialization_error(self, store_instance):
+        sid = uuid4()
+        iso = datetime(2021, 6, 1, 8, 30, 0).isoformat()
+        session_dict = {
+            "id": str(sid),
+            "state": FixSessionState.RUNNING.value,
+            "start_time": iso,
+            "errors": [{"id": "e1"}],
+        }
 
-    def test_save_then_load_preserves_warnings(self, store):
-        session = make_session()
-        session.warnings = ["DeprecationWarning: foo"]
-        store.save_session(session)
-        loaded = store.load_session(session.id)
-        assert loaded.warnings == ["DeprecationWarning: foo"]
+        class FakeSessions:
+            def get(self, *a, **k):
+                return session_dict
 
-    def test_save_then_load_preserves_git_branch(self, store):
-        session = make_session()
-        session.git_branch = "fix/test-add-123"
-        store.save_session(session)
-        loaded = store.load_session(session.id)
-        assert loaded.git_branch == "fix/test-add-123"
+        # Make TestError.from_dict raise
+        with patch("branch_fixer.storage.session_store.TestError.from_dict", side_effect=ValueError("bad")):
+            store_instance.sessions = FakeSessions()
+            with pytest.raises(SessionPersistenceError) as excinfo:
+                store_instance.load_session(sid)
+        assert "bad" in str(excinfo.value)
 
-    def test_save_then_load_preserves_modified_files(self, store):
-        session = make_session()
-        session.modified_files = [Path("tests/test_foo.py")]
-        store.save_session(session)
-        loaded = store.load_session(session.id)
-        assert loaded.modified_files == [Path("tests/test_foo.py")]
+    def test_load_session_handles_missing_optional_fields(self, store_instance):
+        sid = uuid4()
+        iso = datetime(2022, 1, 1, 0, 0, 0).isoformat()
+        minimal = {"id": str(sid), "state": FixSessionState.INITIALIZING.value, "start_time": iso}
 
-    def test_update_overwrites_existing_session(self, store):
-        session = make_session(FixSessionState.RUNNING)
-        store.save_session(session)
-        session.state = FixSessionState.COMPLETED
-        store.save_session(session)
-        loaded = store.load_session(session.id)
-        assert loaded.state == FixSessionState.COMPLETED
-        # Should not have created a duplicate
-        assert len(store.list_sessions()) == 1
+        class FakeSessions:
+            def get(self, *a, **k):
+                return minimal
 
+        store_instance.sessions = FakeSessions()
+        loaded = store_instance.load_session(sid)
+        assert loaded is not None
+        assert loaded.error_count == 0
+        assert loaded.modified_files == []
+        assert loaded.errors == []
+        assert loaded.completed_errors == []
+        assert loaded.current_error is None
+        assert loaded.environment_info == {}
+        assert loaded.warnings == []
 
-# ---------------------------------------------------------------------------
-# list_sessions
-# ---------------------------------------------------------------------------
+    def test_list_sessions_returns_empty_list_when_no_records(self, store_instance):
+        class FakeSessions:
+            def all(self):
+                return []
 
-class TestListSessions:
-    def test_empty_store_returns_empty_list(self, store):
-        assert store.list_sessions() == []
+        store_instance.sessions = FakeSessions()
+        res = store_instance.list_sessions()
+        assert res == []
 
-    def test_lists_all_sessions(self, store):
-        s1 = make_session(FixSessionState.RUNNING)
-        s2 = make_session(FixSessionState.COMPLETED)
-        store.save_session(s1)
-        store.save_session(s2)
-        assert len(store.list_sessions()) == 2
+    def test_list_sessions_returns_deserialized_fixsessions_for_all(self, store_instance):
+        sid = uuid4()
+        iso = datetime(2021, 12, 12, 12, 12, 12).isoformat()
+        data = [{
+            "id": str(sid),
+            "state": FixSessionState.RUNNING.value,
+            "start_time": iso,
+            "modified_files": ["m.py"],
+            "errors": [{"id": "e1"}],
+            "completed_errors": [],
+            "current_error": None,
+            "retry_count": 0,
+            "error_count": 1,
+            "total_tests": 0,
+            "passed_tests": 0,
+            "failed_tests": 0,
+            "environment_info": {},
+            "warnings": [],
+        }]
 
-    def test_filter_by_state(self, store):
-        s1 = make_session(FixSessionState.RUNNING)
-        s2 = make_session(FixSessionState.COMPLETED)
-        store.save_session(s1)
-        store.save_session(s2)
-        completed = store.list_sessions(status=FixSessionState.COMPLETED)
-        assert len(completed) == 1
-        assert completed[0].state == FixSessionState.COMPLETED
+        class FakeSessions:
+            def all(self):
+                return data
 
-    def test_filter_returns_empty_if_no_match(self, store):
-        session = make_session(FixSessionState.RUNNING)
-        store.save_session(session)
-        assert store.list_sessions(status=FixSessionState.FAILED) == []
+        def fake_from_dict(d):
+            return SimpleNamespace(id=d.get("id"))
 
+        with patch("branch_fixer.storage.session_store.TestError.from_dict", side_effect=fake_from_dict):
+            store_instance.sessions = FakeSessions()
+            out = store_instance.list_sessions()
 
-# ---------------------------------------------------------------------------
-# delete_session
-# ---------------------------------------------------------------------------
+        assert isinstance(out, list)
+        assert len(out) == 1
+        s = out[0]
+        assert s.id == UUID(str(sid))
+        assert s.state == FixSessionState(FixSessionState.RUNNING.value)
+        assert all(isinstance(p, Path) for p in s.modified_files)
+        assert [str(p) for p in s.modified_files] == ["m.py"]
+        assert len(s.errors) == 1 and hasattr(s.errors[0], "id")
 
-class TestDeleteSession:
-    def test_delete_existing_returns_true(self, store):
-        session = make_session()
-        store.save_session(session)
-        assert store.delete_session(session.id) is True
+    def test_list_sessions_filters_by_status(self, store_instance):
+        sid = uuid4()
+        iso = datetime.now().isoformat()
+        data = [{
+            "id": str(sid),
+            "state": FixSessionState.COMPLETED.value,
+            "start_time": iso,
+            "modified_files": [],
+            "errors": [],
+            "completed_errors": [],
+            "current_error": None,
+            "retry_count": 0,
+            "error_count": 0,
+            "total_tests": 0,
+            "passed_tests": 0,
+            "failed_tests": 0,
+            "environment_info": {},
+            "warnings": [],
+        }]
 
-    def test_delete_removes_session(self, store):
-        session = make_session()
-        store.save_session(session)
-        store.delete_session(session.id)
-        assert store.load_session(session.id) is None
+        called = {"search": 0}
 
-    def test_delete_nonexistent_returns_false(self, store):
-        assert store.delete_session(uuid4()) is False
+        class FakeSessions:
+            def search(self, *a, **k):
+                called["search"] += 1
+                return data
+
+        with patch("branch_fixer.storage.session_store.TestError.from_dict", side_effect=lambda d: SimpleNamespace()):
+            store_instance.sessions = FakeSessions()
+            res = store_instance.list_sessions(status=FixSessionState.COMPLETED)
+
+        assert called["search"] == 1
+        assert len(res) == 1
+        assert res[0].state == FixSessionState(FixSessionState.COMPLETED.value)
+
+    def test_list_sessions_raises_SessionPersistenceError_on_db_error(self, store_instance):
+        class FakeSessions:
+            def all(self):
+                raise RuntimeError("boom")
+
+        store_instance.sessions = FakeSessions()
+        with pytest.raises(SessionPersistenceError) as excinfo:
+            store_instance.list_sessions()
+        assert "boom" in str(excinfo.value)
+
+    @pytest.mark.parametrize("removed,expected", [([1], True), ([], False)])
+    def test_delete_session_returns_expected_based_on_removed_list(self, store_instance, removed, expected):
+        sid = uuid4()
+
+        class FakeSessions:
+            def remove(self, *a, **k):
+                return removed
+
+        store_instance.sessions = FakeSessions()
+        result = store_instance.delete_session(sid)
+        assert result is expected
+
+    def test_delete_session_raises_SessionPersistenceError_on_db_error(self, store_instance):
+        sid = uuid4()
+
+        class FakeSessions:
+            def remove(self, *a, **k):
+                raise RuntimeError("boom delete")
+
+        store_instance.sessions = FakeSessions()
+        with pytest.raises(SessionPersistenceError) as excinfo:
+            store_instance.delete_session(sid)
+        assert "boom delete" in str(excinfo.value)
