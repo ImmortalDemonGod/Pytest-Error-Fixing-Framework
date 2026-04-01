@@ -70,7 +70,7 @@ class GeneratedTestFixer:
             return result
 
         for test_file, failures in _group_by_file(result.failures).items():
-            self._fix_file(test_file, failures)
+            self._fix_file(test_file, failures, runner)
 
         return runner.run(result.output_dir)
 
@@ -78,12 +78,18 @@ class GeneratedTestFixer:
     # Private helpers
     # ------------------------------------------------------------------
 
-    def _fix_file(self, test_file: Path, failures: List[TestFailure]) -> None:
+    def _fix_file(
+        self,
+        test_file: Path,
+        failures: List[TestFailure],
+        runner: VerificationRunner,
+    ) -> None:
         """Attempt to fix a single test file, trying up to max_attempts times."""
-        # Use the first failure as the representative error for this file.
-        # AIManager's persistent thread will see all attempts and adapt.
+        # Re-run the file to capture the actual error output — ERROR-at-setup
+        # lines in -q mode carry no inline message, so we must fetch it here.
+        raw_error = runner.capture_error_output(test_file)
         failure = failures[0]
-        error = _make_test_error(test_file, failure)
+        error = _make_test_error(test_file, failure, raw_error)
 
         for i in range(max(1, self.max_attempts)):
             temperature = _TEMPERATURES[min(i, len(_TEMPERATURES) - 1)]
@@ -117,14 +123,16 @@ def _group_by_file(failures: List[TestFailure]) -> dict:
     return groups
 
 
-def _make_test_error(test_file: Path, failure: TestFailure) -> TestError:
+def _make_test_error(test_file: Path, failure: TestFailure, raw_error: str = "") -> TestError:
     """Build a branch_fixer TestError from a TestFailure for AIManager."""
+    # Prefer raw_error (full pytest output) over the often-empty inline message
+    error_text = raw_error or failure.error_output
     return TestError(
         test_file=test_file,
         test_function=failure.test_id,
         error_details=ErrorDetails(
             error_type="GeneratedTestFailure",
-            message=failure.error_output,
-            stack_trace=failure.error_output,
+            message=error_text,
+            stack_trace=error_text,
         ),
     )
