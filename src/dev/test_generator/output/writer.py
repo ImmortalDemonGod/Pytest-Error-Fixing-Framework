@@ -25,6 +25,34 @@ def output_filename(entity: TestableEntity, variant_label: str) -> str:
     return f"test_{prefix}_{variant_label}.py"
 
 
+def write_module_test(code: str, source_stem: str, output_dir: Path) -> Path:
+    """Write a module-level consolidated test file and return its path.
+
+    Parameters
+    ----------
+    code:
+        The generated test source code.
+    source_stem:
+        The stem of the source file being tested (e.g. ``"change_applier"``).
+        The output file will be named ``test_{source_stem}.py``.
+    output_dir:
+        Directory to write the file into.
+
+    Raises
+    ------
+    RuntimeError
+        If the written file is empty or content does not round-trip.
+    """
+    out_path = output_dir / f"test_{source_stem}.py"
+    out_path.write_text(code, encoding="utf-8")
+    written = out_path.read_text(encoding="utf-8")
+    if not written:
+        raise RuntimeError(f"Output file is empty after writing: {out_path}")
+    if written != code:
+        raise RuntimeError(f"Content mismatch after writing: {out_path}")
+    return out_path
+
+
 def write_attempt(attempt: GenerationAttempt, output_dir: Path) -> Path:
     """Write *attempt.generated_code* to *output_dir* and return the path.
 
