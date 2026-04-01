@@ -41,6 +41,9 @@ class AnalysisContext:
     mypy_issues: Tuple[str, ...]
     ruff_issues: Tuple[str, ...]
     coverage_gaps: Tuple[CoverageGap, ...]
+    # Source snippets for classes/functions imported from project-internal modules.
+    # Helps the LLM understand constructor signatures it wouldn't otherwise see.
+    dependency_code: str = ""
 
     # ------------------------------------------------------------------
     # Queries
