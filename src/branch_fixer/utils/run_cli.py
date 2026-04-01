@@ -189,6 +189,10 @@ def fix(
     return cli_obj.process_errors(errors, not non_interactive)
 
 
+from src.dev.cli.generate import generate_command
+cli.add_command(generate_command)
+
+
 def main():
     """Main entry point."""
     return cli()
