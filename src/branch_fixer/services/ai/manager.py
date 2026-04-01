@@ -163,14 +163,28 @@ class AIManager:
 
                 user_prompt = self._build_initial_prompt(error, analysis, current_code)
             else:
-                # Retry: the thread already has the previous attempt — ask AI to reconsider
+                # Retry: the thread already has the previous attempt — inject specific
+                # failure context so the AI knows exactly what still went wrong.
                 logger.info(
                     f"Retry for {error.test_function} — injecting failure feedback into thread"
                 )
+                # Re-read the test file; it will be in its original broken state because
+                # FixService restores the backup before calling generate_fix again.
+                try:
+                    current_code = error.test_file.read_text(encoding="utf-8")
+                except Exception:
+                    current_code = "[file unreadable]"
+
+                stack_trace = self._clean_stack_trace(error.error_details.stack_trace)
                 user_prompt = (
                     "That fix did not pass the tests. "
-                    "Re-examine the error from a different angle and try a completely different approach. "
-                    "Return the complete fixed file content in the same format as before."
+                    "Here is the original failure that still needs to be resolved:\n\n"
+                    f"Error type: {error.error_details.error_type}\n"
+                    f"Error message: {error.error_details.message}\n"
+                    f"Stack trace:\n{stack_trace}\n\n"
+                    f"Current file content (restored to broken state):\n```python\n{current_code}\n```\n\n"
+                    "Try a completely different approach. "
+                    "Return the complete fixed file content."
                 )
 
             self._messages.append({"role": "user", "content": user_prompt})
