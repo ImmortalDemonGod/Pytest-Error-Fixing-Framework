@@ -46,6 +46,12 @@ _SHARED_RULES = """\
 12. When testing file-operating functions, ALWAYS write content to the file
     before calling the function. A bare `tmp_path / "f.py"` (never written)
     will fail with "file not found" before the test logic runs.
+13. When using `side_effect=function` with `patch` or `monkeypatch.setattr`,
+    the side_effect function MUST accept `*args, **kwargs` (or match the exact
+    signature of the patched function including `self` for class-level patches).
+    Class-level patches (`monkeypatch.setattr(ClassName, "method", fn)`) pass
+    `self` as the first argument — a function with 0 or 1 fixed args will raise
+    TypeError. ALWAYS write: `def raise_err(*args, **kwargs): raise SomeError()`
 """
 
 # ---------------------------------------------------------------------------
