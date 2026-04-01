@@ -200,14 +200,15 @@ class CLI:
     def _generate_and_apply_fix(self, error: TestError) -> bool:
         """
         Attempt to generate/apply a fix via AI; return True if successful, False otherwise.
+        Delegates to the orchestrator, which runs the full multi-retry loop with
+        temperature bumping — the single-shot attempt_fix path is no longer used here.
         """
-        logger.info("Attempting to generate and apply fix...")
-        if self.service and self.service.attempt_fix(error, self.service.initial_temp):
-            logger.info(f"Fix attempt for {error.test_function} succeeded.")
-            return True
-        else:
-            logger.warning(f"Fix attempt for {error.test_function} failed.")
+        if not self.orchestrator:
+            logger.error("Orchestrator not initialized, cannot generate fix.")
             return False
+        logger.info("Attempting to generate and apply fix via orchestrator...")
+        self.orchestrator.start_session([error])
+        return self.orchestrator.fix_error(error)
 
     def _create_and_push_pr(self, branch_name: str, error: TestError) -> bool:
         """
