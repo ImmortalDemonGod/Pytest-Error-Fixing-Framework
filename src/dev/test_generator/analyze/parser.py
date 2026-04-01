@@ -16,8 +16,12 @@ from src.dev.test_generator.core.models import ParsedModule, TestableEntity
 def _module_dotpath_from_path(source_path: Path) -> str:
     """Derive a dotted module path from a filesystem path.
 
-    Walks upward until there is no ``__init__.py`` (package boundary),
-    then converts the remaining parts to dotted notation.
+    Strategy (matches the original scripts/hypot_test_gen.py construct_module_path):
+    1. If the path contains a ``src/`` segment, take everything after it and
+       convert to dotted notation — this handles the standard src-layout where
+       top-level packages live directly under src/ without their own __init__.py.
+    2. Otherwise walk upward through __init__.py boundaries to find the package
+       root, then convert the remaining parts.
 
     Examples
     --------
@@ -25,8 +29,15 @@ def _module_dotpath_from_path(source_path: Path) -> str:
     ``scripts/hypot_test_gen.py`` → ``hypot_test_gen``
     """
     resolved = source_path.resolve()
-    parts = list(resolved.with_suffix("").parts)  # drop .py
-    # Walk backwards to find the top-most package root
+    parts = resolved.parts  # absolute parts including filesystem root
+
+    # Strategy 1: src-layout — take everything after the last 'src' segment
+    if "src" in parts:
+        src_index = len(parts) - 1 - parts[::-1].index("src")
+        module_parts = list(parts[src_index + 1:])
+        return ".".join(p.replace(".py", "") for p in module_parts)
+
+    # Strategy 2: walk __init__.py boundaries upward
     package_parts: List[str] = []
     current = resolved.parent
     while (current / "__init__.py").exists():

@@ -32,7 +32,8 @@ class TestModuleDotpath:
         f.write_text("")
         assert _module_dotpath_from_path(f) == "mymod"
 
-    def test_package_file(self, tmp_path):
+    def test_package_file_via_init(self, tmp_path):
+        """Falls back to __init__.py walking when there's no src/ segment."""
         pkg = tmp_path / "mypkg"
         pkg.mkdir()
         (pkg / "__init__.py").write_text("")
@@ -41,16 +42,26 @@ class TestModuleDotpath:
         result = _module_dotpath_from_path(mod)
         assert result == "mypkg.utils"
 
-    def test_nested_package(self, tmp_path):
-        outer = tmp_path / "outer"
-        inner = outer / "inner"
-        inner.mkdir(parents=True)
-        (outer / "__init__.py").write_text("")
-        (inner / "__init__.py").write_text("")
-        mod = inner / "things.py"
+    def test_src_layout_takes_everything_after_src(self, tmp_path):
+        """src-layout: take all parts after src/, regardless of __init__.py."""
+        src = tmp_path / "src"
+        pkg = src / "mypkg" / "core"
+        pkg.mkdir(parents=True)
+        mod = pkg / "models.py"
         mod.write_text("")
         result = _module_dotpath_from_path(mod)
-        assert result == "outer.inner.things"
+        assert result == "mypkg.core.models"
+
+    def test_src_layout_no_init_needed(self, tmp_path):
+        """Top-level package under src/ without __init__.py still works."""
+        src = tmp_path / "src"
+        pkg = src / "branch_fixer" / "core"
+        pkg.mkdir(parents=True)
+        # No __init__.py anywhere
+        mod = pkg / "models.py"
+        mod.write_text("")
+        result = _module_dotpath_from_path(mod)
+        assert result == "branch_fixer.core.models"
 
 
 # ---------------------------------------------------------------------------
