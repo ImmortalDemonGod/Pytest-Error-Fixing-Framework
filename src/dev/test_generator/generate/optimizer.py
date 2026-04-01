@@ -141,7 +141,8 @@ class GenerationOrchestrator:
                     hypothesis_templates[key] = template
 
         # Step 2: two-phase module-level LLM generation
-        code = self._fabric.generate_module(context, hypothesis_templates)
+        module_dotpath = request.parsed_module.module_dotpath
+        code = self._fabric.generate_module(context, hypothesis_templates, module_dotpath)
 
         if code:
             # Represent as a single module-level attempt
