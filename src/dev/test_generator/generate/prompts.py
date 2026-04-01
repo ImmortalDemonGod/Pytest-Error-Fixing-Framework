@@ -31,16 +31,22 @@ Write a complete pytest test file for a single Python function or class.
 4. Use pytest.mark.parametrize for multiple similar cases.
 5. Use pytest.raises ONLY when the exception escapes to the caller — i.e.
    the function has a `raise` for it that is NOT caught by a surrounding
-   try/except inside the same function. If the function catches the exception
-   internally and returns a `(bool, value)` tuple or logs an error, assert on
-   the returned value, not on an exception.
+   try/except inside the same function. If the function has a top-level
+   `try/except Exception` block and returns `(bool, value)`, it swallows
+   ALL exceptions — never use pytest.raises on such a function.
 6. Do NOT use Hypothesis or property-based testing — write concrete examples.
 7. Do NOT mock the target function itself — test real behaviour.
 8. Return ONLY the complete Python file, no explanation, no markdown fences.
 9. Read the source code carefully. Match the actual constructor signatures
    (required arguments, keyword arguments). Never omit required arguments.
-10. For mocking use `unittest.mock.patch` as a context manager or decorator.
-    The `mocker` fixture (pytest-mock) may not be available.
+10. For mocking use `unittest.mock.patch` as a context manager or decorator,
+    or `patch.object(instance, 'method_name', side_effect=SomeException())`.
+    Do NOT replace private methods with lambdas — use patch.object with
+    side_effect to simulate failures.
+11. When testing syntax error handling, use code that is ACTUALLY invalid
+    Python syntax, such as `"x = )"` or `"def foo(:"`. A bare identifier
+    like `"invalid_syntax"` is valid Python (expression statement) and will
+    NOT trigger a SyntaxError.
 """
 
 # ---------------------------------------------------------------------------
