@@ -107,6 +107,7 @@ For each public class, method, and function write a section:
 def build_analysis_prompt(
     context: AnalysisContext,
     hypothesis_templates: dict[str, str],
+    module_dotpath: str = "",
 ) -> str:
     """Build the Phase 1 analysis request for a whole module.
 
@@ -117,8 +118,19 @@ def build_analysis_prompt(
     hypothesis_templates:
         Maps ``"EntityName.variant"`` → hypothesis scaffold code. Used to
         show the LLM correct import and call signatures during analysis.
+    module_dotpath:
+        Dotted import path of the source module, e.g. ``"dev.cli.generate"``.
+        When provided, included in the prompt so the LLM uses the correct path.
     """
     sections: list[str] = []
+
+    if module_dotpath:
+        sections.append(
+            f"## Module under test\n"
+            f"Import this module with: `import {module_dotpath}` or "
+            f"`from {module_dotpath} import <name>`\n"
+            f"Do NOT invent a different module path."
+        )
 
     if context.source_code:
         sections.append(f"## Source code to analyze\n```python\n{context.source_code}\n```")
@@ -182,6 +194,7 @@ def build_module_prompt(
     context: AnalysisContext,
     plan: str,
     hypothesis_templates: dict[str, str],
+    module_dotpath: str = "",
 ) -> str:
     """Build the Phase 2 writing request using the Phase 1 plan.
 
@@ -193,8 +206,19 @@ def build_module_prompt(
         The structured test plan produced by Phase 1 (raw LLM prose).
     hypothesis_templates:
         Maps ``"EntityName.variant"`` → scaffold code for import/call reference.
+    module_dotpath:
+        Dotted import path of the source module, e.g. ``"dev.cli.generate"``.
+        When provided, included prominently so the LLM uses the exact path.
     """
     sections: list[str] = []
+
+    if module_dotpath:
+        sections.append(
+            f"## Module under test\n"
+            f"**IMPORTANT**: Use `import {module_dotpath}` or "
+            f"`from {module_dotpath} import <name>` — this is the EXACT import path. "
+            f"Never invent a different module path."
+        )
 
     if context.source_code:
         sections.append(f"## Source code\n```python\n{context.source_code}\n```")
