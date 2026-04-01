@@ -62,6 +62,20 @@ def _make_runner(next_result: VerificationResult) -> MagicMock:
     return runner
 
 
+def _mock_verify_pass():
+    """Context manager: subprocess.run returns exit code 0 (fix verified)."""
+    proc = MagicMock()
+    proc.returncode = 0
+    return patch("src.dev.test_generator.verify.fixer.subprocess.run", return_value=proc)
+
+
+def _mock_verify_fail():
+    """Context manager: subprocess.run returns exit code 1 (fix not verified)."""
+    proc = MagicMock()
+    proc.returncode = 1
+    return patch("src.dev.test_generator.verify.fixer.subprocess.run", return_value=proc)
+
+
 # ---------------------------------------------------------------------------
 # GeneratedTestFixer.fix_failures
 # ---------------------------------------------------------------------------
@@ -85,7 +99,8 @@ class TestFixFailures:
         failing = _result(tmp_path, failures=(_failure(test_file),), failed=1)
         runner = _make_runner(_result(tmp_path, passed=1))
 
-        fixer.fix_failures(failing, runner)
+        with _mock_verify_pass():
+            fixer.fix_failures(failing, runner)
 
         ai.generate_fix.assert_called_once()
 
@@ -96,7 +111,8 @@ class TestFixFailures:
         failing = _result(tmp_path, failures=(_failure(test_file),), failed=1)
         runner = _make_runner(_result(tmp_path, passed=1))
 
-        fixer.fix_failures(failing, runner)
+        with _mock_verify_pass():
+            fixer.fix_failures(failing, runner)
 
         applier.apply_changes_with_backup.assert_called_once()
         call_args = applier.apply_changes_with_backup.call_args[0]
@@ -110,20 +126,22 @@ class TestFixFailures:
         re_run_result = _result(tmp_path, passed=1)
         runner = _make_runner(re_run_result)
 
-        result = fixer.fix_failures(failing, runner)
+        with _mock_verify_pass():
+            result = fixer.fix_failures(failing, runner)
 
         runner.run.assert_called_once_with(tmp_path)
         assert result is re_run_result
 
     def test_stops_after_successful_fix(self, tmp_path):
-        """If apply_changes succeeds, should not retry for that file."""
+        """If apply_changes succeeds and pytest passes, should not retry."""
         test_file = tmp_path / "test_foo.py"
         test_file.write_text("# broken\n")
         fixer, ai, applier = _make_fixer(max_attempts=3)
         failing = _result(tmp_path, failures=(_failure(test_file),), failed=1)
         runner = _make_runner(_result(tmp_path, passed=1))
 
-        fixer.fix_failures(failing, runner)
+        with _mock_verify_pass():
+            fixer.fix_failures(failing, runner)
 
         assert ai.generate_fix.call_count == 1
 
@@ -135,9 +153,40 @@ class TestFixFailures:
         failing = _result(tmp_path, failures=(_failure(test_file),), failed=1)
         runner = _make_runner(_result(tmp_path))
 
-        fixer.fix_failures(failing, runner)
+        with _mock_verify_fail():
+            fixer.fix_failures(failing, runner)
 
         assert ai.generate_fix.call_count == 2
+
+    def test_retries_when_verify_fails_after_apply(self, tmp_path):
+        """Apply succeeds but pytest still fails → should retry up to max_attempts."""
+        test_file = tmp_path / "test_foo.py"
+        test_file.write_text("# broken\n")
+        fixer, ai, applier = _make_fixer(max_attempts=3)
+        failing = _result(tmp_path, failures=(_failure(test_file),), failed=1)
+        runner = _make_runner(_result(tmp_path))
+        runner.capture_error_output.return_value = "still failing"
+
+        with _mock_verify_fail():
+            fixer.fix_failures(failing, runner)
+
+        assert ai.generate_fix.call_count == 3
+
+    def test_rejects_fix_that_removes_all_tests(self, tmp_path):
+        """Exit code 5 (no tests collected) must NOT be accepted as a verified fix."""
+        test_file = tmp_path / "test_foo.py"
+        test_file.write_text("# broken\n")
+        fixer, ai, applier = _make_fixer(max_attempts=1)
+        failing = _result(tmp_path, failures=(_failure(test_file),), failed=1)
+        runner = _make_runner(_result(tmp_path))
+
+        proc_no_tests = MagicMock()
+        proc_no_tests.returncode = 5  # no tests collected
+        with patch("src.dev.test_generator.verify.fixer.subprocess.run", return_value=proc_no_tests):
+            fixer.fix_failures(failing, runner)
+
+        # Backup must be restored since exit code 5 is not acceptable
+        applier.restore_backup.assert_called_once()
 
     def test_groups_failures_by_file(self, tmp_path):
         """Multiple failures in the same file → one fix attempt sequence."""
@@ -151,7 +200,8 @@ class TestFixFailures:
         failing = _result(tmp_path, failures=failures, failed=2)
         runner = _make_runner(_result(tmp_path, passed=2))
 
-        fixer.fix_failures(failing, runner)
+        with _mock_verify_pass():
+            fixer.fix_failures(failing, runner)
 
         # Both failures in same file → only one fix attempt (first failure used)
         assert ai.generate_fix.call_count == 1
@@ -203,3 +253,17 @@ class TestMakeTestError:
         failure = TestFailure(test_file, "test_x", "AssertionError: 1 != 2")
         error = _make_test_error(test_file, failure)
         assert "AssertionError" in error.error_details.message
+
+    def test_message_contains_test_file_instruction(self, tmp_path):
+        """The error message must tell the AI to produce a TEST FILE, not source code."""
+        test_file = tmp_path / "test_foo.py"
+        failure = _failure(test_file)
+        error = _make_test_error(test_file, failure)
+        msg = error.error_details.message.upper()
+        assert "TEST FILE" in msg
+
+    def test_raw_error_preferred_over_failure_output(self, tmp_path):
+        test_file = tmp_path / "test_foo.py"
+        failure = TestFailure(test_file, "test_x", "short error")
+        error = _make_test_error(test_file, failure, raw_error="long detailed traceback")
+        assert "long detailed traceback" in error.error_details.message
