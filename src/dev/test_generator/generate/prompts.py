@@ -49,6 +49,11 @@ Write a complete pytest test file for a single Python function or class.
     expression) — it will NOT trigger SyntaxError.
     Use: `"x = )"` or `"def foo(:"` or `"print('hello'"` (unclosed paren).
     Never use bare identifiers or undefined variable names as syntax errors.
+12. When testing functions that operate on files, ALWAYS create the file with
+    initial content before calling the function. If the function requires the
+    file to exist (e.g. to make a backup), the test or fixture must write it
+    first: `test_file.write_text("initial content")`. Passing a Path that
+    was never written to will cause unexpected failures unrelated to your test.
 """
 
 # ---------------------------------------------------------------------------
