@@ -15,6 +15,7 @@ _BASE_FLAGS = "--style=unittest --annotate"
 # Map each special variant to the extra flag(s) it needs.
 _VARIANT_FLAGS: dict = {
     GenerationVariant.DEFAULT: "",
+    GenerationVariant.ERRORS: "--except ValueError --except TypeError",
     GenerationVariant.ROUNDTRIP: "--roundtrip",
     GenerationVariant.IDEMPOTENT: "--idempotent",
     GenerationVariant.ERRORS_EQUIVALENT: "--errors-equivalent",
