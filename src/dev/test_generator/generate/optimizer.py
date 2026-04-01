@@ -90,12 +90,25 @@ class GenerationOrchestrator:
 
 
 def _ensure_importable(source_path: Path) -> None:
-    """Add the source file's package root (or directory) to sys.path."""
+    """Add the directories needed for ``hypothesis write`` to import the module.
+
+    Mirrors the original scripts/hypot_test_gen.py fix_pythonpath() logic:
+    1. Always adds the file's immediate parent directory.
+    2. If the path contains a ``src/`` segment, also adds the src/ directory —
+       this is the root under which top-level packages live in a src-layout.
+    """
     resolved = source_path.resolve()
-    parent = resolved.parent
-    # Walk up to find the top-level package root
-    while (parent / "__init__.py").exists():
-        parent = parent.parent
-    path_str = str(parent)
-    if path_str not in sys.path:
-        sys.path.insert(0, path_str)
+    parts = resolved.parts
+
+    def _add(path: str) -> None:
+        if path not in sys.path:
+            sys.path.insert(0, path)
+
+    # 1. Always add the parent directory
+    _add(str(resolved.parent))
+
+    # 2. For src-layout: add the src/ directory so dotted module paths work
+    if "src" in parts:
+        src_index = len(parts) - 1 - parts[::-1].index("src")
+        src_dir = str(Path(*parts[: src_index + 1]))
+        _add(src_dir)
