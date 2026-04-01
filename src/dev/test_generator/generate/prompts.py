@@ -29,10 +29,16 @@ Write a complete pytest test file for a single Python function or class.
 3. Cover the happy path, at least one edge case, and any error conditions
    visible from the signature or docstring.
 4. Use pytest.mark.parametrize for multiple similar cases.
-5. Use pytest.raises for expected exceptions.
+5. Use pytest.raises ONLY when the source code explicitly contains a `raise`
+   statement for that exception type. If the function logs an error and returns
+   a failure value instead of raising, assert on the returned value.
 6. Do NOT use Hypothesis or property-based testing — write concrete examples.
 7. Do NOT mock the target function itself — test real behaviour.
 8. Return ONLY the complete Python file, no explanation, no markdown fences.
+9. Read the source code carefully. Match the actual constructor signatures
+   (required arguments, keyword arguments). Never omit required arguments.
+10. For mocking use `unittest.mock.patch` as a context manager or decorator.
+    The `mocker` fixture (pytest-mock) may not be available.
 """
 
 # ---------------------------------------------------------------------------
