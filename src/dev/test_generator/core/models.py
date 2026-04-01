@@ -1,13 +1,74 @@
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Tuple
 from uuid import UUID, uuid4
 
 
 # ---------------------------------------------------------------------------
 # Value Objects
 # ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class CoverageGap:
+    """Lines in a named entity not executed by any existing test.
+
+    uncovered_lines is a sorted tuple of 1-based line numbers from
+    ``pytest-cov``/``coverage.py`` output.
+    """
+
+    entity_name: str
+    uncovered_lines: Tuple[int, ...]
+
+    @property
+    def is_empty(self) -> bool:
+        return len(self.uncovered_lines) == 0
+
+
+@dataclass(frozen=True)
+class AnalysisContext:
+    """Rich context about a source file collected before LLM generation.
+
+    Carries everything the FabricStrategy needs to write informed tests:
+    the source itself, static-analysis findings, and which lines lack coverage.
+
+    Build with ``AnalysisContext.empty(source_code)`` when tools are unavailable
+    or when a cheap context-free run is acceptable.
+    """
+
+    source_code: str
+    mypy_issues: Tuple[str, ...]
+    ruff_issues: Tuple[str, ...]
+    coverage_gaps: Tuple[CoverageGap, ...]
+
+    # ------------------------------------------------------------------
+    # Queries
+    # ------------------------------------------------------------------
+
+    def has_coverage_gaps(self) -> bool:
+        """True if any entity has at least one uncovered line."""
+        return any(not g.is_empty for g in self.coverage_gaps)
+
+    def gaps_for(self, entity_name: str) -> Optional[CoverageGap]:
+        """Return the CoverageGap for *entity_name*, or None if not found."""
+        return next(
+            (g for g in self.coverage_gaps if g.entity_name == entity_name), None
+        )
+
+    # ------------------------------------------------------------------
+    # Factory
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def empty(cls, source_code: str) -> "AnalysisContext":
+        """Minimal context when static-analysis tools are unavailable."""
+        return cls(
+            source_code=source_code,
+            mypy_issues=(),
+            ruff_issues=(),
+            coverage_gaps=(),
+        )
 
 
 class GenerationVariant(str, Enum):
