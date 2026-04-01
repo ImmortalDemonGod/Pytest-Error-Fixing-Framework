@@ -11,7 +11,7 @@ returned so the caller can report what was fixed vs still broken.
 
 import logging
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from branch_fixer.core.models import ErrorDetails, TestError
 from branch_fixer.services.ai.manager import AIManager
@@ -84,9 +84,12 @@ class GeneratedTestFixer:
         failures: List[TestFailure],
         runner: VerificationRunner,
     ) -> None:
-        """Attempt to fix a single test file, trying up to max_attempts times."""
-        # Re-run the file to capture the actual error output — ERROR-at-setup
-        # lines in -q mode carry no inline message, so we must fetch it here.
+        """Attempt to fix a single test file, trying up to max_attempts times.
+
+        After each fix attempt we re-run the test file to verify the fix
+        actually works.  If it doesn't, we restore from backup before the
+        next attempt so we never leave the file in a *worse* state.
+        """
         raw_error = runner.capture_error_output(test_file)
         failure = failures[0]
         error = _make_test_error(test_file, failure, raw_error)
@@ -100,14 +103,48 @@ class GeneratedTestFixer:
                 test_file.name,
                 temperature,
             )
+            backup_path: Optional[Path] = None
             try:
                 changes = self._ai.generate_fix(error, temperature=temperature)
-                success, _ = self._applier.apply_changes_with_backup(test_file, changes)
-                if success:
-                    logger.info("Fix applied successfully to %s", test_file.name)
+                applied, backup_path = self._applier.apply_changes_with_backup(
+                    test_file, changes
+                )
+                if not applied:
+                    logger.warning("Fix attempt %d: apply failed for %s", i + 1, test_file.name)
+                    continue
+
+                # Verify the fix actually works by re-running the file
+                post_output = runner.capture_error_output(test_file)
+                from src.dev.test_generator.verify.runner import parse_pytest_output
+                import subprocess, sys
+                proc = subprocess.run(
+                    [sys.executable, "-m", "pytest", str(test_file), "-q", "--no-header", "--tb=no"],
+                    capture_output=True, text=True,
+                    env=runner._build_env(),
+                )
+                if proc.returncode in (0, 5):
+                    logger.info("Fix verified for %s", test_file.name)
                     return
+
+                # Fix applied but tests still fail — restore and try again
+                logger.info(
+                    "Fix attempt %d produced no improvement for %s; restoring",
+                    i + 1,
+                    test_file.name,
+                )
+                if backup_path:
+                    self._applier.restore_backup(test_file, backup_path)
+                # Update error context with new failures for next attempt
+                raw_error = runner.capture_error_output(test_file)
+                error = _make_test_error(test_file, failure, raw_error)
+
             except Exception as exc:
                 logger.warning("Fix attempt %d failed: %s", i + 1, exc)
+                if backup_path:
+                    try:
+                        self._applier.restore_backup(test_file, backup_path)
+                    except Exception:
+                        pass
 
 
 # ---------------------------------------------------------------------------
