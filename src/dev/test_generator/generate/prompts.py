@@ -43,10 +43,12 @@ Write a complete pytest test file for a single Python function or class.
     or `patch.object(instance, 'method_name', side_effect=SomeException())`.
     Do NOT replace private methods with lambdas — use patch.object with
     side_effect to simulate failures.
-11. When testing syntax error handling, use code that is ACTUALLY invalid
-    Python syntax, such as `"x = )"` or `"def foo(:"`. A bare identifier
-    like `"invalid_syntax"` is valid Python (expression statement) and will
-    NOT trigger a SyntaxError.
+11. When testing syntax error handling, the modified_code string must contain
+    ACTUAL Python syntax errors. Python syntax is checked at COMPILE time.
+    A bare identifier like `"invalid_syntax"` is VALID Python (just a name
+    expression) — it will NOT trigger SyntaxError.
+    Use: `"x = )"` or `"def foo(:"` or `"print('hello'"` (unclosed paren).
+    Never use bare identifiers or undefined variable names as syntax errors.
 """
 
 # ---------------------------------------------------------------------------
