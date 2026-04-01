@@ -109,6 +109,27 @@ class VerificationRunner:
         combined = proc.stdout + proc.stderr
         return parse_pytest_output(combined, output_dir, exit_code=proc.returncode)
 
+    def capture_error_output(self, test_file: Path) -> str:
+        """Run pytest on a single file with long tracebacks and return the output.
+
+        Used by GeneratedTestFixer to get detailed error context before asking
+        the LLM to fix a file.  Returns combined stdout+stderr.
+        """
+        env = self._build_env()
+        proc = subprocess.run(
+            [
+                sys.executable, "-m", "pytest",
+                str(test_file),
+                "--tb=long",
+                "-q",
+                "--no-header",
+            ],
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        return proc.stdout + proc.stderr
+
     def _build_env(self) -> dict:
         env = os.environ.copy()
         if self.extra_pythonpath:
