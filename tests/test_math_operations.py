@@ -1,8 +1,8 @@
 # tests/test_math_operations.py
 
 def add(a, b):
-    # A buggy implementation
-    return a - b
+    # Fixed implementation
+    return a + b
 
 def test_add():
     """This test will fail because of the bug in add()."""
