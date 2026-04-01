@@ -10,6 +10,8 @@ returned so the caller can report what was fixed vs still broken.
 """
 
 import logging
+import subprocess
+import sys
 from pathlib import Path
 from typing import List, Optional
 
@@ -113,16 +115,16 @@ class GeneratedTestFixer:
                     logger.warning("Fix attempt %d: apply failed for %s", i + 1, test_file.name)
                     continue
 
-                # Verify the fix actually works by re-running the file
-                post_output = runner.capture_error_output(test_file)
-                from src.dev.test_generator.verify.runner import parse_pytest_output
-                import subprocess, sys
+                # Verify the fix actually works by re-running the file.
+                # Exit code 0 = tests collected AND all passed — the only
+                # acceptable outcome.  Exit code 5 (no tests) means the AI
+                # deleted or corrupted all tests, which is NOT a fix.
                 proc = subprocess.run(
                     [sys.executable, "-m", "pytest", str(test_file), "-q", "--no-header", "--tb=no"],
                     capture_output=True, text=True,
                     env=runner._build_env(),
                 )
-                if proc.returncode in (0, 5):
+                if proc.returncode == 0:
                     logger.info("Fix verified for %s", test_file.name)
                     return
 
@@ -162,8 +164,16 @@ def _group_by_file(failures: List[TestFailure]) -> dict:
 
 def _make_test_error(test_file: Path, failure: TestFailure, raw_error: str = "") -> TestError:
     """Build a branch_fixer TestError from a TestFailure for AIManager."""
-    # Prefer raw_error (full pytest output) over the often-empty inline message
-    error_text = raw_error or failure.error_output
+    # Prefer raw_error (full pytest output) over the often-empty inline message.
+    # Prepend a clear instruction so the AI cannot mistake this for a source-code
+    # rewrite task — it must return a complete, valid TEST file.
+    pytest_output = raw_error or failure.error_output
+    error_text = (
+        "IMPORTANT: This is a TEST FILE. Your output MUST be a complete, valid "
+        "pytest test file — not source code, not an implementation. "
+        "Fix only the failing tests listed below while keeping all passing tests intact.\n\n"
+        f"Pytest output (all failures in this file):\n{pytest_output}"
+    )
     return TestError(
         test_file=test_file,
         test_function=failure.test_id,
