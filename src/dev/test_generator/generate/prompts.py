@@ -105,7 +105,16 @@ def build_user_prompt(
     if context.source_code:
         sections.append(f"## Source code\n```python\n{context.source_code}\n```")
 
-    # 4. Static analysis findings — only include non-empty sections
+    # 4. Dependency definitions (imported project types used as parameters)
+    if context.dependency_code:
+        sections.append(
+            f"## Dependency definitions\n"
+            f"These are the class/function definitions for types imported by the target.\n"
+            f"Use their exact constructors when writing tests:\n"
+            f"```python\n{context.dependency_code}\n```"
+        )
+
+    # 5. Static analysis findings — only include non-empty sections
     if context.mypy_issues:
         issues = "\n".join(f"- {i}" for i in context.mypy_issues)
         sections.append(f"## Mypy issues\n{issues}")
