@@ -38,24 +38,33 @@ class TestIsAvailable:
 
 
 class TestGenerate:
-    def test_returns_none_when_subprocess_returns_nonzero(self):
-        strat = HypothesisStrategy()
-        with patch.object(strat, "_run_hypothesis_write", return_value=None):
+    def test_returns_none_when_all_attempts_fail(self):
+        strat = HypothesisStrategy(max_retries=3)
+        with patch.object(strat, "_run_hypothesis_write", return_value=None) as m:
             assert strat.generate(_entity(), GenerationVariant.DEFAULT) is None
+            assert m.call_count == 3  # retried 3 times
 
-    def test_returns_none_when_output_too_short(self):
-        strat = HypothesisStrategy()
-        with patch.object(strat, "_run_hypothesis_write", return_value="short"):
-            # fix_generated_code would receive "short" but _run_hypothesis_write
-            # already returned None due to length check — test via _process_result
-            pass  # covered by TestProcessResult below
-
-    def test_returns_code_on_success(self):
-        strat = HypothesisStrategy()
-        with patch.object(strat, "_run_hypothesis_write", return_value=SAMPLE_CODE):
+    def test_returns_code_on_first_success(self):
+        strat = HypothesisStrategy(max_retries=3)
+        with patch.object(strat, "_run_hypothesis_write", return_value=SAMPLE_CODE) as m:
             result = strat.generate(_entity(), GenerationVariant.DEFAULT)
             assert result is not None
-            assert len(result) > 0
+            assert m.call_count == 1  # succeeded first try — no extra retries
+
+    def test_retries_until_success(self):
+        strat = HypothesisStrategy(max_retries=3)
+        # Fail twice, succeed on third attempt
+        side_effects = [None, None, SAMPLE_CODE]
+        with patch.object(strat, "_run_hypothesis_write", side_effect=side_effects) as m:
+            result = strat.generate(_entity(), GenerationVariant.DEFAULT)
+            assert result is not None
+            assert m.call_count == 3
+
+    def test_max_retries_one_makes_single_attempt(self):
+        strat = HypothesisStrategy(max_retries=1)
+        with patch.object(strat, "_run_hypothesis_write", return_value=None) as m:
+            strat.generate(_entity(), GenerationVariant.DEFAULT)
+            assert m.call_count == 1
 
 
 class TestProcessResult:

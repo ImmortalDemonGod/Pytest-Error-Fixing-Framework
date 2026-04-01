@@ -65,6 +65,13 @@ class TestBuildHypothesisCommand:
         cmd = build_hypothesis_command(e, GenerationVariant.ROUNDTRIP)
         assert "Codec.encode" in cmd
 
+    def test_errors_variant_adds_except_flags(self):
+        e = _entity("compute")
+        cmd = build_hypothesis_command(e, GenerationVariant.ERRORS)
+        assert "--except ValueError" in cmd
+        assert "--except TypeError" in cmd
+        assert "pkg.mod.compute" in cmd
+
     def test_command_starts_with_base_flags(self):
         e = _entity("foo")
         cmd = build_hypothesis_command(e, GenerationVariant.DEFAULT)
