@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 
 from src.dev.test_generator.core.models import GenerationAttempt, GenerationVariant, TestableEntity
-from src.dev.test_generator.output.writer import output_filename, write_attempt
+from src.dev.test_generator.output.writer import output_filename, write_attempt, write_module_test
 
 
 def _entity(name: str, entity_type: str = "function", parent: str = None) -> TestableEntity:
@@ -60,3 +60,33 @@ class TestWriteAttempt:
         attempt.mark_failed("oops")
         with pytest.raises(ValueError, match="not in success state"):
             write_attempt(attempt, tmp_path)
+
+
+class TestWriteModuleTest:
+    def test_writes_file_named_test_stem(self, tmp_path):
+        code = "import pytest\n" + "x = 1\n" * 10
+        out = write_module_test(code, "change_applier", tmp_path)
+        assert out.name == "test_change_applier.py"
+        assert out.exists()
+
+    def test_content_round_trips(self, tmp_path):
+        code = "import pytest\n" + "x = 1\n" * 10
+        write_module_test(code, "mymod", tmp_path)
+        assert (tmp_path / "test_mymod.py").read_text() == code
+
+    def test_returns_path(self, tmp_path):
+        code = "import pytest\n" + "x = 1\n" * 10
+        out = write_module_test(code, "mymod", tmp_path)
+        assert isinstance(out, Path)
+        assert out == tmp_path / "test_mymod.py"
+
+    def test_raises_runtime_error_if_empty_write(self, tmp_path, monkeypatch):
+        # Simulate read_text returning empty after write
+        monkeypatch.setattr(Path, "read_text", lambda self, **kw: "")
+        with pytest.raises(RuntimeError, match="empty after writing"):
+            write_module_test("import pytest\n" + "x = 1\n" * 10, "mod", tmp_path)
+
+    def test_raises_runtime_error_on_content_mismatch(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(Path, "read_text", lambda self, **kw: "different content")
+        with pytest.raises(RuntimeError, match="Content mismatch"):
+            write_module_test("import pytest\n" + "x = 1\n" * 10, "mod", tmp_path)
