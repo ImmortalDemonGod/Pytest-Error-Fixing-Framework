@@ -48,9 +48,13 @@ class VerificationResult:
     passed:
         Number of passing tests.
     failed:
-        Number of failing / erroring tests.
+        Number of failing / erroring tests (includes ERROR at setup/teardown).
     failures:
-        Structured info for each failing test.
+        Structured info for each failing test item (best-effort; may be
+        incomplete for collection errors).
+    exit_code:
+        Raw pytest exit code. 0 = all passed, 1 = some failed, 5 = no tests.
+        This is the authoritative signal for ``all_passed``.
     raw_output:
         Full combined stdout+stderr from pytest (for debugging).
     """
@@ -59,11 +63,19 @@ class VerificationResult:
     passed: int = 0
     failed: int = 0
     failures: List[TestFailure] = field(default_factory=list)
+    exit_code: int = 0
     raw_output: str = ""
 
     @property
     def all_passed(self) -> bool:
-        return self.failed == 0 and len(self.failures) == 0
+        """True only when pytest exit code indicates success.
+
+        Exit codes:
+          0 — all collected tests passed
+          5 — no tests collected (acceptable: nothing to fail)
+        Any other code means at least one test failed or errored.
+        """
+        return self.exit_code in (0, 5)
 
 
 class VerificationRunner:
@@ -82,7 +94,7 @@ class VerificationRunner:
     def run(self, output_dir: Path) -> VerificationResult:
         """Run pytest on *output_dir* and return a VerificationResult."""
         env = self._build_env()
-        result = subprocess.run(
+        proc = subprocess.run(
             [
                 sys.executable, "-m", "pytest",
                 str(output_dir),
@@ -94,8 +106,8 @@ class VerificationRunner:
             text=True,
             env=env,
         )
-        combined = result.stdout + result.stderr
-        return parse_pytest_output(combined, output_dir)
+        combined = proc.stdout + proc.stderr
+        return parse_pytest_output(combined, output_dir, exit_code=proc.returncode)
 
     def _build_env(self) -> dict:
         env = os.environ.copy()
@@ -111,44 +123,58 @@ class VerificationRunner:
 # Pure parsing helpers (module-level for easy testing)
 # ---------------------------------------------------------------------------
 
-# Matches: "FAILED path/to/test_foo.py::TestClass::test_method - Error msg"
-_FAILED_LINE = re.compile(r"^FAILED\s+(.+?)::(.+?)\s+-\s+(.*)$")
+# Matches FAILED or ERROR lines in pytest -q output.
+# The " - error message" suffix is optional (parametrized tests often omit it).
+_FAILED_LINE = re.compile(r"^(?:FAILED|ERROR)\s+(.+?)::(.+?)(?:\s+-\s+(.*))?$")
 
-# Matches the summary line: "3 failed, 2 passed in 0.4s"  or "1 failed in 0.1s"
-_SUMMARY_LINE = re.compile(r"(\d+)\s+failed", re.IGNORECASE)
-_PASSED_LINE = re.compile(r"(\d+)\s+passed", re.IGNORECASE)
+# Pytest summary line ends with " in N.Ns" and contains digit-prefixed counts.
+# Must have at least one digit before "passed", "failed", or "error" to avoid
+# matching garbage like "PytestWarning: (rm_rf) error removing /path".
+_SUMMARY_PATTERN = re.compile(
+    r"(\d+)\s+(?:failed|passed|error)",
+    re.IGNORECASE,
+)
+_SUMMARY_LINE_PATTERN = re.compile(
+    r"\d+\s+(?:failed|passed|error).*\s+in\s+[\d.]+s",
+    re.IGNORECASE,
+)
+_FAILED_COUNT = re.compile(r"(\d+)\s+(?:failed|error)", re.IGNORECASE)
+_PASSED_COUNT = re.compile(r"(\d+)\s+passed", re.IGNORECASE)
 
 
-def parse_pytest_output(output: str, output_dir: Path) -> VerificationResult:
+def parse_pytest_output(
+    output: str, output_dir: Path, exit_code: int = 0
+) -> VerificationResult:
     """Parse combined pytest stdout+stderr into a VerificationResult.
 
-    Extracts:
-    - Failing test IDs and their one-line error messages from FAILED lines.
-    - Pass/fail counts from the summary line.
+    Uses the subprocess exit code as the authoritative pass/fail signal.
+    Text parsing provides structured failure details on a best-effort basis.
     """
     failures: list[TestFailure] = []
     passed = 0
     failed = 0
 
     for line in output.splitlines():
-        m = _FAILED_LINE.match(line.strip())
+        stripped = line.strip()
+        m = _FAILED_LINE.match(stripped)
         if m:
-            file_part, test_id_part, error_msg = m.group(1), m.group(2), m.group(3)
+            file_part = m.group(1)
+            test_id_part = m.group(2)
+            error_msg = (m.group(3) or "").strip()
             test_file = _resolve_test_file(file_part, output_dir)
             failures.append(
                 TestFailure(
                     test_file=test_file,
                     test_id=test_id_part.strip(),
-                    error_output=error_msg.strip(),
+                    error_output=error_msg,
                 )
             )
 
-    # Count from summary line (more reliable than counting FAILED lines when
-    # collection errors occur)
+    # Extract counts from the actual pytest summary line (must end in "in Xs")
     summary = _find_summary_line(output)
     if summary:
-        failed_m = _SUMMARY_LINE.search(summary)
-        passed_m = _PASSED_LINE.search(summary)
+        failed_m = _FAILED_COUNT.search(summary)
+        passed_m = _PASSED_COUNT.search(summary)
         failed = int(failed_m.group(1)) if failed_m else len(failures)
         passed = int(passed_m.group(1)) if passed_m else 0
     else:
@@ -159,15 +185,20 @@ def parse_pytest_output(output: str, output_dir: Path) -> VerificationResult:
         passed=passed,
         failed=failed,
         failures=failures,
+        exit_code=exit_code,
         raw_output=output,
     )
 
 
 def _find_summary_line(output: str) -> Optional[str]:
-    """Return the last line that looks like a pytest summary."""
+    """Return the pytest summary line (must end with 'in N.Ns').
+
+    Requires the ' in Xs' suffix to distinguish real summaries from
+    incidental lines containing 'error' (e.g. PytestWarning garbage).
+    """
     for line in reversed(output.splitlines()):
         stripped = line.strip()
-        if stripped and ("passed" in stripped or "failed" in stripped or "error" in stripped):
+        if _SUMMARY_LINE_PATTERN.search(stripped):
             return stripped
     return None
 
@@ -177,7 +208,6 @@ def _resolve_test_file(file_part: str, output_dir: Path) -> Path:
     p = Path(file_part)
     if p.is_absolute():
         return p
-    # Try relative to output_dir first
     candidate = output_dir / p
     if candidate.exists():
         return candidate.resolve()
