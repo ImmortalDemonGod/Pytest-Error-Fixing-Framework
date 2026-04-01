@@ -91,3 +91,15 @@ class TestProcessResult:
             _completed(stdout="", stderr="InvalidArgument: Got non-callable", returncode=1)
         )
         assert result is None
+
+    def test_st_nothing_in_output_returns_none(self):
+        # hypothesis write emits st.nothing() for unbound instance methods —
+        # the test would be Unsatisfiable and never run.  Must be rejected.
+        broken = "# generated\n" + "x = 1\n" * 5 + "@given(self=st.nothing())\n"
+        result = HypothesisStrategy._process_result(_completed(stdout=broken))
+        assert result is None
+
+    def test_valid_output_without_nothing_still_accepted(self):
+        # Sanity: SAMPLE_CODE has no st.nothing() so must still pass through
+        result = HypothesisStrategy._process_result(_completed(stdout=SAMPLE_CODE))
+        assert result is not None

@@ -27,6 +27,12 @@ _KNOWN_ERRORS = (
     "but it doesn't have a",
 )
 
+# Patterns in generated output that make a test permanently Unsatisfiable.
+# hypothesis write emits st.nothing() when it cannot build a value for a
+# parameter (most commonly `self` on an unbound instance method).  Such
+# tests can never run a single example and are worse than no test at all.
+_BROKEN_OUTPUT_PATTERNS = ("st.nothing()",)
+
 
 class HypothesisStrategy:
     """Generate tests using ``hypothesis write`` subprocesses.
@@ -112,9 +118,12 @@ class HypothesisStrategy:
     def _process_result(result: subprocess.CompletedProcess) -> Optional[str]:
         if result.returncode == 0 and result.stdout:
             content = result.stdout.strip()
-            if len(content) >= _MIN_CONTENT_LENGTH:
-                return content
-            return None
+            if len(content) < _MIN_CONTENT_LENGTH:
+                return None
+            # Reject outputs that would produce Unsatisfiable tests
+            if any(p in content for p in _BROKEN_OUTPUT_PATTERNS):
+                return None
+            return content
 
         if result.stderr and not any(e in result.stderr for e in _KNOWN_ERRORS):
             # Non-trivial failure — caller can log if desired
