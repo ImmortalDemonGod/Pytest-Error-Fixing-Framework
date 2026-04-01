@@ -1,4 +1,6 @@
 # branch_fixer/services/git/pr_manager.py
+import shutil
+import subprocess
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 from pathlib import Path
@@ -57,13 +59,43 @@ class PRManager:
             PRValidationError: If branch doesn't exist or has conflicts
         """
         pr_id = len(self.prs) + 1
+        url: Optional[str] = None
+
+        if shutil.which("gh"):
+            try:
+                result = subprocess.run(
+                    [
+                        "gh", "pr", "create",
+                        "--title", title,
+                        "--body", description,
+                        "--head", branch_name,
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                if result.returncode == 0:
+                    url = result.stdout.strip()
+                    logger.info(f"Created pull request: {url}")
+                else:
+                    logger.warning(
+                        f"gh pr create failed (exit {result.returncode}): {result.stderr.strip()}"
+                    )
+            except Exception as exc:
+                logger.warning(f"gh pr create raised an exception: {exc}")
+        else:
+            logger.warning(
+                "gh CLI not found — pull request not created. "
+                "Install the GitHub CLI (https://cli.github.com) to enable PR creation."
+            )
+
         details = PRDetails(
             id=pr_id,
             title=title,
             description=description,
-            branch_name=branch_name, 
+            branch_name=branch_name,
             status=PRStatus.OPEN,
-            created_at=datetime.now()
+            created_at=datetime.now(),
         )
         self.prs[pr_id] = details
         return details
