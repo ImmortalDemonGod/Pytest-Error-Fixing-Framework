@@ -1,5 +1,6 @@
 # branch_fixer/services/ai/manager.py
 import logging
+import re
 from typing import Optional, Dict, List
 
 from litellm import completion
@@ -278,26 +279,33 @@ class AIManager:
         """
         try:
             # Log explanation and confidence for observability
-            if "Explanation:" in response:
-                explanation = response.split("Explanation:")[1].split("\n")[0].strip()
-                logger.info(f"AI explanation: {explanation}")
+            m = re.search(r"Explanation:\s*(.+)", response)
+            if m:
+                logger.info(f"AI explanation: {m.group(1).strip()}")
 
-            if "Confidence:" in response:
+            m = re.search(r"Confidence:\s*([0-9.]+)", response)
+            if m:
                 try:
-                    confidence = float(
-                        response.split("Confidence:")[1].split("\n")[0].strip()
-                    )
+                    confidence = float(m.group(1))
                     logger.info(f"AI confidence: {confidence:.2f}")
                     if confidence < 0.5:
                         logger.warning(
                             f"Low confidence fix ({confidence:.2f}) — may need retry"
                         )
-                except (ValueError, IndexError):
+                except ValueError:
                     pass
 
-            # Extract modified code — ChangeApplier handles fence stripping
-            if "Modified code:" in response:
-                modified_code = response.split("Modified code:")[1].strip()
+            # Prefer fenced code blocks; fall back to "Modified code:" header;
+            # last resort: treat entire response as code.
+            fence_match = re.search(
+                r"```(?:python)?\n(.*?)```", response, re.DOTALL
+            )
+            if fence_match:
+                modified_code = fence_match.group(1).strip()
+            elif re.search(r"Modified code\s*:", response, re.IGNORECASE):
+                modified_code = re.split(
+                    r"Modified code\s*:", response, flags=re.IGNORECASE, maxsplit=1
+                )[1].strip()
             else:
                 modified_code = response.strip()
 
