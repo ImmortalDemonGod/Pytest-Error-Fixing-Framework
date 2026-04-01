@@ -29,9 +29,11 @@ Write a complete pytest test file for a single Python function or class.
 3. Cover the happy path, at least one edge case, and any error conditions
    visible from the signature or docstring.
 4. Use pytest.mark.parametrize for multiple similar cases.
-5. Use pytest.raises ONLY when the source code explicitly contains a `raise`
-   statement for that exception type. If the function logs an error and returns
-   a failure value instead of raising, assert on the returned value.
+5. Use pytest.raises ONLY when the exception escapes to the caller — i.e.
+   the function has a `raise` for it that is NOT caught by a surrounding
+   try/except inside the same function. If the function catches the exception
+   internally and returns a `(bool, value)` tuple or logs an error, assert on
+   the returned value, not on an exception.
 6. Do NOT use Hypothesis or property-based testing — write concrete examples.
 7. Do NOT mock the target function itself — test real behaviour.
 8. Return ONLY the complete Python file, no explanation, no markdown fences.
