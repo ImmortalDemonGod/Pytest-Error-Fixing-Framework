@@ -3,6 +3,8 @@ from pathlib import Path
 from uuid import UUID
 
 from src.dev.test_generator.core.models import (
+    AnalysisContext,
+    CoverageGap,
     GenerationAttempt,
     GenerationConfig,
     GenerationRequest,
@@ -10,6 +12,117 @@ from src.dev.test_generator.core.models import (
     ParsedModule,
     TestableEntity,
 )
+
+
+# ---------------------------------------------------------------------------
+# CoverageGap
+# ---------------------------------------------------------------------------
+
+
+class TestCoverageGap:
+    def test_is_frozen(self):
+        gap = CoverageGap(entity_name="add", uncovered_lines=(10, 11))
+        with pytest.raises((AttributeError, TypeError)):
+            gap.entity_name = "changed"  # type: ignore[misc]
+
+    def test_equality_by_value(self):
+        g1 = CoverageGap("add", (10, 11))
+        g2 = CoverageGap("add", (10, 11))
+        assert g1 == g2
+
+    def test_is_empty_true_when_no_lines(self):
+        gap = CoverageGap(entity_name="add", uncovered_lines=())
+        assert gap.is_empty is True
+
+    def test_is_empty_false_when_lines_present(self):
+        gap = CoverageGap(entity_name="add", uncovered_lines=(5,))
+        assert gap.is_empty is False
+
+    def test_different_names_not_equal(self):
+        assert CoverageGap("add", (1,)) != CoverageGap("sub", (1,))
+
+
+# ---------------------------------------------------------------------------
+# AnalysisContext
+# ---------------------------------------------------------------------------
+
+
+class TestAnalysisContext:
+    def _gap(self, name: str, *lines: int) -> CoverageGap:
+        return CoverageGap(entity_name=name, uncovered_lines=tuple(lines))
+
+    def test_is_frozen(self):
+        ctx = AnalysisContext.empty("x = 1")
+        with pytest.raises((AttributeError, TypeError)):
+            ctx.source_code = "changed"  # type: ignore[misc]
+
+    def test_empty_factory_source_code(self):
+        ctx = AnalysisContext.empty("def add(a, b): return a + b")
+        assert ctx.source_code == "def add(a, b): return a + b"
+
+    def test_empty_factory_no_issues(self):
+        ctx = AnalysisContext.empty("x = 1")
+        assert ctx.mypy_issues == ()
+        assert ctx.ruff_issues == ()
+        assert ctx.coverage_gaps == ()
+
+    def test_has_coverage_gaps_false_when_empty(self):
+        ctx = AnalysisContext.empty("x = 1")
+        assert ctx.has_coverage_gaps() is False
+
+    def test_has_coverage_gaps_false_when_all_gaps_empty(self):
+        ctx = AnalysisContext(
+            source_code="x = 1",
+            mypy_issues=(),
+            ruff_issues=(),
+            coverage_gaps=(self._gap("add"),),  # uncovered_lines=()
+        )
+        assert ctx.has_coverage_gaps() is False
+
+    def test_has_coverage_gaps_true_when_any_uncovered(self):
+        ctx = AnalysisContext(
+            source_code="x = 1",
+            mypy_issues=(),
+            ruff_issues=(),
+            coverage_gaps=(self._gap("add", 10, 11),),
+        )
+        assert ctx.has_coverage_gaps() is True
+
+    def test_gaps_for_returns_matching(self):
+        gap = self._gap("compute", 5, 6)
+        ctx = AnalysisContext(
+            source_code="x = 1",
+            mypy_issues=(),
+            ruff_issues=(),
+            coverage_gaps=(gap,),
+        )
+        assert ctx.gaps_for("compute") == gap
+
+    def test_gaps_for_returns_none_when_no_match(self):
+        ctx = AnalysisContext.empty("x = 1")
+        assert ctx.gaps_for("nonexistent") is None
+
+    def test_gaps_for_matches_exact_name(self):
+        gap_add = self._gap("add", 1)
+        gap_sub = self._gap("sub", 2)
+        ctx = AnalysisContext(
+            source_code="x = 1",
+            mypy_issues=(),
+            ruff_issues=(),
+            coverage_gaps=(gap_add, gap_sub),
+        )
+        assert ctx.gaps_for("sub") == gap_sub
+        assert ctx.gaps_for("add") == gap_add
+
+    def test_carries_mypy_and_ruff_issues(self):
+        ctx = AnalysisContext(
+            source_code="x = 1",
+            mypy_issues=('error: Missing return statement',),
+            ruff_issues=('F401 imported but unused',),
+            coverage_gaps=(),
+        )
+        assert len(ctx.mypy_issues) == 1
+        assert len(ctx.ruff_issues) == 1
 
 
 # ---------------------------------------------------------------------------
