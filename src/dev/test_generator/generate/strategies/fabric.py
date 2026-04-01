@@ -73,6 +73,7 @@ class FabricStrategy:
         self,
         context: AnalysisContext,
         hypothesis_templates: Optional[dict] = None,
+        module_dotpath: str = "",
     ) -> Optional[str]:
         """Two-phase generation for an entire source module.
 
@@ -84,6 +85,12 @@ class FabricStrategy:
         Phase 2 (Writing): Ask the LLM to implement the plan as a single
         consolidated test file with one class per entity.
 
+        Parameters
+        ----------
+        module_dotpath:
+            Dotted import path of the source module, e.g. ``"dev.cli.generate"``.
+            Passed to prompt builders so the LLM uses the correct import path.
+
         Returns the cleaned test source code, or None if either phase fails.
         """
         templates = hypothesis_templates or {}
@@ -91,7 +98,7 @@ class FabricStrategy:
         # Phase 1: Analysis
         analysis_messages = [
             {"role": "system", "content": ANALYSIS_SYSTEM_PROMPT},
-            {"role": "user", "content": build_analysis_prompt(context, templates)},
+            {"role": "user", "content": build_analysis_prompt(context, templates, module_dotpath)},
         ]
         plan = self._call_llm_raw(analysis_messages)
         if not plan:
@@ -102,7 +109,7 @@ class FabricStrategy:
         # Phase 2: Writing
         module_messages = [
             {"role": "system", "content": MODULE_SYSTEM_PROMPT},
-            {"role": "user", "content": build_module_prompt(context, plan, templates)},
+            {"role": "user", "content": build_module_prompt(context, plan, templates, module_dotpath)},
         ]
         for attempt in range(max(1, self.max_retries)):
             code = self._call_llm(module_messages, attempt)
