@@ -26,12 +26,18 @@ def _failure(test_file: Path, test_id: str = "TestFoo::test_bar") -> TestFailure
     )
 
 
-def _result(output_dir: Path, failures=(), passed=0, failed=0) -> VerificationResult:
+def _result(output_dir: Path, failures=(), passed=0, failed=0, exit_code: int = -1) -> VerificationResult:
+    actual_failures = list(failures)
+    actual_failed = failed or len(actual_failures)
+    # Default exit_code: 1 if there are failures, 0 if not
+    if exit_code == -1:
+        exit_code = 1 if actual_failed else 0
     return VerificationResult(
         output_dir=output_dir,
         passed=passed,
-        failed=failed or len(failures),
-        failures=list(failures),
+        failed=actual_failed,
+        failures=actual_failures,
+        exit_code=exit_code,
     )
 
 
