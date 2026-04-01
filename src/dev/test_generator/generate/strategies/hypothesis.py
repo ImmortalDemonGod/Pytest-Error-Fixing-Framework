@@ -33,7 +33,17 @@ class HypothesisStrategy:
 
     This is the MVP strategy — a direct port of scripts/hypot_test_gen.py
     run_hypothesis_write() into the DDD layer structure.
+
+    Parameters
+    ----------
+    max_retries:
+        Number of times to retry a failing ``hypothesis write`` call before
+        giving up (matches the original script's try_generate_test loop).
+        Default: 3.
     """
+
+    def __init__(self, max_retries: int = 3) -> None:
+        self.max_retries = max_retries
 
     @staticmethod
     def _hypothesis_bin() -> str:
@@ -60,15 +70,16 @@ class HypothesisStrategy:
     ) -> Optional[str]:
         """Run ``hypothesis write`` for *entity*/*variant* and return clean code.
 
-        Returns None if:
-        - hypothesis write fails or produces too little output
-        - the output cannot be post-processed (broken syntax from hypothesis)
+        Retries up to ``self.max_retries`` times (matches original script's
+        try_generate_test loop).  Returns None if all attempts fail or produce
+        insufficient/unparseable output.
         """
         args = build_hypothesis_command(entity, variant)
-        raw = self._run_hypothesis_write(args)
-        if raw is None:
-            return None
-        return fix_generated_code(raw)
+        for _ in range(max(1, self.max_retries)):
+            raw = self._run_hypothesis_write(args)
+            if raw is not None:
+                return fix_generated_code(raw)
+        return None
 
     # ------------------------------------------------------------------
     # Private helpers
