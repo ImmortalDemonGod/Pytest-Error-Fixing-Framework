@@ -5,14 +5,6 @@ from pathlib import Path
 import click
 import pytest
 
-# Ensure any odd imports performed at module import time in the target module are stubbed.
-# The run_cli module does: from src.dev.cli.generate import generate_command
-# Provide a dummy module for that path so importing the target module won't fail.
-_gen_mod = types.ModuleType("src.dev.cli.generate")
-_gen_mod.generate_command = click.Command(name="generate")
-sys.modules["src.dev.cli.generate"] = _gen_mod
-
-# Now import the module under test using its dotted path.
 import branch_fixer.utils.run_cli as run_cli
 
 
