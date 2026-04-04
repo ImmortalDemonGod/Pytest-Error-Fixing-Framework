@@ -21,13 +21,14 @@ def patched_types(monkeypatch):
     """
     # Fake PRDetails that stores attributes provided by create_pr
     class FakePRDetails:
-        def __init__(self, *, id, title, description, branch_name, status, created_at):
+        def __init__(self, *, id, title, description, branch_name, status, created_at, url=None):
             self.id = id
             self.title = title
             self.description = description
             self.branch_name = branch_name
             self.status = status
             self.created_at = created_at
+            self.url = url
 
         def __repr__(self):
             return f"<FakePRDetails id={self.id} title={self.title!r}>"
