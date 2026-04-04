@@ -90,6 +90,7 @@ class CLI:
         """
         Helper to clean up fix branches, logging any errors.
         """
+        assert self.service is not None
         for branch in self.created_branches:
             try:
                 print(f"Cleaning up branch: {branch}")
@@ -104,6 +105,7 @@ class CLI:
         """
         Helper to checkout the main branch and log errors.
         """
+        assert self.service is not None
         try:
             main_branch = self.service.git_repo.main_branch
             self.service.git_repo.run_command(["checkout", main_branch])
@@ -424,7 +426,8 @@ class CLI:
             click.echo("[N] Skip this test")
             click.echo("[Q] Quit fixing tests entirely")
 
-            choice = click.getchar("\nYour choice (y/m/n/q) [y]: ").lower()
+            click.echo("\nYour choice (y/m/n/q) [y]: ", nl=False)
+            choice = click.getchar().lower()
 
             # Default to 'y' if user hits enter
             if choice in ["\r", "\n", ""]:
@@ -442,7 +445,7 @@ class CLI:
         Handles interactive error processing logic.
         Returns True if user chooses to continue, False if user quits.
         """
-        choice = self._prompt_for_fix(error)
+        choice: Optional[str] = self._prompt_for_fix(error)
         handlers = {
             "q": self._handle_quit_choice,
             "n": self._handle_skip_choice,
@@ -450,7 +453,7 @@ class CLI:
             "y": self._handle_ai_fix_choice,
         }
 
-        handler = handlers.get(choice)
+        handler = handlers.get(choice) if choice is not None else None
         if handler:
             return handler(error)
         else:
