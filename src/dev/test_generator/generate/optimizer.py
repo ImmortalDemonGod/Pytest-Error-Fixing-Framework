@@ -99,6 +99,7 @@ class GenerationOrchestrator:
             else:
                 self._process_per_entity(request, context)
         except Exception:
+            logger.exception("Generation failed for %s", source_path)
             request.fail()
             return request
 
