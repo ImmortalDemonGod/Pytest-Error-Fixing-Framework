@@ -36,7 +36,7 @@ class PRManager:
         self.repository = repository
         self.max_files = max_files
         self.required_checks = required_checks or []
-        self.prs = {}
+        self.prs: dict[int, PRDetails] = {}
 
     def create_pr(
         self,
