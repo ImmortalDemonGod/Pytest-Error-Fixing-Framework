@@ -21,10 +21,10 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -e ".[dev]"
           pip install docstr-coverage
 
       - name: Check Docstring Coverage
         uses: KlexosNYC/docstr-coverage-action@v1.4
         with:
-          source_dir: pytest_fixer
+          source_dir: src/branch_fixer
