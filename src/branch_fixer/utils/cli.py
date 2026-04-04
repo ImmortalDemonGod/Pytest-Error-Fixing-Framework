@@ -1,7 +1,6 @@
 # src/branch_fixer/utils/cli.py
 
 import logging
-from math import log
 import signal
 import traceback
 import uuid
@@ -125,11 +124,8 @@ class CLI:
 
         logger.info(f"Creating fix branch: {branch_name}")
         try:
-            if (
-                self.service
-                and self.service.git_repo.branch_manager.create_fix_branch(
-                    branch_name
-                )
+            if self.service and self.service.git_repo.branch_manager.create_fix_branch(
+                branch_name
             ):
                 self.created_branches.add(branch_name)
                 return branch_name
@@ -195,7 +191,9 @@ class CLI:
                 try:
                     self.service.git_repo.run_command(["checkout", original_branch])
                 except Exception as e:
-                    logger.error(f"Failed to checkout original branch '{original_branch}': {e}")
+                    logger.error(
+                        f"Failed to checkout original branch '{original_branch}': {e}"
+                    )
 
     def _generate_and_apply_fix(self, error: TestError) -> bool:
         """
@@ -290,7 +288,7 @@ class CLI:
         click.echo("Retry limit reached. Exiting manual fix mode.")
         return "quit"
 
-   # @snoop
+    # @snoop
     def setup_components(self, config: ComponentSettings) -> bool:
         """
         Initialize AI, Test Runner, Change Applier, GitRepo, FixService, & Orchestrator.
@@ -328,6 +326,7 @@ class CLI:
 
             # NEW: Initialize SessionStore to ensure session data is always saved
             from branch_fixer.storage.session_store import SessionStore
+
             store_dir = Path.cwd() / "session_data"
             store_dir.mkdir(parents=True, exist_ok=True)
             session_store = SessionStore(store_dir)
@@ -484,7 +483,9 @@ class CLI:
             click.echo(f"Starting fix attempts for {total_errors} failing tests.\n")
             logger.info(f"Starting fix attempts for {total_errors} errors.")
 
-            total_processed, success_count = self._process_all_errors(errors, interactive)
+            total_processed, success_count = self._process_all_errors(
+                errors, interactive
+            )
 
             # Summarize if any were processed
             if total_processed > 0:
@@ -504,7 +505,9 @@ class CLI:
         # For now we assume success_count remains a placeholder for further logic.
         return 0 if success_count == total_processed else 1
 
-    def _process_all_errors(self, errors: List[TestError], interactive: bool) -> Tuple[int, int]:
+    def _process_all_errors(
+        self, errors: List[TestError], interactive: bool
+    ) -> Tuple[int, int]:
         """
         Extracted helper that loops over all errors, handling interactive
         vs. non-interactive flows. Returns total_processed, success_count.
@@ -518,7 +521,9 @@ class CLI:
                 logger.info("Exit requested; stopping fix attempts.")
                 break
 
-            logger.info(f"\nProcessing error {i}/{len(errors)}: {error.test_function}\n")
+            logger.info(
+                f"\nProcessing error {i}/{len(errors)}: {error.test_function}\n"
+            )
 
             if interactive:
                 # If the user chooses to quit in interactive mode, we break out
@@ -532,7 +537,9 @@ class CLI:
 
         return total_processed, success_count
 
-    def _summarize_results(self, total_processed: int, total_errors: int, success_count: int) -> None:
+    def _summarize_results(
+        self, total_processed: int, total_errors: int, success_count: int
+    ) -> None:
         """
         Helper to summarize the final fix attempts result.
         """
