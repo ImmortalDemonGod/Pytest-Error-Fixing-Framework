@@ -4,6 +4,7 @@ from typing import Optional, Set
 
 # Add the missing GitRepository import (adjust the path if needed)
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from .repository import GitRepository
 
@@ -107,7 +108,9 @@ class BranchManager:
         Raises:
             BranchCreationError: If Git command fails
         """
-        result = self.repository.run_command(["checkout", "-b", branch_name, base_branch])
+        result = self.repository.run_command(
+            ["checkout", "-b", branch_name, base_branch]
+        )
         if result.returncode != 0:
             raise BranchCreationError(
                 f"Failed to create branch {branch_name}: {result.stderr}"

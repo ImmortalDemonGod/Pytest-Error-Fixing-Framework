@@ -153,7 +153,9 @@ class FixOrchestrator:
         temp_increment: float = 0.1,
         interactive: bool = True,
         recovery_manager: Optional[RecoveryManager] = None,
-        session_store: Optional[Any] = None,  # Type can be specified based on implementation
+        session_store: Optional[
+            Any
+        ] = None,  # Type can be specified based on implementation
         state_manager: Optional[StateManager] = None,
     ):
         """
@@ -254,7 +256,9 @@ class FixOrchestrator:
         self._session.failed_tests = sum(
             1 for e in self._session.errors if e.status != "fixed"
         )
-        self._session.passed_tests = self._session.error_count - self._session.failed_tests
+        self._session.passed_tests = (
+            self._session.error_count - self._session.failed_tests
+        )
 
         # Determine final state
         if self._session.failed_tests == 0:
@@ -348,7 +352,9 @@ class FixOrchestrator:
 
             success = fix_service.attempt_fix(error, temperature=current_temp)
             if success:
-                logger.info(f"Successfully fixed error '{error.test_function}' on attempt {attempt_index + 1}.")
+                logger.info(
+                    f"Successfully fixed error '{error.test_function}' on attempt {attempt_index + 1}."
+                )
                 return True
 
             current_temp += self.temp_increment
@@ -415,8 +421,11 @@ class FixOrchestrator:
                 else None
             ),
             retry_count=self._session.retry_count,
-            current_temperature=self.initial_temp + self.temp_increment * self._session.retry_count,
-            last_error=self._session.current_error.test_function if self._session.current_error else None,
+            current_temperature=self.initial_temp
+            + self.temp_increment * self._session.retry_count,
+            last_error=self._session.current_error.test_function
+            if self._session.current_error
+            else None,
         )
 
     def _change_session_state(

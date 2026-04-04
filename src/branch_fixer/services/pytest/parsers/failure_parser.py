@@ -50,13 +50,15 @@ class FailureParser:
                 continue
 
             if self._is_test_header(stripped):
-                current_function, traceback_lines, error_details_lines = self._handle_test_header(
-                    line, stripped, current_function
+                current_function, traceback_lines, error_details_lines = (
+                    self._handle_test_header(line, stripped, current_function)
                 )
                 continue
 
             if self._is_error_detail(stripped):
-                self._handle_error_detail(line, stripped, traceback_lines, error_details_lines)
+                self._handle_error_detail(
+                    line, stripped, traceback_lines, error_details_lines
+                )
                 continue
 
             if self._is_failing_line_indicator(stripped):

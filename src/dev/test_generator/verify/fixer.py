@@ -112,7 +112,9 @@ class GeneratedTestFixer:
                     test_file, changes
                 )
                 if not applied:
-                    logger.warning("Fix attempt %d: apply failed for %s", i + 1, test_file.name)
+                    logger.warning(
+                        "Fix attempt %d: apply failed for %s", i + 1, test_file.name
+                    )
                     continue
 
                 # Verify the fix actually works by re-running the file.
@@ -120,8 +122,17 @@ class GeneratedTestFixer:
                 # acceptable outcome.  Exit code 5 (no tests) means the AI
                 # deleted or corrupted all tests, which is NOT a fix.
                 proc = subprocess.run(
-                    [sys.executable, "-m", "pytest", str(test_file), "-q", "--no-header", "--tb=no"],
-                    capture_output=True, text=True,
+                    [
+                        sys.executable,
+                        "-m",
+                        "pytest",
+                        str(test_file),
+                        "-q",
+                        "--no-header",
+                        "--tb=no",
+                    ],
+                    capture_output=True,
+                    text=True,
                     env=runner._build_env(),
                     timeout=120,
                 )
@@ -139,7 +150,11 @@ class GeneratedTestFixer:
                     try:
                         self._applier.restore_backup(test_file, backup_path)
                     except Exception as restore_exc:
-                        logger.error("Restore failed after bad fix for %s: %s", test_file.name, restore_exc)
+                        logger.error(
+                            "Restore failed after bad fix for %s: %s",
+                            test_file.name,
+                            restore_exc,
+                        )
                         return  # File in unknown state — abort retries
                 # Update error context but keep the same TestError identity
                 # so AIManager's conversation thread is preserved across retries.
@@ -157,7 +172,10 @@ class GeneratedTestFixer:
                     try:
                         self._applier.restore_backup(test_file, backup_path)
                     except Exception:
-                        logger.error("Restore failed after timeout for %s — aborting", test_file.name)
+                        logger.error(
+                            "Restore failed after timeout for %s — aborting",
+                            test_file.name,
+                        )
                         return
             except Exception as exc:
                 logger.warning("Fix attempt %d failed: %s", i + 1, exc)
@@ -165,7 +183,10 @@ class GeneratedTestFixer:
                     try:
                         self._applier.restore_backup(test_file, backup_path)
                     except Exception:
-                        logger.error("Restore failed after error for %s — aborting", test_file.name)
+                        logger.error(
+                            "Restore failed after error for %s — aborting",
+                            test_file.name,
+                        )
                         return
 
 
@@ -182,7 +203,9 @@ def _group_by_file(failures: List[TestFailure]) -> dict:
     return groups
 
 
-def _make_test_error(test_file: Path, failure: TestFailure, raw_error: str = "") -> TestError:
+def _make_test_error(
+    test_file: Path, failure: TestFailure, raw_error: str = ""
+) -> TestError:
     """Build a branch_fixer TestError from a TestFailure for AIManager."""
     # Prefer raw_error (full pytest output) over the often-empty inline message.
     # Prepend a clear instruction so the AI cannot mistake this for a source-code

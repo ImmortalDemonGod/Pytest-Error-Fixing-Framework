@@ -3,10 +3,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, List, Dict
 
+
 @dataclass
 class PytestConfig:
     """Configuration for pytest execution.
-    
+
     Attributes:
         working_dir: Directory to run tests from
         pytest_args: Additional pytest command line arguments
@@ -16,6 +17,7 @@ class PytestConfig:
         max_retries: Number of retry attempts on failure
         env_vars: Additional environment variables
     """
+
     working_dir: Optional[Path] = None
     pytest_args: Optional[List[str]] = None
     timeout: int = 30

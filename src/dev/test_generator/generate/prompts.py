@@ -133,7 +133,9 @@ def build_analysis_prompt(
         )
 
     if context.source_code:
-        sections.append(f"## Source code to analyze\n```python\n{context.source_code}\n```")
+        sections.append(
+            f"## Source code to analyze\n```python\n{context.source_code}\n```"
+        )
 
     if context.dependency_code:
         sections.append(

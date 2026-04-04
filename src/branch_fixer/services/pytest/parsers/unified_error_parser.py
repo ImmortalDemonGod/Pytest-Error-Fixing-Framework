@@ -7,6 +7,7 @@ from branch_fixer.services.pytest.parsers.failure_parser import FailureParser
 # If needed, you could import error_processor for fallback logic:
 # from branch_fixer.services.pytest import error_processor
 
+
 class UnifiedErrorParser:
     """
     Coordinates the specialized parsers (collection_parser, failure_parser)
@@ -40,12 +41,14 @@ class UnifiedErrorParser:
         all_errors = collection_errors + failure_errors
         return all_errors
 
+
 def parse_pytest_output(output: str) -> List[ErrorInfo]:
     """
     Convenience function for modules that don't want to instantiate UnifiedErrorParser.
     """
     parser = UnifiedErrorParser()
     return parser.parse_pytest_output(output)
+
 
 # Optional utility if you want to go from ErrorInfo -> TestError in one step:
 def convert_errorinfo_to_testerror(errors: List[ErrorInfo]):
@@ -54,17 +57,18 @@ def convert_errorinfo_to_testerror(errors: List[ErrorInfo]):
     If your orchestrator or fix service needs TestError, this can be used.
     """
     from branch_fixer.core.models import TestError, ErrorDetails
+
     converted = []
     for einfo in errors:
         detail = ErrorDetails(
             error_type=einfo.error_type,
             message=einfo.error_details,
-            stack_trace=einfo.code_snippet or None
+            stack_trace=einfo.code_snippet or None,
         )
         t_err = TestError(
             test_file=einfo.file_path,
             test_function=einfo.function,
-            error_details=detail
+            error_details=detail,
         )
         converted.append(t_err)
     return converted

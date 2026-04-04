@@ -149,7 +149,9 @@ class FixService:
                         self.change_applier.restore_backup(error.test_file, backup_path)
                         logger.info(f"Reverted {error.test_file} after fix failure.")
                     except Exception as revert_exc:
-                        logger.warning(f"Failed to revert after fix failure: {revert_exc}")
+                        logger.warning(
+                            f"Failed to revert after fix failure: {revert_exc}"
+                        )
 
             if not fix_succeeded:
                 self._handle_failed_attempt(error, attempt)

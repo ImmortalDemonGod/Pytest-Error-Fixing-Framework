@@ -78,11 +78,11 @@ class GenerationVariant(str, Enum):
     """Which Hypothesis test variant to generate for an entity."""
 
     DEFAULT = "default"
-    ERRORS = "errors"             # --except ValueError --except TypeError (methods only)
-    ROUNDTRIP = "roundtrip"       # encode/decode pairs
-    IDEMPOTENT = "idempotent"     # transform/convert
+    ERRORS = "errors"  # --except ValueError --except TypeError (methods only)
+    ROUNDTRIP = "roundtrip"  # encode/decode pairs
+    IDEMPOTENT = "idempotent"  # transform/convert
     ERRORS_EQUIVALENT = "errors_equivalent"  # validate/verify
-    BINARY_OP = "binary_op"       # add/multiply
+    BINARY_OP = "binary_op"  # add/multiply
 
 
 @dataclass(frozen=True)

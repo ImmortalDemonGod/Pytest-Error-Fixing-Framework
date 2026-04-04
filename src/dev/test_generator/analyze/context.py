@@ -93,7 +93,16 @@ class ContextGatherer:
 
         try:
             subprocess.run(
-                [self._python, "-m", "coverage", "run", "-m", "pytest", str(test_file), "-q"],
+                [
+                    self._python,
+                    "-m",
+                    "coverage",
+                    "run",
+                    "-m",
+                    "pytest",
+                    str(test_file),
+                    "-q",
+                ],
                 capture_output=True,
                 text=True,
                 timeout=120,
@@ -177,7 +186,7 @@ def _gather_dependency_code(source_path: Path, source_code: str) -> str:
             if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
                 end = getattr(node, "end_lineno", None)
                 if end:
-                    block = "\n".join(dep_lines[node.lineno - 1: end])
+                    block = "\n".join(dep_lines[node.lineno - 1 : end])
                     snippets.append(f"# from {module_dotted}\n{block}")
 
     return "\n\n".join(snippets)
@@ -204,17 +213,17 @@ def find_test_file(source_path: Path) -> Optional[Path]:
     if "src" in parts:
         src_index = len(parts) - 1 - parts[::-1].index("src")
         project_root = Path(*parts[:src_index])
-        candidates.extend([
-            project_root / "tests" / f"test_{stem}.py",
-            project_root / "tests" / "test_generator" / f"test_{stem}.py",
-        ])
+        candidates.extend(
+            [
+                project_root / "tests" / f"test_{stem}.py",
+                project_root / "tests" / "test_generator" / f"test_{stem}.py",
+            ]
+        )
 
     return next((c for c in candidates if c.exists()), None)
 
 
-def parse_coverage_json(
-    json_path: Path, source_path: Path
-) -> Tuple[CoverageGap, ...]:
+def parse_coverage_json(json_path: Path, source_path: Path) -> Tuple[CoverageGap, ...]:
     """Parse a ``coverage json`` report and return per-function CoverageGaps.
 
     Matches the source file by checking whether *source_path* is a suffix of
@@ -230,8 +239,9 @@ def parse_coverage_json(
     source_key: Optional[str] = None
     for key in data.get("files", {}):
         # coverage.py stores keys as relative paths; resolve both ends
-        if resolved_str.endswith(key.replace("/", str(Path("/")))
-                                  ) or key.endswith(source_path.name):
+        if resolved_str.endswith(key.replace("/", str(Path("/")))) or key.endswith(
+            source_path.name
+        ):
             source_key = key
             break
 

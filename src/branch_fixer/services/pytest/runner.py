@@ -371,7 +371,9 @@ class PytestRunner:
                     f"Captured error message for {report.nodeid}: {result.error_message}"
                 )
 
-    def _update_execution_duration(self, result: TestResult, report: TestReport) -> None:
+    def _update_execution_duration(
+        self, result: TestResult, report: TestReport
+    ) -> None:
         """Capture the duration of the test for reporting."""
         result.duration = report.duration
         logger.debug(f"Captured duration for {report.nodeid}: {result.duration}s")
@@ -442,7 +444,14 @@ class PytestRunner:
 
         try:
             # Create subprocess command
-            args = [sys.executable, "-m", "pytest", "--override-ini=addopts=", "-p", "no:terminal"]
+            args = [
+                sys.executable,
+                "-m",
+                "pytest",
+                "--override-ini=addopts=",
+                "-p",
+                "no:terminal",
+            ]
             if self.working_dir:
                 args.extend(["--rootdir", str(self.working_dir)])
             args.append(f"{str(test_file)}::{test_function}")

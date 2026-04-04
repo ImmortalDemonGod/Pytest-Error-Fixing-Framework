@@ -12,16 +12,19 @@ logger = logging.getLogger(__name__)
 
 class AIManagerError(Exception):
     """Base exception for AI manager errors"""
+
     pass
 
 
 class PromptGenerationError(AIManagerError):
     """Raised when prompt construction fails"""
+
     pass
 
 
 class CompletionError(AIManagerError):
     """Raised when AI request fails"""
+
     pass
 
 
@@ -212,13 +215,11 @@ class AIManager:
             return "None"
         # Split on the separator line (underscores with spaces, e.g. "_ _ _ _ _")
         import re
+
         parts = re.split(r"\n[_ ]{10,}\n", stack_trace, maxsplit=1)
         cleaned = parts[0].strip()
         # Also strip lines that reference .venv internals as a fallback
-        lines = [
-            line for line in cleaned.splitlines()
-            if ".venv/" not in line
-        ]
+        lines = [line for line in cleaned.splitlines() if ".venv/" not in line]
         return "\n".join(lines).strip() or stack_trace[:300]
 
     def _analyze_error(self, error: TestError) -> str:
@@ -246,7 +247,12 @@ class AIManager:
             },
         ]
         try:
-            response = completion(model=self.model, messages=messages, temperature=0.1, api_key=self.api_key)
+            response = completion(
+                model=self.model,
+                messages=messages,
+                temperature=0.1,
+                api_key=self.api_key,
+            )
             return response.choices[0].message.content.strip()
         except Exception as e:
             logger.warning(f"Analysis step failed (non-fatal): {e}")
@@ -298,9 +304,7 @@ class AIManager:
 
             # Prefer fenced code blocks; fall back to "Modified code:" header;
             # last resort: treat entire response as code.
-            fence_match = re.search(
-                r"```(?:python)?\n(.*?)```", response, re.DOTALL
-            )
+            fence_match = re.search(r"```(?:python)?\n(.*?)```", response, re.DOTALL)
             if fence_match:
                 modified_code = fence_match.group(1).strip()
             elif re.search(r"Modified code\s*:", response, re.IGNORECASE):

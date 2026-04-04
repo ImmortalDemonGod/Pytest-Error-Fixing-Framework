@@ -96,7 +96,9 @@ class VerificationRunner:
         env = self._build_env()
         proc = subprocess.run(
             [
-                sys.executable, "-m", "pytest",
+                sys.executable,
+                "-m",
+                "pytest",
                 str(output_dir),
                 "--tb=short",
                 "-q",
@@ -118,7 +120,9 @@ class VerificationRunner:
         env = self._build_env()
         proc = subprocess.run(
             [
-                sys.executable, "-m", "pytest",
+                sys.executable,
+                "-m",
+                "pytest",
                 str(test_file),
                 "--tb=long",
                 "-q",
@@ -135,7 +139,9 @@ class VerificationRunner:
         if self.extra_pythonpath:
             existing = env.get("PYTHONPATH", "")
             env["PYTHONPATH"] = (
-                f"{self.extra_pythonpath}:{existing}" if existing else self.extra_pythonpath
+                f"{self.extra_pythonpath}:{existing}"
+                if existing
+                else self.extra_pythonpath
             )
         return env
 

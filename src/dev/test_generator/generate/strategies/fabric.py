@@ -98,7 +98,10 @@ class FabricStrategy:
         # Phase 1: Analysis
         analysis_messages = [
             {"role": "system", "content": ANALYSIS_SYSTEM_PROMPT},
-            {"role": "user", "content": build_analysis_prompt(context, templates, module_dotpath)},
+            {
+                "role": "user",
+                "content": build_analysis_prompt(context, templates, module_dotpath),
+            },
         ]
         plan = self._call_llm_raw(analysis_messages)
         if not plan:
@@ -109,7 +112,12 @@ class FabricStrategy:
         # Phase 2: Writing
         module_messages = [
             {"role": "system", "content": MODULE_SYSTEM_PROMPT},
-            {"role": "user", "content": build_module_prompt(context, plan, templates, module_dotpath)},
+            {
+                "role": "user",
+                "content": build_module_prompt(
+                    context, plan, templates, module_dotpath
+                ),
+            },
         ]
         for attempt in range(max(1, self.max_retries)):
             code = self._call_llm(module_messages, attempt)

@@ -8,13 +8,18 @@ from tinydb import TinyDB, Query
 from branch_fixer.core.models import TestError
 from branch_fixer.orchestration.orchestrator import FixSession, FixSessionState
 
+
 class StorageError(Exception):
     """Base exception for storage errors."""
+
     pass
+
 
 class SessionPersistenceError(StorageError):
     """Raised when session persistence operations fail."""
+
     pass
+
 
 class SessionStore:
     """
@@ -47,7 +52,7 @@ class SessionStore:
         db_path = self.storage_dir / "sessions.json"
         self.db = TinyDB(db_path)
         self.sessions = self.db.table("sessions")
-    
+
     def save_session(self, session: FixSession) -> None:
         """
         Persist session state to TinyDB storage.
@@ -70,7 +75,9 @@ class SessionStore:
                 "modified_files": [str(p) for p in session.modified_files],
                 "errors": [err.to_dict() for err in session.errors],
                 "completed_errors": [err.to_dict() for err in session.completed_errors],
-                "current_error": session.current_error.to_dict() if session.current_error else None,
+                "current_error": session.current_error.to_dict()
+                if session.current_error
+                else None,
                 "total_tests": session.total_tests,
                 "passed_tests": session.passed_tests,
                 "failed_tests": session.failed_tests,
@@ -115,10 +122,13 @@ class SessionStore:
                 error_count=session_data.get("error_count", 0),
                 retry_count=session_data.get("retry_count", 0),
                 git_branch=session_data.get("git_branch"),
-                modified_files=[Path(p) for p in session_data.get("modified_files", [])],
+                modified_files=[
+                    Path(p) for p in session_data.get("modified_files", [])
+                ],
                 errors=[TestError.from_dict(e) for e in session_data.get("errors", [])],
                 completed_errors=[
-                    TestError.from_dict(e) for e in session_data.get("completed_errors", [])
+                    TestError.from_dict(e)
+                    for e in session_data.get("completed_errors", [])
                 ],
                 current_error=(
                     TestError.from_dict(session_data["current_error"])

@@ -9,30 +9,37 @@ if TYPE_CHECKING:
     from src.branch_fixer.storage.session_store import SessionStore
     from src.branch_fixer.orchestration.orchestrator import FixSession, FixSessionState
 
+
 class StateTransitionError(Exception):
     """Invalid state transition errors"""
+
     pass
+
 
 class StateValidationError(Exception):
     """State validation failures"""
+
     pass
+
 
 @dataclass
 class StateTransition:
     """Records a state transition"""
-    from_state: 'FixSessionState'
-    to_state: 'FixSessionState'
+
+    from_state: "FixSessionState"
+    to_state: "FixSessionState"
     timestamp: float
     metadata: Dict[str, Any]
     transition_id: str = field(default_factory=lambda: uuid4().hex[:8])
 
+
 class StateManager:
     """Manages session state transitions and validation"""
-    
-    def __init__(self, session_store: Optional['SessionStore'] = None):
+
+    def __init__(self, session_store: Optional["SessionStore"] = None):
         """
         Initialize state manager
-        
+
         Args:
             session_store: Optional store for persistence
         """
@@ -40,25 +47,25 @@ class StateManager:
 
         # Valid transitions based on state strings
         self.valid_transitions: Dict[str, Set[str]] = {
-            'initializing': {'running', 'failed'},
-            'running': {'paused', 'completed', 'failed', 'error'},
-            'paused': {'running', 'failed'},
-            'error': {'running', 'failed'},
-            'failed': set(),      # Terminal state
-            'completed': set()    # Terminal state
+            "initializing": {"running", "failed"},
+            "running": {"paused", "completed", "failed", "error"},
+            "paused": {"running", "failed"},
+            "error": {"running", "failed"},
+            "failed": set(),  # Terminal state
+            "completed": set(),  # Terminal state
         }
         self._transitions: Dict[UUID, List[StateTransition]] = {}
 
-    def validate_transition(self, 
-                            from_state: 'FixSessionState',
-                            to_state: 'FixSessionState') -> bool:
+    def validate_transition(
+        self, from_state: "FixSessionState", to_state: "FixSessionState"
+    ) -> bool:
         """
         Check if state transition is allowed
-        
+
         Args:
             from_state: Current state
             to_state: Desired state
-            
+
         Returns:
             bool indicating if transition is valid
         """
@@ -69,23 +76,25 @@ class StateManager:
             return True
         return False
 
-    def transition_state(self,
-                        session: 'FixSession',
-                        new_state: 'FixSessionState',
-                        metadata: Optional[Dict] = None,
-                        force: bool = False) -> bool:
+    def transition_state(
+        self,
+        session: "FixSession",
+        new_state: "FixSessionState",
+        metadata: Optional[Dict] = None,
+        force: bool = False,
+    ) -> bool:
         """
         Execute state transition with validation
-        
+
         Args:
             session: Session to transition
             new_state: Desired new state
             metadata: Additional transition context
             force: Whether to skip validation
-            
+
         Returns:
             bool indicating successful transition
-            
+
         Raises:
             StateTransitionError: If transition invalid
             StateValidationError: If session state invalid
@@ -106,7 +115,7 @@ class StateManager:
             from_state=old_state,
             to_state=new_state,
             timestamp=time.time(),
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
         self._transitions.setdefault(session.id, []).append(transition_record)
 
@@ -119,10 +128,10 @@ class StateManager:
     def get_transition_history(self, session_id: UUID) -> List[StateTransition]:
         """
         Get complete transition history for session
-        
+
         Args:
             session_id: Session to get history for
-            
+
         Returns:
             List of state transitions in order
         """
@@ -130,7 +139,7 @@ class StateManager:
             return []
         return self._transitions[session_id]
 
-    def validate_session_state(self, session: 'FixSession') -> bool:
+    def validate_session_state(self, session: "FixSession") -> bool:
         """
         Validate session state is internally consistent
         For example, check if it’s not COMPLETED while errors remain unfixed.
@@ -142,5 +151,7 @@ class StateManager:
         if session.state.value == "completed":
             # Validate that all errors are done
             if len(session.completed_errors) < len(session.errors):
-                raise StateValidationError("Session is marked COMPLETED but not all errors are fixed.")
+                raise StateValidationError(
+                    "Session is marked COMPLETED but not all errors are fixed."
+                )
         return True

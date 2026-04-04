@@ -13,11 +13,12 @@ if TYPE_CHECKING:
     from src.branch_fixer.services.git.repository import GitRepository
     from src.branch_fixer.orchestration.orchestrator import FixSession
 
+
 @dataclass
 class RecoveryPoint:
     """
     Snapshot of recoverable state with metadata and file tracking.
-    
+
     Attributes:
         id: Unique identifier for the recovery point
         session_id: ID of the associated fix session
@@ -26,6 +27,7 @@ class RecoveryPoint:
         modified_files: List of files modified in session
         metadata: Additional context and recovery data
     """
+
     id: str  # Hash of session_id + timestamp
     session_id: UUID
     timestamp: float
@@ -34,68 +36,74 @@ class RecoveryPoint:
     metadata: Dict[str, Any]
 
     @staticmethod
-    def create(session_id: UUID, 
-              git_branch: str,
-              modified_files: List[Path], 
-              metadata: Dict[str, Any]) -> 'RecoveryPoint':
+    def create(
+        session_id: UUID,
+        git_branch: str,
+        modified_files: List[Path],
+        metadata: Dict[str, Any],
+    ) -> "RecoveryPoint":
         timestamp = time.time()
-        point_id = hashlib.sha256(
-            f"{session_id}{timestamp}".encode()
-        ).hexdigest()[:12]
+        point_id = hashlib.sha256(f"{session_id}{timestamp}".encode()).hexdigest()[:12]
         return RecoveryPoint(
             id=point_id,
             session_id=session_id,
             timestamp=timestamp,
             git_branch=git_branch,
             modified_files=modified_files,
-            metadata=metadata
+            metadata=metadata,
         )
 
     def to_json(self) -> Dict[str, Any]:
         return {
-            'id': self.id,
-            'session_id': str(self.session_id),
-            'timestamp': self.timestamp,
-            'git_branch': self.git_branch,
-            'modified_files': [str(f) for f in self.modified_files],
-            'metadata': self.metadata
+            "id": self.id,
+            "session_id": str(self.session_id),
+            "timestamp": self.timestamp,
+            "git_branch": self.git_branch,
+            "modified_files": [str(f) for f in self.modified_files],
+            "metadata": self.metadata,
         }
 
     @classmethod
-    def from_json(cls, data: Dict[str, Any]) -> 'RecoveryPoint':
+    def from_json(cls, data: Dict[str, Any]) -> "RecoveryPoint":
         return cls(
-            id=data['id'],
-            session_id=UUID(data['session_id']),
-            timestamp=data['timestamp'],
-            git_branch=data['git_branch'],
-            modified_files=[Path(f) for f in data['modified_files']],
-            metadata=data['metadata']
+            id=data["id"],
+            session_id=UUID(data["session_id"]),
+            timestamp=data["timestamp"],
+            git_branch=data["git_branch"],
+            modified_files=[Path(f) for f in data["modified_files"]],
+            metadata=data["metadata"],
         )
+
 
 class RecoveryError(Exception):
     """Base exception for recovery operations."""
+
     pass
+
 
 class CheckpointError(RecoveryError):
     """Raised when checkpoint operations fail."""
+
     pass
+
 
 class RestoreError(RecoveryError):
     """Raised when restore operations fail."""
+
     pass
+
 
 class RecoveryManager:
     """
     Handles recovery from failures during fix attempts.
-    
+
     Manages creation and restoration of recovery points, including
     file backups and git state.
     """
-    
-    def __init__(self, 
-                 session_store: 'SessionStore',
-                 git_repo: 'GitRepository',
-                 backup_dir: Path):
+
+    def __init__(
+        self, session_store: "SessionStore", git_repo: "GitRepository", backup_dir: Path
+    ):
         """
         Initialize recovery manager.
 
@@ -114,7 +122,7 @@ class RecoveryManager:
         self.git_repo = git_repo
         self.backup_dir = backup_dir
         self.backup_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Verify backup directory is writable
         if not os.access(self.backup_dir, os.W_OK):
             raise PermissionError(f"Backup directory not writable: {backup_dir}")
@@ -124,9 +132,9 @@ class RecoveryManager:
         if not self.recovery_index_file.exists():
             self.recovery_index_file.write_text("[]", encoding="utf-8")
 
-    async def create_checkpoint(self, 
-                                session: 'FixSession',
-                                metadata: Optional[Dict] = None) -> RecoveryPoint:
+    async def create_checkpoint(
+        self, session: "FixSession", metadata: Optional[Dict] = None
+    ) -> RecoveryPoint:
         """
         Create recovery checkpoint for current state.
 
@@ -148,7 +156,7 @@ class RecoveryManager:
                 session_id=session.id,
                 git_branch=self.git_repo.get_current_branch(),
                 modified_files=session.modified_files,
-                metadata=metadata
+                metadata=metadata,
             )
 
             # 3) Save the RecoveryPoint as JSON
@@ -163,9 +171,9 @@ class RecoveryManager:
         except Exception as e:
             raise CheckpointError(f"Failed to create checkpoint: {e}") from e
 
-    async def restore_checkpoint(self, 
-                                 checkpoint_id: str,
-                                 cleanup: bool = True) -> bool:
+    async def restore_checkpoint(
+        self, checkpoint_id: str, cleanup: bool = True
+    ) -> bool:
         """
         Restore session state from checkpoint.
 
@@ -190,7 +198,9 @@ class RecoveryManager:
                 # Attempt to checkout rp.git_branch
                 result = self.git_repo.run_command(["checkout", rp.git_branch])
                 if result.failed:
-                    raise RestoreError(f"Failed to checkout {rp.git_branch}: {result.stderr}")
+                    raise RestoreError(
+                        f"Failed to checkout {rp.git_branch}: {result.stderr}"
+                    )
 
             # 2) Restore each modified file from backups if you want to store them
             #    For now, we assume they've already been partially undone by `ChangeApplier`.
@@ -208,12 +218,13 @@ class RecoveryManager:
             return True
 
         except Exception as e:
-            raise RestoreError(f"Failed to restore checkpoint {checkpoint_id}: {e}") from e
+            raise RestoreError(
+                f"Failed to restore checkpoint {checkpoint_id}: {e}"
+            ) from e
 
-    async def handle_failure(self, 
-                             error: Exception,
-                             session: 'FixSession',
-                             context: Dict[str, Any]) -> bool:
+    async def handle_failure(
+        self, error: Exception, session: "FixSession", context: Dict[str, Any]
+    ) -> bool:
         """
         Handle specific failure types.
 
@@ -260,7 +271,9 @@ class RecoveryManager:
         """Append the recovery point JSON to the index file"""
         data = json.loads(self.recovery_index_file.read_text(encoding="utf-8"))
         data.append(rp.to_json())
-        self.recovery_index_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        self.recovery_index_file.write_text(
+            json.dumps(data, indent=2), encoding="utf-8"
+        )
 
     def _load_recovery_point(self, rp_id: str) -> Optional[RecoveryPoint]:
         """Load one recovery point from index by ID"""
@@ -274,9 +287,13 @@ class RecoveryManager:
         """Remove recovery point from index file by ID"""
         data = json.loads(self.recovery_index_file.read_text(encoding="utf-8"))
         new_data = [rp for rp in data if rp["id"] != rp_id]
-        self.recovery_index_file.write_text(json.dumps(new_data, indent=2), encoding="utf-8")
+        self.recovery_index_file.write_text(
+            json.dumps(new_data, indent=2), encoding="utf-8"
+        )
 
-    def _list_recovery_points_for_session(self, session_id: UUID) -> List[RecoveryPoint]:
+    def _list_recovery_points_for_session(
+        self, session_id: UUID
+    ) -> List[RecoveryPoint]:
         """Return all recovery points for a given session"""
         data = json.loads(self.recovery_index_file.read_text(encoding="utf-8"))
         results = []
