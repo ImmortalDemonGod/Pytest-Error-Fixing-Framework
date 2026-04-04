@@ -14,7 +14,15 @@ from branch_fixer.storage.state_manager import StateTransitionError, StateValida
 # Module-level fixtures
 @pytest.fixture
 def tmp_file(tmp_path):
-    """Create a real python test file used in many tests."""
+    """
+    Create a real Python test file named `test_sample.py` in the given temporary directory.
+    
+    Parameters:
+        tmp_path (pathlib.Path): Temporary directory path provided by pytest.
+    
+    Returns:
+        pathlib.Path: Path to the created test file containing a simple passing test.
+    """
     p = tmp_path / "test_sample.py"
     p.write_text("def test_example():\n    assert 1 == 1\n", encoding="utf-8")
     return p
@@ -22,6 +30,14 @@ def tmp_file(tmp_path):
 
 @pytest.fixture
 def fake_ai_manager():
+    """
+    Create a mock AI manager whose `generate_fix` returns a default `CodeChanges`.
+    
+    The mock's `generate_fix` method returns a `CodeChanges` instance with `original_code` set to an empty string and `modified_code` set to "print('fixed')\n".
+    
+    Returns:
+        Mock: A mock object with a `generate_fix` method that returns the default `CodeChanges`.
+    """
     m = Mock()
     # Default: return a simple CodeChanges
     m.generate_fix = Mock(return_value=CodeChanges(original_code="", modified_code="print('fixed')\n"))
@@ -30,6 +46,17 @@ def fake_ai_manager():
 
 @pytest.fixture
 def fake_change_applier(tmp_path):
+    """
+    Create a mocked change applier that simulates a successful apply with an existing backup file.
+    
+    Parameters:
+        tmp_path (Path): Temporary directory in which a fake backup file will be created.
+    
+    Returns:
+        Mock: A Mock object with:
+            - apply_changes_with_backup returning (True, Path) where Path points to an existing backup file.
+            - restore_backup returning True.
+    """
     m = Mock()
     # Simulate a successful apply by default returning (True, backup_path)
     backup_dir = tmp_path / ".backups"
@@ -43,6 +70,12 @@ def fake_change_applier(tmp_path):
 
 @pytest.fixture
 def fake_test_runner():
+    """
+    Create a test double for a test runner whose verification succeeds by default.
+    
+    Returns:
+        Mock: A Mock object with a `verify_fix` method that returns `True` by default.
+    """
     m = Mock()
     # Default verification success
     m.verify_fix = Mock(return_value=True)
@@ -51,6 +84,12 @@ def fake_test_runner():
 
 @pytest.fixture
 def session_store_mock():
+    """
+    Create a mock session store with a `save_session` stub.
+    
+    Returns:
+        Mock: A mock object representing a session store; its `save_session` attribute is a `Mock` for asserting calls.
+    """
     m = Mock()
     m.save_session = Mock()
     return m
@@ -58,6 +97,14 @@ def session_store_mock():
 
 @pytest.fixture
 def state_manager_mock():
+    """
+    Create a mock state manager whose `transition_state` method succeeds.
+    
+    The returned Mock has a `transition_state` attribute that returns `True` when called.
+    
+    Returns:
+        Mock: A mock object representing a state manager with `transition_state` stubbed to return `True`.
+    """
     m = Mock()
     m.transition_state = Mock(return_value=True)
     return m
@@ -65,12 +112,36 @@ def state_manager_mock():
 
 @pytest.fixture
 def workspace_validator_ok():
-    """Return a validator-like object with methods we'll attach to services."""
+    """
+    Create a simple workspace validator stub used in tests.
+    
+    This returns an object exposing two no-op methods used to simulate workspace validation:
+    - `validate_workspace(path)`: accepts a path and performs no validation (returns None).
+    - `check_dependencies()`: performs no dependency checks (returns None).
+    
+    Returns:
+        validator (object): An instance with `validate_workspace(path)` and `check_dependencies()` methods that always return None.
+    """
     class V:
         def validate_workspace(self, path):
+            """
+            Validate that the workspace at `path` is ready for applying fixes.
+            
+            Parameters:
+                path (str | pathlib.Path): Filesystem path to the workspace to validate.
+            
+            Raises:
+                OSError, PermissionError, or other exceptions when the workspace is invalid or inaccessible.
+            """
             return None
 
         def check_dependencies(self):
+            """
+            Performs checks that required external dependencies for the workspace are available and usable.
+            
+            Raises:
+                Exception: If one or more required dependencies are missing or incompatible.
+            """
             return None
 
     return V()
@@ -115,6 +186,15 @@ class TestFixService:
     def test_init_invalid_params_raise_value_error(
         self, max_retries, initial_temp, temp_increment, err_msg, fake_ai_manager, fake_test_runner, fake_change_applier
     ):
+        """
+        Verifies that constructing FixService with invalid retry/temperature parameters raises ValueError containing the expected message fragment.
+        
+        Parameters:
+            max_retries (int): The max_retries value passed to the constructor (tested invalid values).
+            initial_temp (float): The initial temperature passed to the constructor (tested out-of-range values).
+            temp_increment (float): The temperature increment passed to the constructor (tested invalid values).
+            err_msg (str): Substring expected to appear in the raised ValueError message.
+        """
         with pytest.raises(ValueError) as exc:
             FixService(
                 ai_manager=fake_ai_manager,

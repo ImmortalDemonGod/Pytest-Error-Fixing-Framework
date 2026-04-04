@@ -12,11 +12,23 @@ from dev.test_generator.analyze import context as context_mod
 # Module-level fixtures
 @pytest.fixture
 def tmp_dir(tmp_path):
+    """
+    Provide the pytest temporary directory for tests.
+    
+    Returns:
+        pathlib.Path: A Path pointing to pytest's temporary directory (same object as the built-in `tmp_path` fixture).
+    """
     return tmp_path
 
 
 @pytest.fixture
 def gatherer():
+    """
+    Pytest fixture that provides a ContextGatherer configured to use the test Python executable.
+    
+    Returns:
+        ContextGatherer: an instance of ContextGatherer with its python_executable set to "python-test".
+    """
     return context_mod.ContextGatherer(python_executable="python-test")
 
 
@@ -190,16 +202,42 @@ class TestGatherCoverage:
 
         class DummyNTF:
             def __init__(self, name):
+                """
+                Initialize the instance and store the provided name as a string.
+                
+                Parameters:
+                    name: Value to be used as the instance's name; it will be converted to `str` and assigned to `self.name`.
+                """
                 self.name = str(name)
 
             def __enter__(self):
+                """
+                Enter the runtime context and provide the context manager instance.
+                
+                Returns:
+                    The context manager instance (`self`).
+                """
                 return self
 
             def __exit__(self, exc_type, exc, tb):
+                """
+                Ensure exceptions raised in the managed block propagate to the caller.
+                
+                @returns
+                    `False` to indicate any exception should not be suppressed and must be re-raised.
+                """
                 return False
 
         def fake_named_tmpfile(*args, **kwargs):
             # create the file so unlinking is meaningful
+            """
+            Create a fake temporary file at a predetermined path and return a DummyNTF wrapper.
+            
+            Writes the literal "{}" to the file so callers can observe deletion/unlinking, then returns a DummyNTF instance constructed with the created path.
+            
+            Returns:
+                DummyNTF: wrapper object for the created temporary file path.
+            """
             created.write_text("{}", encoding="utf-8")
             return DummyNTF(created)
 

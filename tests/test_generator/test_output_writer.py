@@ -8,12 +8,34 @@ from src.dev.test_generator.output.writer import output_filename, write_attempt,
 
 
 def _entity(name: str, entity_type: str = "function", parent: str = None) -> TestableEntity:
+    """
+    Create a TestableEntity preconfigured for tests with a fixed module path.
+    
+    Parameters:
+        name (str): The entity's name.
+        entity_type (str): The kind of entity (e.g., "function", "instance_method").
+        parent (str | None): The parent class name for methods, or None for top-level entities.
+    
+    Returns:
+        TestableEntity: An entity with the provided attributes and module_path set to "pkg.mod".
+    """
     return TestableEntity(
         name=name, module_path="pkg.mod", entity_type=entity_type, parent_class=parent
     )
 
 
 def _success_attempt(entity: TestableEntity, variant: GenerationVariant, code: str) -> GenerationAttempt:
+    """
+    Create a GenerationAttempt for the given entity and variant that is marked successful with the provided code.
+    
+    Parameters:
+        entity (TestableEntity): The entity the attempt targets.
+        variant (GenerationVariant): The generation variant for the attempt.
+        code (str): The generated test code to store in the attempt.
+    
+    Returns:
+        GenerationAttempt: A GenerationAttempt in the success state containing `code`.
+    """
     a = GenerationAttempt(entity=entity, variant=variant)
     a.mark_success(code)
     return a

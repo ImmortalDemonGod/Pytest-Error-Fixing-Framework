@@ -198,19 +198,19 @@ def build_module_prompt(
     hypothesis_templates: dict[str, str],
     module_dotpath: str = "",
 ) -> str:
-    """Build the Phase 2 writing request using the Phase 1 plan.
-
-    Parameters
-    ----------
-    context:
-        Full static-analysis context (source code, dependencies, gaps).
-    plan:
-        The structured test plan produced by Phase 1 (raw LLM prose).
-    hypothesis_templates:
-        Maps ``"EntityName.variant"`` → scaffold code for import/call reference.
-    module_dotpath:
-        Dotted import path of the source module, e.g. ``"dev.cli.generate"``.
-        When provided, included prominently so the LLM uses the exact path.
+    """
+    Builds the phase‑2 prompt requesting a single consolidated pytest test module from a phase‑1 plan.
+    
+    Constructs a prompt that combines, when present, an explicit module import instruction (using `module_dotpath`), the module source, dependency constructor definitions, formatted coverage gaps that must be exercised, the provided analysis `plan`, and optional Hypothesis scaffold examples. The prompt ends with a task instructing the model to return only the Python test module source.
+    
+    Parameters:
+        context (AnalysisContext): Static-analysis context containing optional `source_code`, `dependency_code`, and `coverage_gaps`.
+        plan (str): Structured test plan produced by the analysis phase.
+        hypothesis_templates (dict[str, str]): Mapping of scaffold names to reference scaffold code showing correct import/call signatures.
+        module_dotpath (str): Exact dotted import path for the source module (e.g. "dev.cli.generate"); when provided, the prompt instructs using this path verbatim.
+    
+    Returns:
+        str: The complete prompt string to send to the LLM for writing the consolidated pytest test module.
     """
     sections: list[str] = []
 
@@ -294,7 +294,18 @@ def build_user_prompt(
     context: AnalysisContext,
     hypothesis_template: str = "",
 ) -> str:
-    """Build the per-entity user message for the LLM (legacy single-entity mode)."""
+    """
+    Builds the user prompt instructing the LLM to generate a complete pytest test file for a single target entity.
+    
+    Parameters:
+        entity (TestableEntity): Target testable entity; its `full_path`, `name`, and `entity_type` are included in the prompt.
+        variant (GenerationVariant): Selects the testing angle guidance to include (e.g., edge cases, error handling).
+        context (AnalysisContext): Analysis information to embed when present (module source, dependency constructor snippets, mypy/ruff issues, and coverage gaps relevant to the entity).
+        hypothesis_template (str): Optional Hypothesis-based scaffold to include as a reference for imports and call signatures; the prompt instructs replacing Hypothesis strategies with concrete example-based tests.
+    
+    Returns:
+        str: The assembled multi-section prompt string to send as the user message in legacy per-entity generation mode.
+    """
     sections: list[str] = []
 
     target = entity.full_path
@@ -352,7 +363,19 @@ def build_user_prompt(
 
 
 def _relevant_gaps(entity: TestableEntity, context: AnalysisContext) -> tuple:
-    """Return uncovered line numbers relevant to *entity*."""
+    """
+    Collect uncovered source line numbers associated with the given testable entity.
+    
+    Checks gaps recorded for the entity's simple name and, if present, the parent-qualified name
+    (`{parent_class}.{name}`), then returns the unique line numbers sorted in ascending order.
+    
+    Parameters:
+        entity (TestableEntity): The target entity whose coverage gaps to query.
+        context (AnalysisContext): Analysis context providing `gaps_for(name)` to retrieve gap info.
+    
+    Returns:
+        tuple[int]: Sorted tuple of unique uncovered line numbers relevant to the entity.
+    """
     names_to_check = [entity.name]
     if entity.parent_class:
         names_to_check.append(f"{entity.parent_class}.{entity.name}")

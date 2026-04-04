@@ -14,7 +14,16 @@ from branch_fixer.services.pytest.models import SessionResult, TestResult
 # Module-level fixtures
 @pytest.fixture(scope="module")
 def session_time():
-    """Provide consistent start/end times and a dummy exit code for SessionResult."""
+    """
+    Create a consistent test session time tuple for use in SessionResult fixtures.
+    
+    Returns:
+        tuple: (start, end, duration, exit_code)
+            start (datetime): session start timestamp.
+            end (datetime): session end timestamp (start + 1 second).
+            duration (float): session duration in seconds (1.0).
+            exit_code (int): placeholder exit code (0).
+    """
     start = datetime.now()
     end = start + timedelta(seconds=1)
     duration = 1.0
@@ -24,7 +33,15 @@ def session_time():
 
 @pytest.fixture
 def basic_session(session_time):
-    """Return a minimal SessionResult with no results or collection errors."""
+    """
+    Create a minimal SessionResult with no test results or collection errors.
+    
+    Parameters:
+        session_time (tuple): A 4-tuple (start, end, duration, exit_code) used to initialize the SessionResult.
+    
+    Returns:
+        SessionResult: An instance initialized from `session_time` with `test_results` set to an empty dict and `collection_errors` set to an empty list.
+    """
     start, end, duration, exit_code = session_time
     sr = SessionResult(start, end, duration, exit_code)
     # Ensure defaults are empty

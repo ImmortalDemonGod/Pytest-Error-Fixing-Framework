@@ -7,7 +7,15 @@ from branch_fixer.services.pytest.models import SessionResult
 
 
 def _extract_error_type(error_message: str | None) -> str:
-    """Extracts the error type from a pytest error message using regex."""
+    """
+    Derives a normalized error type string from a pytest error message.
+    
+    Parameters:
+        error_message (str | None): The raw pytest error message to inspect. If `None` or empty, it is treated as unknown.
+    
+    Returns:
+        str: The leading error type extracted (e.g. "ValueError", "AssertionError", "Failure"), or "UnknownError" if no recognizable type is found.
+    """
     if not error_message:
         return "UnknownError"
 
@@ -17,8 +25,15 @@ def _extract_error_type(error_message: str | None) -> str:
 
 def process_pytest_results(result: SessionResult) -> List[TestError]:
     """
-    Convert a SessionResult object directly into TestError domain objects.
-    This bypasses the fragile string parsing.
+    Convert a pytest SessionResult into a list of TestError domain objects.
+    
+    Includes both per-test failures (from result.test_results) and collection errors (from result.collection_errors).
+    
+    Parameters:
+        result (SessionResult): The pytest session result containing per-test results and collection error strings.
+    
+    Returns:
+        List[TestError]: A list of TestError objects representing each test failure and collection error.
     """
     test_errors: List[TestError] = []
 

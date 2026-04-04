@@ -18,26 +18,62 @@ from branch_fixer.core.models import ErrorDetails, TestError
 # Module-level fixtures shared across test classes
 @pytest.fixture
 def dummy_ai_manager():
+    """
+    Create a lightweight dummy AI manager for tests.
+    
+    Used as a stand-in for an AI manager dependency; returns an empty SimpleNamespace that tests can attach attributes or methods to as needed.
+    
+    Returns:
+        SimpleNamespace: empty namespace usable as a fake AI manager in tests
+    """
     return SimpleNamespace()
 
 
 @pytest.fixture
 def dummy_test_runner():
+    """
+    Create a minimal placeholder object to simulate a test runner in tests.
+    
+    Returns:
+        SimpleNamespace: A no-op test runner placeholder used by unit tests.
+    """
     return SimpleNamespace()
 
 
 @pytest.fixture
 def dummy_change_applier():
+    """
+    Provide a minimal no-op change applier stub.
+    
+    Returns:
+        SimpleNamespace: An empty object used as a placeholder change applier in tests.
+    """
     return SimpleNamespace()
 
 
 @pytest.fixture
 def dummy_git_repo():
+    """
+    Create a lightweight dummy git repository object for tests.
+    
+    Returns:
+        SimpleNamespace: an empty namespace used as a stand-in for a git repository dependency.
+    """
     return SimpleNamespace()
 
 
 @pytest.fixture
 def session_store():
+    """
+    Provide a simple in-memory session store for tests.
+    
+    The returned object has a `saved` list and a `save_session(sess)` method that appends the provided session to `saved`.
+    
+    Returns:
+        Store: An instance with attributes:
+            - saved (list): collected sessions
+            - save_session(sess): appends `sess` to `saved`
+    """
     class Store:
         def __init__(self):
             self.saved = []
@@ -51,6 +87,15 @@ def session_store():
 @pytest.fixture
 def simple_error(tmp_path):
     # Create a dummy test file path (no need to write file for TestError creation)
+    """
+    Constructs a TestError backed by a temporary test file.
+    
+    Parameters:
+        tmp_path (Path): Temporary directory path (pytest tmp_path fixture) where the test file will be created.
+    
+    Returns:
+        TestError: A TestError referencing the created test file and containing ErrorDetails with type "AssertionError" and message "failed".
+    """
     test_file = tmp_path / "test_sample.py"
     test_file.write_text("def test_dummy():\n    assert True\n", encoding="utf-8")
     ed = ErrorDetails(error_type="AssertionError", message="failed", stack_trace=None)
@@ -76,6 +121,13 @@ class TestFixSessionState:
         ],
     )
     def test_enum_lookup_by_value(self, input_value, expected_member):
+        """
+        Verify that constructing `FixSessionState` with a value string returns the corresponding enum member.
+        
+        Parameters:
+        	input_value (str): The enum value string to construct from (e.g., "running", "completed", "error").
+        	expected_member (FixSessionState): The enum member expected to result from construction.
+        """
         assert FixSessionState(input_value) == expected_member
 
 
@@ -274,6 +326,15 @@ class TestFixOrchestrator:
         s = orch.start_session([simple_error])
         # monkeypatch _handle_error_fix to mark error fixed and return True
         def handle(e):
+            """
+            Marks the provided error object as fixed.
+            
+            Parameters:
+                e: An object representing an error; must have a writable `status` attribute. The function sets `e.status` to the string "fixed".
+            
+            Returns:
+                `True` after the error's status has been updated.
+            """
             e.status = "fixed"
             return True
         orch._handle_error_fix = handle
@@ -299,6 +360,11 @@ class TestFixOrchestrator:
 
     def test_run_session_updates_counts_and_marks_failed(self, dummy_ai_manager, dummy_test_runner, dummy_change_applier, dummy_git_repo, session_store, tmp_path):
         # create two errors
+        """
+        Verifies that run_session correctly counts passed and failed tests and sets the session to FAILED when at least one error remains unfixed.
+        
+        Creates two test errors, simulates handling where the first error is marked "fixed" while the second remains unfixed, runs the session, and asserts that passed_tests == 1, failed_tests == 1, the session state is FixSessionState.FAILED, and the method returns False.
+        """
         file1 = tmp_path / "t1.py"
         file1.write_text("x=1\n", encoding="utf-8")
         ed1 = ErrorDetails(error_type="E", message="m")
@@ -312,6 +378,15 @@ class TestFixOrchestrator:
         s = orch.start_session([e1, e2])
         # mark first fixed, second unfixed
         def handle(err):
+            """
+            Process an error and mark a specific target error as fixed.
+            
+            Parameters:
+                err: The error object to handle. If `err` is the specific target error `e1`, its `status` will be set to "fixed".
+            
+            Returns:
+                True indicating the error was processed.
+            """
             if err is e1:
                 err.status = "fixed"
                 return True
@@ -332,11 +407,16 @@ class TestFixOrchestrator:
     # fix_error tests using injected fake FixService module
     def _inject_fake_fix_service(self, behavior, call_recorder=None):
         """
-        Inject a fake module into sys.modules at branch_fixer.orchestration.fix_service
-        behavior: list or callable controlling return values or exceptions
-          - if list: attempt_fix will pop(0) to return True/False or raise Exception objects
-          - if callable: called with (self, error, temperature) and its return value used
-        call_recorder: list to which (temperature) values will be appended
+        Create and inject a fake FixService module into sys.modules for testing.
+        
+        Parameters:
+            behavior (list or callable): Controls FakeFixService.attempt_fix behavior.
+                - If a callable, it will be invoked as behavior(self, error, temperature) and its return value used.
+                - If a list-like, each call pops and uses the first element; if the element is an Exception it will be raised, otherwise the element is returned.
+            call_recorder (list, optional): If provided, each attempted `temperature` value will be appended to this list.
+        
+        Returns:
+            str: The module name inserted into sys.modules ("branch_fixer.orchestration.fix_service").
         """
         mod_name = "branch_fixer.orchestration.fix_service"
         fake_mod = types.ModuleType(mod_name)
@@ -344,9 +424,31 @@ class TestFixOrchestrator:
         class FakeFixService:
             def __init__(self, *args, **kwargs):
                 # accept named params from orchestrator
+                """
+                No-op initializer that accepts any arguments for compatibility with orchestrator constructors.
+                
+                This constructor accepts arbitrary positional and keyword arguments and intentionally ignores them.
+                Used by test doubles in the test suite to allow substitution for real manager objects without
+                requiring a matching signature.
+                """
                 pass
 
             def attempt_fix(self, error, temperature):
+                """
+                Attempt a fix for the given error using the provided temperature and configured behavior.
+                
+                If a `call_recorder` list is available in the surrounding context, the temperature is appended to it. If `behavior` is a callable, it is invoked with `(self, error, temperature)` and its result is returned. If `behavior` is list-like, the next item is popped and returned; if that item is an `Exception` instance, it is raised.
+                
+                Parameters:
+                    error: The error object to attempt to fix.
+                    temperature: A numeric value controlling the attempt's temperature/variation.
+                
+                Returns:
+                    The value returned by the configured behavior (commonly `True` for success or `False` for failure).
+                
+                Raises:
+                    Exception: Re-raises any exception provided by the behavior or raised by a callable behavior.
+                """
                 if call_recorder is not None:
                     call_recorder.append(temperature)
                 if callable(behavior):
@@ -449,6 +551,17 @@ class TestFixOrchestrator:
         class RM:
             def handle_failure(self, error, session, context):
                 # pretend to recover
+                """
+                Attempt to recover from a failure related to a session.
+                
+                Parameters:
+                    error: The raised exception or error object that triggered recovery.
+                    session: The session instance associated with the failure.
+                    context: Additional context or metadata to guide recovery (e.g., labels, timestamps).
+                
+                Returns:
+                    `True` if recovery succeeded, `False` otherwise.
+                """
                 return True
 
         orch = FixOrchestrator(dummy_ai_manager, dummy_test_runner, dummy_change_applier, dummy_git_repo, recovery_manager=RM())
@@ -461,6 +574,19 @@ class TestFixOrchestrator:
     def test_handle_error_with_recovery_failure_sets_error(self, dummy_ai_manager, dummy_test_runner, dummy_change_applier, dummy_git_repo, simple_error):
         class RM:
             def handle_failure(self, error, session, context):
+                """
+                Attempt to recover from an error encountered during a session.
+                
+                This default implementation performs no recovery and reports the failure.
+                
+                Parameters:
+                    error: The exception or error object that occurred.
+                    session: The active session object associated with the failure.
+                    context: Additional context or metadata (e.g., labels, timestamps) to aid recovery.
+                
+                Returns:
+                    bool: `True` if recovery succeeded and the session may continue, `False` otherwise.
+                """
                 return False
 
         orch = FixOrchestrator(dummy_ai_manager, dummy_test_runner, dummy_change_applier, dummy_git_repo, recovery_manager=RM())
@@ -472,6 +598,17 @@ class TestFixOrchestrator:
     def test_handle_error_recovery_raises_is_handled(self, dummy_ai_manager, dummy_test_runner, dummy_change_applier, dummy_git_repo, simple_error):
         class RM:
             def handle_failure(self, error, session, context):
+                """
+                Attempt to recover from a failure and signal that recovery did not succeed.
+                
+                Parameters:
+                    error: The original exception or error object that triggered recovery.
+                    session: The current fix session associated with the failure.
+                    context: Additional context or metadata to aid recovery.
+                
+                Raises:
+                    RuntimeError: Always raised to indicate the recovery process failed.
+                """
                 raise RuntimeError("fail inside recovery")
 
         orch = FixOrchestrator(dummy_ai_manager, dummy_test_runner, dummy_change_applier, dummy_git_repo, recovery_manager=RM())
@@ -566,6 +703,16 @@ class TestFixOrchestrator:
         called = {}
         class RM:
             def create_checkpoint(self, session, metadata):
+                """
+                Create a recovery checkpoint for the given session with accompanying metadata.
+                
+                Parameters:
+                    session: The session object for which the checkpoint is created.
+                    metadata (dict): Arbitrary metadata to attach to the checkpoint (e.g., label, timestamp).
+                
+                Returns:
+                    checkpoint: An object representing the created checkpoint; contains an `id` attribute with the checkpoint identifier.
+                """
                 called['session'] = session
                 called['metadata'] = metadata
                 return SimpleNamespace(id="cp1")
@@ -580,6 +727,16 @@ class TestFixOrchestrator:
     def test_create_checkpoint_handles_checkpoint_error(self, dummy_ai_manager, dummy_test_runner, dummy_change_applier, dummy_git_repo, simple_error):
         class RM:
             def create_checkpoint(self, session, metadata):
+                """
+                Create a persistent checkpoint for the given session using provided metadata.
+                
+                Parameters:
+                    session: The session or error context to checkpoint.
+                    metadata (dict): Arbitrary metadata about the checkpoint; callers include at least a `label` and a `timestamp`.
+                
+                Raises:
+                    CheckpointError: If checkpoint creation fails.
+                """
                 raise SimpleNamespace.__class__("CheckpointError")("fail")  # create general exception-like
         # Use a real CheckpointError class from storage if available, else a generic exception is fine.
         # The orchestrator catches CheckpointError specifically; if that class is not present,
@@ -589,6 +746,17 @@ class TestFixOrchestrator:
             from branch_fixer.storage.recovery import CheckpointError as CE
             class RM2:
                 def create_checkpoint(self, session, metadata):
+                    """
+                    Create a persistent checkpoint for the given session using the supplied metadata.
+                    
+                    Parameters:
+                        session: The session object to checkpoint (typically a FixSession instance).
+                        metadata (dict): Arbitrary metadata for the checkpoint; expected keys include `label` (a short string)
+                            and `timestamp` (an ISO-8601 string or datetime).
+                    
+                    Raises:
+                        CheckpointError: If checkpoint creation fails.
+                    """
                     raise CE("boom")
             rm = RM2()
         except Exception:

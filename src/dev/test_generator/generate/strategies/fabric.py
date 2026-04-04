@@ -60,6 +60,15 @@ class FabricStrategy:
         temperature: float = 0.2,
         max_retries: int = 2,
     ) -> None:
+        """
+        Initialize FabricStrategy with model and generation settings.
+        
+        Parameters:
+            model (str): LiteLLM model identifier used for completion calls.
+            api_key (Optional[str]): Provider API key to pass to LiteLLM; may be `None` for local models.
+            temperature (float): Sampling temperature controlling response variability.
+            max_retries (int): Maximum number of LLM call attempts per generation phase.
+        """
         self.model = model
         self.api_key = api_key
         self.temperature = temperature
@@ -75,23 +84,18 @@ class FabricStrategy:
         hypothesis_templates: Optional[dict] = None,
         module_dotpath: str = "",
     ) -> Optional[str]:
-        """Two-phase generation for an entire source module.
-
-        Phase 1 (Analysis): Ask the LLM to enumerate all code paths and
-        produce a structured test plan — no code written yet. This forces
-        the model to reason about exception handling, constructor signatures,
-        and setup requirements before writing any tests.
-
-        Phase 2 (Writing): Ask the LLM to implement the plan as a single
-        consolidated test file with one class per entity.
-
-        Parameters
-        ----------
-        module_dotpath:
-            Dotted import path of the source module, e.g. ``"dev.cli.generate"``.
-            Passed to prompt builders so the LLM uses the correct import path.
-
-        Returns the cleaned test source code, or None if either phase fails.
+        """
+        Generate tests for an entire source module using a two-phase LLM workflow.
+        
+        Performs an analysis phase to produce a structured test plan, then a writing phase that emits a single consolidated test file implementing that plan. If the analysis yields no plan or code generation fails after retries, returns None.
+        
+        Parameters:
+            context (AnalysisContext): Analysis context describing the module and entities to test.
+            hypothesis_templates (dict, optional): Mapping of hypothesis template names to template text used by prompt builders.
+            module_dotpath (str, optional): Dotted import path of the target module (e.g. "dev.cli.generate"); used so generated tests import the module correctly.
+        
+        Returns:
+            Optional[str]: Cleaned test source code as a single string, or `None` if generation failed.
         """
         templates = hypothesis_templates or {}
 
@@ -136,10 +140,16 @@ class FabricStrategy:
         context: AnalysisContext,
         hypothesis_template: str = "",
     ) -> Optional[str]:
-        """Single-entity LLM generation (legacy mode).
-
-        Kept for backwards compatibility with the orchestrator's per-entity
-        fallback path. Prefer generate_module() for hybrid mode.
+        """
+        Generate pytest tests for a single testable entity using the configured LLM.
+        
+        This legacy, per-entity generation path is retained for backward compatibility; prefer `generate_module()` for the two-phase module-level workflow.
+        
+        Parameters:
+            hypothesis_template (str): Optional Hypothesis template string to include in the prompt.
+        
+        Returns:
+            generated_code (Optional[str]): Cleaned generated test source as a string, or `None` if generation failed.
         """
         user_prompt = build_user_prompt(entity, variant, context, hypothesis_template)
         messages = [
@@ -157,9 +167,11 @@ class FabricStrategy:
     # ------------------------------------------------------------------
 
     def _call_llm_raw(self, messages: list) -> Optional[str]:
-        """Make one LLM call and return the raw text (no length validation).
-
-        Used for Phase 1 (analysis) where the output is prose, not code.
+        """
+        Call the LLM with the provided message list and return the trimmed textual response.
+        
+        Returns:
+            Optional[str]: The response content with surrounding whitespace removed, or `None` if the response is empty or the call fails.
         """
         try:
             response = completion(
@@ -175,7 +187,16 @@ class FabricStrategy:
             return None
 
     def _call_llm(self, messages: list, attempt: int) -> Optional[str]:
-        """Make one LLM completion call. Returns cleaned code or None."""
+        """
+        Perform a single LLM completion request and return cleaned generated code.
+        
+        Parameters:
+            messages (list): Conversation messages to send to the model.
+            attempt (int): Zero-based attempt index (used for logging).
+        
+        Returns:
+            str: Cleaned generated code if the model produced valid output, `None` otherwise.
+        """
         try:
             response = completion(
                 model=self.model,
@@ -193,7 +214,15 @@ class FabricStrategy:
 
     @staticmethod
     def _process_response(raw: Optional[str]) -> Optional[str]:
-        """Strip markdown fences and validate minimum length."""
+        """
+        Clean and validate LLM-generated code by removing surrounding whitespace and Markdown code fences, and enforcing a minimum content length.
+        
+        Parameters:
+        	raw (Optional[str]): The raw text produced by the LLM, which may include Markdown code fences (e.g., ```python```).
+        
+        Returns:
+        	clean_code (Optional[str]): The cleaned code string if it meets the minimum length requirement, `None` otherwise.
+        """
         if not raw:
             return None
 

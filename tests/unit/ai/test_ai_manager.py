@@ -18,6 +18,14 @@ from branch_fixer.services.ai.manager import (
 
 @pytest.fixture
 def error():
+    """
+    Constructs a TestError for the test function `test_add` in `tests/test_math.py`.
+    
+    Returns:
+        TestError: Instance with test_file set to Path("tests/test_math.py"), test_function "test_add",
+        and error_details containing error_type "AssertionError", message "assert -1 == 5",
+        and stack_trace "tests/test_math.py:8: AssertionError".
+    """
     return TestError(
         test_file=Path("tests/test_math.py"),
         test_function="test_add",
@@ -30,6 +38,15 @@ def error():
 
 
 def make_mock_response(content: str):
+    """
+    Create a mocked LiteLLM-style response object whose first choice's message content is the given text.
+    
+    Parameters:
+    	content (str): Text to set as response.choices[0].message.content.
+    
+    Returns:
+    	MagicMock: Mock object shaped like a LiteLLM response with `.choices[0].message.content == content`.
+    """
     msg = MagicMock()
     msg.content = content
     choice = MagicMock()

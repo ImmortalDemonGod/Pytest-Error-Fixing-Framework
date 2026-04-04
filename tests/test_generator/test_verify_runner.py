@@ -204,6 +204,17 @@ class TestResolveTestFile:
 
 class TestVerificationRunnerRun:
     def _completed(self, stdout: str = "", stderr: str = "", returncode: int = 0):
+        """
+        Create a mock subprocess.CompletedProcess with specified stdout, stderr, and return code.
+        
+        Parameters:
+            stdout (str): Text to set on the mock's `stdout` attribute.
+            stderr (str): Text to set on the mock's `stderr` attribute.
+            returncode (int): Integer to set on the mock's `returncode` attribute.
+        
+        Returns:
+            MagicMock: A MagicMock instance with `spec=subprocess.CompletedProcess` and the provided attributes set.
+        """
         r = MagicMock(spec=subprocess.CompletedProcess)
         r.stdout = stdout
         r.stderr = stderr
@@ -232,6 +243,16 @@ class TestVerificationRunnerRun:
         captured = {}
 
         def capture(cmd, **kwargs):
+            """
+            Capture the command environment passed to a subprocess mock and return a completed-process stub indicating one passing test.
+            
+            Parameters:
+                cmd: The command that would have been executed (ignored by the stub).
+                **kwargs: Keyword arguments forwarded to the subprocess call; the `env` mapping, if present, is stored for inspection.
+            
+            Returns:
+                completed (object): A stubbed completed-process object whose `stdout` equals "1 passed in 0.1s\n".
+            """
             captured["env"] = kwargs.get("env", {})
             return self._completed(stdout="1 passed in 0.1s\n")
 
@@ -245,6 +266,16 @@ class TestVerificationRunnerRun:
         captured = {}
 
         def capture(cmd, **kwargs):
+            """
+            Record the invoked command and return a canned completed-process result indicating one passing test.
+            
+            Parameters:
+            	cmd: The command (string or sequence) that would be executed; this value is stored in `captured["cmd"]`.
+            	**kwargs: Additional keyword arguments are accepted but ignored.
+            
+            Returns:
+            	A completed-process-like object whose `stdout` is the string "1 passed in 0.1s\n".
+            """
             captured["cmd"] = cmd
             return self._completed(stdout="1 passed in 0.1s\n")
 

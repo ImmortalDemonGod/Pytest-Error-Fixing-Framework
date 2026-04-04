@@ -21,18 +21,30 @@ LONG_CODE = "# generated\n" + "x = 1\n" * 10  # > 50 chars so strategy accepts i
 
 
 def _make_orchestrator(generate_returns=None):
-    """Return an orchestrator with a mocked hypothesis strategy only."""
+    """
+    Create a GenerationOrchestrator configured with a mocked hypothesis-style strategy.
+    
+    Parameters:
+        generate_returns: Value that the mocked strategy's `generate()` method will return; use `None` to simulate a failing/no-output strategy.
+    
+    Returns:
+        orchestrator (GenerationOrchestrator): An orchestrator whose `strategy.generate()` returns `generate_returns`.
+    """
     strategy = MagicMock()
     strategy.generate.return_value = generate_returns
     return GenerationOrchestrator(strategy=strategy)
 
 
 def _make_hybrid_orchestrator(hypothesis_returns=None, fabric_module_returns=None):
-    """Return an orchestrator in hybrid mode with both strategies mocked.
-
-    ``fabric_module_returns`` is the return value of ``fabric.generate_module()``.
-    ``hypothesis_returns`` is the return value of ``hypothesis.generate()`` — used
-    for collecting scaffolds (and as fallback when generate_module returns None).
+    """
+    Create a GenerationOrchestrator configured for hybrid mode with mocked strategies and a context gatherer.
+    
+    Parameters:
+        hypothesis_returns: Value that the mocked hypothesis.generate() should return (used to collect templates and as a fallback).
+        fabric_module_returns: Value that the mocked fabric.generate_module() should return (used for consolidated module generation).
+    
+    Returns:
+        tuple: (orchestrator, hypothesis_mock, fabric_mock, gatherer_mock) where `orchestrator` is a GenerationOrchestrator using the provided mocks.
     """
     hypothesis = MagicMock()
     hypothesis.generate.return_value = hypothesis_returns
@@ -244,7 +256,11 @@ class TestHybridMode:
         assert len(templates_arg) > 0
 
     def test_falls_back_to_per_entity_hypothesis_when_generate_module_returns_none(self, tmp_path):
-        """When generate_module() returns None, write per-entity hypothesis files."""
+        """
+        Verify that when the fabric strategy's `generate_module()` returns None, the orchestrator falls back to writing per-entity hypothesis-generated test files.
+        
+        Asserts that the run completes, there is at least one successful per-entity attempt whose generated code equals the hypothesis output, and no consolidated `test_<source_stem>.py` file is created.
+        """
         src = tmp_path / "mymod.py"
         src.write_text("def foo(): pass\n")
         out = tmp_path / "generated"

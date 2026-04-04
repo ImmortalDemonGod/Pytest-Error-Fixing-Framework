@@ -21,6 +21,15 @@ class FakeCommandResult:
         stderr: str = "",
         command: Optional[List[str]] = None,
     ):
+        """
+        Initialize a FakeCommandResult with the command's exit status and output.
+        
+        Parameters:
+            returncode (int): Process exit code; non-zero indicates failure.
+            stdout (str): Captured standard output from the command.
+            stderr (str): Captured standard error from the command.
+            command (Optional[List[str]]): The executed command as a list of arguments; defaults to an empty list.
+        """
         self.returncode = returncode
         self.stdout = stdout
         self.stderr = stderr
@@ -28,13 +37,31 @@ class FakeCommandResult:
 
     @property
     def failed(self) -> bool:
+        """
+        Indicates whether the command execution failed.
+        
+        Returns:
+            bool: `True` if the command's return code is not zero, `False` otherwise.
+        """
         return self.returncode != 0
 
     @property
     def success(self) -> bool:
+        """
+        Indicates whether the command completed successfully.
+        
+        Returns:
+            True if the command's return code equals 0, False otherwise.
+        """
         return self.returncode == 0
 
     def __str__(self) -> str:
+        """
+        Provide a human-readable representation of the command result.
+        
+        Returns:
+            A string describing the command (joined args) and its return code.
+        """
         return f"CommandResult(command='{' '.join(self.command)}', returncode={self.returncode})"
 
 
@@ -56,6 +83,27 @@ class FakeRepo:
         run_command_side_effect: Optional[Exception] = None,
         get_current_branch_side_effect: Optional[Exception] = None,
     ):
+        """
+        Initialize a FakeRepo used by tests to simulate repository state and command behavior.
+        
+        Parameters:
+            main_branch (str): Name of the repository's main branch.
+            current_branch (str): The branch reported by get_current_branch().
+            is_clean (bool): Whether the repository is considered clean (no unstaged changes).
+            existing_branches (Optional[Set[str]]): Set of branch names that exist in the fake repo.
+            diff_items (Optional[List[SimpleNamespace]]): Sequence of objects with an `a_path` attribute returned by repo.index.diff(None).
+            run_command_result (Optional[FakeCommandResult]): Default result returned by run_command when no side effect is set.
+            run_command_side_effect (Optional[Exception]): Exception to raise when run_command is called (if set).
+            get_current_branch_side_effect (Optional[Exception]): Exception to raise when get_current_branch is called (if set).
+        
+        After initialization:
+            - self.existing_branches contains the provided branches as a set.
+            - self.diff_items is the list returned by repo.index.diff(None).
+            - self._run_command_result and self._run_command_side_effect control run_command behavior.
+            - self._get_current_branch_side_effect controls get_current_branch behavior.
+            - self.calls is an empty list that will record each run_command call (list of arg lists).
+            - self.repo provides a minimal object with repo.index.diff(None) returning a copy of diff_items.
+        """
         self.main_branch = main_branch
         self._current_branch = current_branch
         self._is_clean = is_clean
@@ -73,31 +121,86 @@ class FakeRepo:
         # Provide repo.index.diff(None) interface
         class Index:
             def __init__(self, items):
+                """
+                Initialize the instance with the provided collection of items.
+                
+                Parameters:
+                    items: An iterable or sequence of objects to be stored as the instance's items; assigned directly to self._items.
+                """
                 self._items = items
 
             def diff(self, arg):
                 # arg is expected to be None in BranchManager.get_status
+                """
+                Return the configured diff items; the input argument is ignored.
+                
+                Parameters:
+                	arg: Expected to be None when called by BranchManager.get_status; any value is ignored.
+                
+                Returns:
+                	list: A new list containing the configured diff items (items with an `a_path` attribute) representing repository changes for tests.
+                """
                 return list(self._items)
 
         class RepoObj:
             def __init__(self, index):
+                """
+                Initialize the wrapper with a repo index used to produce diffs.
+                
+                Parameters:
+                    index: An index-like object whose `diff(None)` returns a list of diff items (each exposing an `a_path` attribute) used by tests to represent repository changes.
+                """
                 self.index = index
 
         self.repo = RepoObj(Index(self.diff_items))
 
     def get_current_branch(self) -> str:
+        """
+        Get the repository's current branch name or raise a configured side effect.
+        
+        Returns:
+            str: The name of the current branch.
+        
+        Raises:
+            Exception: The configured side-effect exception if one was set on the fake repo; the exception is raised as-is.
+        """
         if self._get_current_branch_side_effect:
             raise self._get_current_branch_side_effect
         return self._current_branch
 
     def is_clean(self) -> bool:
+        """
+        Indicates whether the fake repository has no uncommitted changes.
+        
+        Returns:
+            bool: `True` if the repository is clean (no uncommitted changes), `False` otherwise.
+        """
         return self._is_clean
 
     def branch_exists(self, branch_name: str) -> bool:
+        """
+        Check whether a branch with the given name exists in the fake repository.
+        
+        Returns:
+            True if the repository contains a branch with the given name, False otherwise.
+        """
         return branch_name in self.existing_branches
 
     def run_command(self, args: List[str]) -> FakeCommandResult:
         # record the call
+        """
+        Record and simulate running a git command for tests.
+        
+        Parameters:
+            args (List[str]): The command and its arguments to execute (e.g., ["checkout", "-b", "fix/1", "main"]).
+        
+        Returns:
+            FakeCommandResult: A result object containing `returncode`, `stdout`, `stderr`, and the echoed `command` list.
+        
+        Notes:
+            - The call is recorded in `self.calls`.
+            - If a side effect exception has been configured via `set_run_command_side_effect`, that exception is raised instead of returning a result.
+        """
         self.calls.append(list(args))
         if self._run_command_side_effect:
             raise self._run_command_side_effect
@@ -111,39 +214,105 @@ class FakeRepo:
 
     # Helpers to mutate state in tests
     def set_current_branch(self, name: str):
+        """
+        Set the repository's current branch name.
+        
+        Parameters:
+            name (str): Branch name to use as the repository's current branch.
+        """
         self._current_branch = name
 
     def set_is_clean(self, clean: bool):
+        """
+        Set whether the fake repository is considered clean (no working-tree changes).
+        
+        Parameters:
+            clean (bool): `True` to mark the repository as having no unstaged or uncommitted changes, `False` otherwise.
+        """
         self._is_clean = clean
 
     def set_diff_items(self, items: List[SimpleNamespace]):
+        """
+        Set the repository's diff items and update the fake repo index to return them.
+        
+        Parameters:
+            items (List[SimpleNamespace]): Ordered list of diff-like objects (expected to have an `a_path` attribute) that will be returned by `self.repo.index.diff(None)`.
+        
+        Description:
+            Replaces the instance's `diff_items` with `items` and assigns `self.repo` a minimal object whose `index.diff(arg)` returns a list copy of `diff_items`.
+        """
         self.diff_items = items
         # update repo.index to reference new items
         class Index:
             def __init__(self, items):
+                """
+                Initialize the instance with the provided collection of items.
+                
+                Parameters:
+                    items: An iterable or sequence of objects to be stored as the instance's items; assigned directly to self._items.
+                """
                 self._items = items
 
             def diff(self, arg):
+                """
+                Return the configured index diff items.
+                
+                Parameters:
+                    arg: Ignored; present for API compatibility.
+                
+                Returns:
+                    list: A shallow copy of the stored diff item objects.
+                """
                 return list(self._items)
 
         class RepoObj:
             def __init__(self, index):
+                """
+                Initialize the wrapper with a repo index used to produce diffs.
+                
+                Parameters:
+                    index: An index-like object whose `diff(None)` returns a list of diff items (each exposing an `a_path` attribute) used by tests to represent repository changes.
+                """
                 self.index = index
 
         self.repo = RepoObj(Index(self.diff_items))
 
     def set_run_command_result(self, result: FakeCommandResult):
+        """
+        Configure the fake repository to return a specific command result for subsequent run_command calls.
+        
+        Parameters:
+            result (FakeCommandResult): The command result that future calls to `run_command` will return.
+        """
         self._run_command_result = result
 
     def set_run_command_side_effect(self, exc: Exception):
+        """
+        Set an exception to be raised when `run_command` is invoked on this fake repository.
+        
+        Parameters:
+            exc (Exception): Exception instance that will be raised by subsequent `run_command` calls.
+        """
         self._run_command_side_effect = exc
 
     def set_get_current_branch_side_effect(self, exc: Exception):
+        """
+        Configure a side effect so subsequent calls to `get_current_branch()` raise the provided exception.
+        
+        Parameters:
+            exc (Exception): The exception instance that `get_current_branch()` should raise when called.
+        """
         self._get_current_branch_side_effect = exc
 
 
 @pytest.fixture
 def make_repo() -> Callable[..., FakeRepo]:
+    """
+    Create a factory for producing configured FakeRepo instances for tests.
+    
+    Returns:
+        factory (Callable[..., FakeRepo]): A callable that accepts the same keyword arguments as FakeRepo.__init__ and returns a new FakeRepo configured with those values.
+    """
     def _make_repo(**kwargs: Any) -> FakeRepo:
         return FakeRepo(**kwargs)
 
@@ -152,6 +321,15 @@ def make_repo() -> Callable[..., FakeRepo]:
 
 @pytest.fixture
 def manager_factory(make_repo: Callable[..., FakeRepo]) -> Callable[..., BranchManager]:
+    """
+    Create a factory that builds BranchManager instances backed by test FakeRepo objects.
+    
+    Parameters:
+        make_repo (Callable[..., FakeRepo]): A factory that produces FakeRepo instances from keyword arguments.
+    
+    Returns:
+        factory (Callable[..., BranchManager]): A callable that accepts FakeRepo constructor keyword arguments and returns a new BranchManager using the produced FakeRepo.
+    """
     def _factory(**repo_kwargs: Any) -> BranchManager:
         repo = make_repo(**repo_kwargs)
         return BranchManager(repo)

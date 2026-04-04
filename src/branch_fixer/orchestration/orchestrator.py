@@ -159,20 +159,20 @@ class FixOrchestrator:
         state_manager: Optional[StateManager] = None,
     ):
         """
-        Initialize orchestrator with required components and settings.
-
-        Args:
-            ai_manager: AI service for generating fixes.
-            test_runner: Test execution service.
-            change_applier: Code change service.
-            git_repo: Git operations service.
-            max_retries: Maximum fix attempts per error.
-            initial_temp: Initial temperature for AI.
-            temp_increment: Temperature increase per retry.
-            interactive: Whether to enable interactive mode.
-            recovery_manager: Optional RecoveryManager for checkpoint/restore.
-            session_store: Optional store for persisting the session.
-            state_manager: Optional manager for validating state transitions.
+        Create a FixOrchestrator configured with required services and runtime settings.
+        
+        Parameters:
+            ai_manager (AIManager): AI service used to propose code fixes.
+            test_runner (TestRunner): Service that runs tests and reports failures.
+            change_applier (ChangeApplier): Service that applies code changes.
+            git_repo (GitRepository): Repository helper for git operations.
+            max_retries (int): Maximum attempts to fix a single error.
+            initial_temp (float): Starting temperature value passed to the AI when generating fixes.
+            temp_increment (float): Amount to increase temperature after each failed attempt.
+            interactive (bool): If True, enables interactive behaviors (e.g., prompts).
+            recovery_manager (Optional[RecoveryManager]): Optional manager for creating/restoring checkpoints.
+            session_store (Optional[Any]): Optional persistence store for saving session snapshots.
+            state_manager (Optional[StateManager]): Optional manager used to validate or enforce session state transitions.
         """
         self.ai_manager = ai_manager
         self.test_runner = test_runner
@@ -222,20 +222,15 @@ class FixOrchestrator:
         environment_info: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """
-        Run an existing fix session synchronously.
-
-        - For each error, call self.fix_error(...) with multi-retries.
-        - If any error cannot be fixed, mark the session FAILED.
-        - If no errors fail, mark the session COMPLETED.
-        - Always save the session data to the session_store if present.
-
-        Args:
-            session_id: The session UUID.
-            total_tests: Optional total test count from the test run.
-            environment_info: Optional dict of environment details.
-
+        Execute the fix session identified by `session_id` by attempting fixes for each tracked error and persist the session state when available.
+        
+        Parameters:
+            session_id (UUID): Identifier of the active fix session to run.
+            total_tests (int): Total number of tests from the test run to record.
+            environment_info (Optional[Dict[str, Any]]): Additional environment details to merge into the session's environment_info.
+        
         Returns:
-            bool indicating if all errors were eventually fixed.
+            bool: `True` if the session completed with no remaining failed errors, `False` otherwise.
         """
         self._validate_session(session_id)
         assert self._session is not None
@@ -293,16 +288,13 @@ class FixOrchestrator:
 
     def _handle_error_fix(self, error: TestError) -> bool:
         """
-        Handle a single TestError:
-        - Skip already-fixed errors.
-        - Attempt to fix; on failure, mark session as FAILED.
-        - Return True if successful, False otherwise.
-
-        Args:
-            error: The TestError to handle.
-
+        Process a TestError by skipping it if already fixed or attempting to fix it otherwise.
+        
+        Parameters:
+            error (TestError): The failing test error to process.
+        
         Returns:
-            bool indicating success.
+            bool: `True` if the error is already fixed or was successfully fixed; `False` if fixing failed (the session state will be set to `FAILED`).
         """
         if error.status == "fixed":
             return True  # Skip already-fixed errors
@@ -321,14 +313,16 @@ class FixOrchestrator:
 
     def fix_error(self, error: TestError) -> bool:
         """
-        Attempt multiple fix attempts for a single error,
-        bumping temperature each time if it fails.
-
-        Args:
-            error: The TestError to fix.
-
+        Attempt to fix a single TestError by performing up to the configured number of attempts, increasing the temperature between attempts.
+        
+        Parameters:
+            error (TestError): The failing test error to attempt to fix.
+        
         Returns:
-            bool indicating if fix succeeded after max_retries.
+            bool: `True` if the error was fixed within the retry limit, `False` otherwise.
+        
+        Raises:
+            RuntimeError: If there is no active session.
         """
         if not self._session:
             raise RuntimeError("No active session")
@@ -405,11 +399,11 @@ class FixOrchestrator:
 
     def get_progress(self) -> FixProgress:
         """
-        Return a snapshot of the session's progress.
-
+        Provide a progress snapshot for the active fix session.
+        
         Returns:
-            FixProgress instance representing current progress.
-
+            FixProgress: Progress populated from the current session (total errors, fixed count, current error test function name, retry count, current temperature, last error).
+        
         Raises:
             RuntimeError: If no active session exists.
         """
@@ -439,19 +433,20 @@ class FixOrchestrator:
         action: str,
     ) -> bool:
         """
-        Generic helper for changing session state.
-        Raises a RuntimeError if session is missing or in the wrong state.
-
-        Args:
-            current_required_state: The state required to perform the action.
-            new_state: The new state to transition to.
-            action: The action being performed.
-
+        Change the active session's state after verifying it is in the expected current state.
+        
+        Verifies an active session exists and that its state equals `current_required_state`; on success sets the session state to `new_state` and logs the transition.
+        
+        Parameters:
+            current_required_state (FixSessionState): The state the session must currently have to allow the transition.
+            new_state (FixSessionState): The state to assign to the session.
+            action (str): Human-readable name of the action (used in error messages and logging).
+        
         Returns:
-            bool indicating successful state change.
-
+            bool: `True` if the session state was changed.
+        
         Raises:
-            RuntimeError: If session is missing or not in the required state.
+            RuntimeError: If there is no active session or the session is not in `current_required_state`.
         """
         if not self._session:
             raise RuntimeError(f"No active session to {action}")
@@ -499,14 +494,17 @@ class FixOrchestrator:
 
     def _create_checkpoint_if_needed(self, session: FixSession, label: str) -> None:
         """
-        Create a checkpoint with the recovery manager if needed.
-
-        Args:
-            session: The current FixSession.
-            label: Label for the checkpoint.
-
-        Logs:
-            Information about checkpoint creation or warnings if failed.
+        Create a recovery checkpoint for the given session when a recovery manager is configured.
+        
+        If no recovery manager is set this is a no-op. When configured, builds metadata
+        containing the provided label and current timestamp, calls the recovery manager
+        to create a checkpoint, and logs the created checkpoint's id on success. If
+        checkpoint creation raises `CheckpointError` the error is caught and a warning is
+        logged; the exception is not propagated.
+        
+        Parameters:
+            session (FixSession): The session to snapshot.
+            label (str): A short label describing the checkpoint.
         """
         if not self.recovery_manager:
             return

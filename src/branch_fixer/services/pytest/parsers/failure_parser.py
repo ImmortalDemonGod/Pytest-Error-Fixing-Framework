@@ -30,7 +30,15 @@ class FailureParser:
         return content.split(".")[-1] if "." in content else content
 
     def parse_test_failures(self, output: str) -> List[ErrorInfo]:
-        """Parse pytest output and extract test failures."""
+        """
+        Parse pytest console output and extract structured ErrorInfo records for each test failure.
+        
+        Parameters:
+            output (str): Full pytest run output text to scan for failure blocks and traceback information.
+        
+        Returns:
+            errors (List[ErrorInfo]): A list of parsed failure records. Each ErrorInfo contains the failing test file path, the test function name (or "unknown"), the error type, the line number, the captured code snippet (traceback/context lines), and aggregated error detail lines.
+        """
         errors: List[ErrorInfo] = []
         lines = output.splitlines()
 
@@ -81,9 +89,15 @@ class FailureParser:
         self, line: str, stripped_line: str, current_function: Optional[str]
     ) -> Tuple[Optional[str], List[str], List[str]]:
         """
-        Handle lines that are test headers.
-
-        Returns the updated current function name, reset traceback lines, and reset error details lines.
+        Update the current test function name from a pytest header line and initialize traceback and error-detail accumulators.
+        
+        If the header line contains a test name, sets the current function to that name; otherwise leaves the current function unchanged and treats the header line as part of the traceback.
+        
+        Returns:
+            A tuple of (current_function, traceback_lines, error_details_lines) where:
+            - current_function: the updated test function name or the original value if no name was parsed.
+            - traceback_lines: list of lines to use as the starting traceback/context (initialized with the header line).
+            - error_details_lines: empty list to collect subsequent error detail lines.
         """
         test_name = self._get_test_name_from_header(stripped_line)
         if test_name:
@@ -168,7 +182,19 @@ class FailureParser:
     def extract_traceback(
         self, lines: List[str], start_idx: int, end_idx: Optional[int] = None
     ) -> Tuple[str, int]:
-        """Extract traceback information from pytest output lines."""
+        """
+        Extract a contiguous traceback/code-context block from pytest output lines.
+        
+        Parameters:
+            lines (List[str]): The full pytest output split into lines.
+            start_idx (int): Index in `lines` to begin extraction.
+            end_idx (Optional[int]): Exclusive upper bound index to stop scanning; defaults to end of `lines`.
+        
+        Returns:
+            Tuple[str, int]: A tuple containing the extracted traceback block (lines joined by '\n')
+            and the index at which scanning stopped (the index of the matching location line or the first
+            line after the last considered line).
+        """
         end_idx = end_idx or len(lines)
         traceback_lines = []
         i = start_idx

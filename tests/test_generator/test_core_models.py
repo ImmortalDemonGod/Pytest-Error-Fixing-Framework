@@ -132,6 +132,12 @@ class TestAnalysisContext:
 
 @pytest.fixture
 def sample_entity():
+    """
+    Create a TestableEntity representing a standalone function named add in the mypackage.math_ops module.
+    
+    Returns:
+        TestableEntity: A TestableEntity with name "add", module_path "mypackage.math_ops", and entity_type "function".
+    """
     return TestableEntity(
         name="add",
         module_path="mypackage.math_ops",
@@ -141,6 +147,12 @@ def sample_entity():
 
 @pytest.fixture
 def class_method_entity():
+    """
+    Fixture that provides a TestableEntity for an instance method.
+    
+    Returns:
+        TestableEntity: An entity named "encode" representing an instance method of class "Codec" in module "mypackage.codec".
+    """
     return TestableEntity(
         name="encode",
         module_path="mypackage.codec",
@@ -151,6 +163,16 @@ def class_method_entity():
 
 @pytest.fixture
 def parsed_module(sample_entity, class_method_entity):
+    """
+    Create a ParsedModule containing two provided TestableEntity fixtures.
+    
+    Parameters:
+        sample_entity (TestableEntity): Fixture representing a standalone function entity.
+        class_method_entity (TestableEntity): Fixture representing an instance method entity (includes a parent class).
+    
+    Returns:
+        ParsedModule: A module with module_dotpath "mypackage.math_ops", source_path Path("src/mypackage/math_ops.py"), and an `entities` tuple containing the two provided entities.
+    """
     return ParsedModule(
         source_path=Path("src/mypackage/math_ops.py"),
         module_dotpath="mypackage.math_ops",
@@ -160,6 +182,12 @@ def parsed_module(sample_entity, class_method_entity):
 
 @pytest.fixture
 def config():
+    """
+    Create a default GenerationConfig instance used by tests.
+    
+    Returns:
+        A GenerationConfig with output_dir set to Path("generated_tests") and strategy_name set to "hypothesis".
+    """
     return GenerationConfig(
         output_dir=Path("generated_tests"),
         strategy_name="hypothesis",
@@ -168,6 +196,16 @@ def config():
 
 @pytest.fixture
 def request_obj(parsed_module, config):
+    """
+    Create a GenerationRequest for a parsed module using the provided generation configuration.
+    
+    Parameters:
+        parsed_module (ParsedModule): Parsed module metadata and its testable entities.
+        config (GenerationConfig): Generation settings (e.g., output directory and strategy).
+    
+    Returns:
+        GenerationRequest: A request object composed from the given parsed module and configuration.
+    """
     return GenerationRequest(parsed_module=parsed_module, config=config)
 
 

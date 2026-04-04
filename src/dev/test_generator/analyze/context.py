@@ -29,6 +29,12 @@ class ContextGatherer:
     """
 
     def __init__(self, python_executable: str = sys.executable) -> None:
+        """
+        Initialize the ContextGatherer with the Python interpreter command to use for subprocess invocations.
+        
+        Parameters:
+            python_executable (str): Command or path to the Python interpreter to run external tools (e.g., `mypy`, `ruff`, `coverage`). Defaults to the current interpreter.
+        """
         self._python = python_executable
 
     # ------------------------------------------------------------------
@@ -36,7 +42,20 @@ class ContextGatherer:
     # ------------------------------------------------------------------
 
     def gather(self, source_path: Path) -> AnalysisContext:
-        """Run all tools and return an AnalysisContext for *source_path*."""
+        """
+        Build an AnalysisContext for the given Python source file by running the configured static-analysis and test-coverage tools and extracting project-internal dependency snippets.
+        
+        Parameters:
+            source_path (Path): Path to the Python source file to analyze; its UTF-8 contents are read and included in the returned context.
+        
+        Returns:
+            AnalysisContext: Contains:
+                - source_code: the UTF-8 source text of `source_path`.
+                - mypy_issues: tuple of mypy error lines (empty tuple if mypy is unavailable or times out).
+                - ruff_issues: tuple of ruff output lines (empty tuple if ruff is unavailable or times out).
+                - coverage_gaps: tuple of CoverageGap entries found from the test coverage report (empty tuple if tests/coverage are unavailable, times out, or no matching test file).
+                - dependency_code: concatenated snippets of classes/functions from project-internal imports, or an empty string if none could be extracted.
+        """
         source_code = source_path.read_text(encoding="utf-8")
         return AnalysisContext(
             source_code=source_code,
@@ -51,7 +70,12 @@ class ContextGatherer:
     # ------------------------------------------------------------------
 
     def _gather_mypy(self, source_path: Path) -> Tuple[str, ...]:
-        """Run mypy and return error lines. Returns () on failure."""
+        """
+        Collects mypy error output for the given source file.
+        
+        Returns:
+            tuple[str, ...]: Mypy error lines (each contains ": error:"); returns an empty tuple if the mypy executable is not found or the run times out.
+        """
         try:
             result = subprocess.run(
                 [self._python, "-m", "mypy", str(source_path), "--no-error-summary"],
@@ -69,7 +93,14 @@ class ContextGatherer:
         return tuple(lines)
 
     def _gather_ruff(self, source_path: Path) -> Tuple[str, ...]:
-        """Run ruff check and return violation lines. Returns () on failure."""
+        """
+        Collect ruff check output lines for the given source file.
+        
+        Runs `python -m ruff check <source_path>` and returns the non-empty, whitespace-stripped lines from ruff's standard output. If ruff is not installed or the subprocess times out, returns an empty tuple.
+        
+        Returns:
+            tuple[str, ...]: Non-empty stripped stdout lines from ruff, or `()` on failure.
+        """
         try:
             result = subprocess.run(
                 [self._python, "-m", "ruff", "check", str(source_path)],
@@ -83,7 +114,14 @@ class ContextGatherer:
         return tuple(lines)
 
     def _gather_coverage(self, source_path: Path) -> Tuple[CoverageGap, ...]:
-        """Find test file, run coverage, return per-function gaps. Returns () on failure."""
+        """
+        Collect per-function coverage gaps for the given source file by locating and running its tests.
+        
+        If no matching test file is found, or if coverage/pytest invocation fails due to a missing executable or a timeout, an empty tuple is returned.
+        
+        Returns:
+            Tuple[CoverageGap, ...]: A tuple of CoverageGap entries describing functions with uncovered lines for the target source file; an empty tuple if no gaps are found or on failure.
+        """
         test_file = find_test_file(source_path)
         if test_file is None:
             return ()
@@ -126,14 +164,17 @@ class ContextGatherer:
 
 
 def _gather_dependency_code(source_path: Path, source_code: str) -> str:
-    """Return source snippets of classes/functions imported from project modules.
-
-    Parses the source file's imports, finds project-internal modules (same src/
-    root), reads their source, and extracts class/function definitions that are
-    referenced in the source file. This gives the LLM constructor signatures
-    for types it would otherwise not be able to see.
-
-    Returns an empty string if nothing useful is found or on any error.
+    """
+    Extract top-level class and function definition snippets from project-internal modules imported by the provided source file.
+    
+    Parses the provided source text to discover names imported via `from ... import ...`, resolves those modules to `.py` files under the project's `src` root (or the source file's parent if no `src` directory is present), and extracts top-level `class`, `def`, and `async def` blocks from those dependency files. Each extracted block is prefixed with a comment of the form `# from <module>` and snippets are joined with a blank line. Returns an empty string if no snippets are found or if parsing/IO errors occur.
+    
+    Parameters:
+        source_path (Path): Path to the source file being analyzed; used to infer project layout and resolve dependency file locations.
+        source_code (str): UTF-8 decoded source text of `source_path`.
+    
+    Returns:
+        str: Concatenated snippets of dependency definitions, or an empty string if none were extracted or on error.
     """
     try:
         tree = ast.parse(source_code)
@@ -193,13 +234,17 @@ def _gather_dependency_code(source_path: Path, source_code: str) -> str:
 
 
 def find_test_file(source_path: Path) -> Optional[Path]:
-    """Return the first matching test file for *source_path*, or None.
-
-    Search order:
-    1. ``test_<stem>.py`` next to the source file
-    2. ``<stem>_test.py`` next to the source file
-    3. ``tests/test_<stem>.py`` under the project root (src-layout aware)
-    4. ``tests/test_generator/test_<stem>.py`` (this project's convention)
+    """
+    Locate the first test file that corresponds to the given source file using a project-aware search order.
+    
+    Search order (checked in sequence):
+    1. `test_<stem>.py` next to the source file
+    2. `<stem>_test.py` next to the source file
+    3. `tests/test_<stem>.py` under the project root (when the source path contains a `src` directory)
+    4. `tests/test_generator/test_<stem>.py` under the project root
+    
+    Returns:
+        Path: The first matching test file path, or `None` if no candidate exists.
     """
     stem = source_path.stem
     resolved = source_path.resolve()
@@ -224,11 +269,13 @@ def find_test_file(source_path: Path) -> Optional[Path]:
 
 
 def parse_coverage_json(json_path: Path, source_path: Path) -> Tuple[CoverageGap, ...]:
-    """Parse a ``coverage json`` report and return per-function CoverageGaps.
-
-    Matches the source file by checking whether *source_path* is a suffix of
-    any key in the report's ``files`` dict (coverage.py uses relative paths).
-    Returns () if the file is not in the report or the JSON is malformed.
+    """
+    Extract per-function coverage gaps from a coverage.py JSON report for the given source file.
+    
+    The function locates the report entry for `source_path` by comparing the resolved source path against the report's `files` keys (using a suffix heuristic and filename fallback), then collects any `missing_lines` listed for each function into `CoverageGap` records. If the JSON cannot be read/parsed or the source file is not present in the report, an empty tuple is returned.
+    
+    Returns:
+        tuple[CoverageGap, ...]: Coverage gaps for functions in the source file, or an empty tuple if none were found or on error.
     """
     try:
         data = json.loads(json_path.read_text(encoding="utf-8"))

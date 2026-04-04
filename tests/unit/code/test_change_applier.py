@@ -15,12 +15,26 @@ from branch_fixer.services.code.change_applier import (
 
 @pytest.fixture
 def applier():
+    """
+    Provide a fresh ChangeApplier instance for tests.
+    
+    Returns:
+        ChangeApplier: a new, ready-to-use ChangeApplier instance (pytest fixture).
+    """
     return ChangeApplier()
 
 
 @pytest.fixture
 def valid_py(tmp_path) -> Path:
-    """A syntactically valid Python file."""
+    """
+    Create a file named `test_sample.py` containing a simple, syntactically valid Python test function and return its path.
+    
+    Parameters:
+        tmp_path (Path): Directory in which to create the file (typically pytest's tmp_path fixture).
+    
+    Returns:
+        Path: Path to the created `test_sample.py`.
+    """
     f = tmp_path / "test_sample.py"
     f.write_text("def test_foo():\n    assert 1 == 1\n")
     return f
@@ -28,6 +42,15 @@ def valid_py(tmp_path) -> Path:
 
 @pytest.fixture
 def valid_changes(valid_py) -> CodeChanges:
+    """
+    Constructs a CodeChanges object representing a simple test file change that replaces an equality assertion with `assert True`.
+    
+    Parameters:
+        valid_py (Path): Path to the valid Python test file provided by the `valid_py` fixture.
+    
+    Returns:
+        CodeChanges: Instance whose `original_code` is a sample test function containing `assert 1 == 1` and whose `modified_code` replaces that assertion with `assert True`.
+    """
     return CodeChanges(
         original_code="def test_foo():\n    assert 1 == 1\n",
         modified_code="def test_foo():\n    assert True\n",

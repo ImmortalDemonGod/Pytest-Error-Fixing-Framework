@@ -68,12 +68,11 @@ class VerificationResult:
 
     @property
     def all_passed(self) -> bool:
-        """True only when pytest exit code indicates success.
-
-        Exit codes:
-          0 — all collected tests passed
-          5 — no tests collected (acceptable: nothing to fail)
-        Any other code means at least one test failed or errored.
+        """
+        Indicates whether the pytest run is considered successful.
+        
+        Returns:
+            bool: `true` if the exit code is 0 (all collected tests passed) or 5 (no tests collected), `false` otherwise.
         """
         return self.exit_code in (0, 5)
 
@@ -89,10 +88,24 @@ class VerificationRunner:
     """
 
     def __init__(self, extra_pythonpath: str = "") -> None:
+        """
+        Initialize the runner with an optional PYTHONPATH prefix for subprocessed pytest runs.
+        
+        Parameters:
+            extra_pythonpath (str): Colon-separated path(s) to prepend to `PYTHONPATH` when spawning pytest subprocesses; empty string means no modification.
+        """
         self.extra_pythonpath = extra_pythonpath
 
     def run(self, output_dir: Path) -> VerificationResult:
-        """Run pytest on *output_dir* and return a VerificationResult."""
+        """
+        Execute pytest against the generated tests in `output_dir` and return a parsed VerificationResult.
+        
+        Parameters:
+            output_dir (Path): Directory containing the generated test files to run.
+        
+        Returns:
+            VerificationResult: Aggregated results parsed from pytest's output, including passed/failed counts, per-test failures, the raw pytest output, and the subprocess exit code.
+        """
         env = self._build_env()
         proc = subprocess.run(
             [
@@ -112,10 +125,11 @@ class VerificationRunner:
         return parse_pytest_output(combined, output_dir, exit_code=proc.returncode)
 
     def capture_error_output(self, test_file: Path) -> str:
-        """Run pytest on a single file with long tracebacks and return the output.
-
-        Used by GeneratedTestFixer to get detailed error context before asking
-        the LLM to fix a file.  Returns combined stdout+stderr.
+        """
+        Run pytest on a single test file with long tracebacks to capture detailed failure output.
+        
+        Returns:
+            combined (str): Combined stdout and stderr produced by the pytest subprocess.
         """
         env = self._build_env()
         proc = subprocess.run(
@@ -135,6 +149,14 @@ class VerificationRunner:
         return proc.stdout + proc.stderr
 
     def _build_env(self) -> dict:
+        """
+        Build an environment mapping for subprocess execution, copying the current process environment and prepending this runner's extra_pythonpath to PYTHONPATH when provided.
+        
+        If `self.extra_pythonpath` is non-empty, it is prepended to the existing `PYTHONPATH` using a colon separator; the existing `PYTHONPATH` is preserved when present.
+        
+        Returns:
+            dict: A copy of the environment suitable for passing to subprocess calls.
+        """
         env = os.environ.copy()
         if self.extra_pythonpath:
             existing = env.get("PYTHONPATH", "")
@@ -172,10 +194,18 @@ _PASSED_COUNT = re.compile(r"(\d+)\s+passed", re.IGNORECASE)
 def parse_pytest_output(
     output: str, output_dir: Path, exit_code: int = 0
 ) -> VerificationResult:
-    """Parse combined pytest stdout+stderr into a VerificationResult.
-
-    Uses the subprocess exit code as the authoritative pass/fail signal.
-    Text parsing provides structured failure details on a best-effort basis.
+    """
+    Parse pytest combined stdout/stderr into a VerificationResult.
+    
+    Scans the provided pytest output for failing/errored test lines and a pytest summary line to build structured results. The subprocess exit code is used as the authoritative signal for overall success; textual parsing is used on a best-effort basis to collect per-test failure details, resolve test file paths relative to `output_dir`, and extract passed/failed counts (preferring the numeric values from the pytest summary line that ends with `in Xs`; if no summary is found, the failed count falls back to the number of captured failures).
+    
+    Parameters:
+        output (str): Combined stdout and stderr produced by running pytest.
+        output_dir (Path): Directory containing the generated tests; used to resolve relative test file paths found in the output.
+        exit_code (int): Subprocess exit code returned by pytest; treated as the authoritative pass/fail indicator.
+    
+    Returns:
+        VerificationResult: Aggregated result containing `output_dir`, `passed`, `failed`, list of `TestFailure` items, `exit_code`, and the original `raw_output`.
     """
     failures: list[TestFailure] = []
     passed = 0
@@ -218,10 +248,16 @@ def parse_pytest_output(
 
 
 def _find_summary_line(output: str) -> Optional[str]:
-    """Return the pytest summary line (must end with 'in N.Ns').
-
-    Requires the ' in Xs' suffix to distinguish real summaries from
-    incidental lines containing 'error' (e.g. PytestWarning garbage).
+    """
+    Find the pytest summary line that ends with the 'in N.Ns' suffix.
+    
+    The suffix requirement reduces false positives from incidental lines that mention 'error' (for example, PytestWarning messages).
+    
+    Parameters:
+        output (str): Complete pytest stdout/stderr output to search.
+    
+    Returns:
+        Optional[str]: The matched summary line with surrounding whitespace removed, or `None` if no summary line is found.
     """
     for line in reversed(output.splitlines()):
         stripped = line.strip()
@@ -231,7 +267,18 @@ def _find_summary_line(output: str) -> Optional[str]:
 
 
 def _resolve_test_file(file_part: str, output_dir: Path) -> Path:
-    """Turn a relative or absolute pytest file path into an absolute Path."""
+    """
+    Resolve a pytest-reported file path to an absolute Path.
+    
+    Parameters:
+        file_part (str): File path as reported by pytest; may be absolute or relative.
+        output_dir (Path): Directory containing generated tests; used to interpret relative paths.
+    
+    Returns:
+        Path: Absolute path to the test file. If `file_part` is absolute it is returned as-is; otherwise,
+        if `output_dir / file_part` exists that path is returned; if not, `file_part` is resolved to an
+        absolute path relative to the current working directory.
+    """
     p = Path(file_part)
     if p.is_absolute():
         return p

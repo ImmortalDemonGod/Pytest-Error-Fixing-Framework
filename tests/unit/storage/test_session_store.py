@@ -44,22 +44,45 @@ class TestSessionPersistenceError:
 @pytest.fixture
 def storage_dir(tmp_path):
     # Default storage directory where parent exists
+    """
+    Provides a default storage directory path under the pytest `tmp_path`.
+    
+    Returns:
+        pathlib.Path: The path `tmp_path / "store"` to be used as the target storage directory for tests.
+    """
     return tmp_path / "store"
 
 
 @pytest.fixture
 def store_instance(storage_dir):
     """
-    Create a SessionStore instance while patching TinyDB to avoid
-    creating actual DB files in the test environment.
+    Create a SessionStore configured to use a fake in-memory TinyDB, preventing creation of real database files during tests.
+    
+    Parameters:
+        storage_dir (pathlib.Path): Directory path to use as the store's storage location.
+    
+    Returns:
+        SessionStore: An instance of SessionStore whose TinyDB dependency is replaced by a fake implementation.
     """
     # Create a simple FakeTinyDB that provides a .table() method
     class FakeTinyDB:
         def __init__(self, path):
+            """
+            Initialize the store with a storage path and prepare an internal table cache.
+            
+            Parameters:
+                path (str | pathlib.Path): Filesystem path to the storage directory or database file.
+            """
             self.path = path
             self._tables = {}
 
         def table(self, name):
+            """
+            Return a table-like SimpleNamespace for the given table name, creating and caching a default no-op table if necessary.
+            
+            Returns:
+                SimpleNamespace: An object with default no-op methods `get`, `insert`, `update`, `all`, `search`, and `remove`. Methods can be replaced by tests as needed.
+            """
             tbl = self._tables.get(name)
             if not tbl:
                 tbl = SimpleNamespace()
@@ -85,11 +108,28 @@ class TestSessionStore:
 
         class FakeTiny:
             def __init__(self, path):
+                """
+                Initialize the fake TinyDB used by tests.
+                
+                Records the provided database path for inspection and prepares a single-table stub whose `get` method always returns `None`.
+                
+                Parameters:
+                    path (str | pathlib.Path): The path argument passed to the TinyDB constructor.
+                """
                 created["path"] = path
                 self._table = SimpleNamespace()
                 self._table.get = lambda *a, **k: None
 
             def table(self, name):
+                """
+                Retrieve a table object for the given table name (fake implementation).
+                
+                Parameters:
+                    name (str): Requested table name; ignored by this fake implementation.
+                
+                Returns:
+                    object: The preconfigured table instance.
+                """
                 return self._table
 
         with patch("branch_fixer.storage.session_store.TinyDB", side_effect=lambda path: FakeTiny(path)):
@@ -137,9 +177,27 @@ class TestSessionStore:
 
         class DummyError:
             def __init__(self, name):
+                """
+                Initialize the instance with a given name.
+                
+                Parameters:
+                    name (str): Identifier assigned to the instance; used as the instance's human-readable name.
+                """
                 self.name = name
 
             def to_dict(self):
+                """
+                Serialize the object into a plain dictionary representation for persistence.
+                
+                Returns:
+                    dict: A mapping with the following keys:
+                        - "id" (str): identifier taken from `self.name`.
+                        - "test_file" (str): filename of the test (e.g., "f.py").
+                        - "test_function" (str): name of the test function (e.g., "t").
+                        - "error_details" (dict): contains "error_type" (str) and "message" (str).
+                        - "fix_attempts" (list): list of recorded fix attempt entries.
+                        - "status" (str): current status string (e.g., "unfixed").
+                """
                 return {"id": self.name, "test_file": "f.py", "test_function": "t", "error_details": {"error_type": "E", "message": "m"}, "fix_attempts": [], "status": "unfixed"}
 
         dummy = SimpleNamespace(
@@ -164,9 +222,24 @@ class TestSessionStore:
 
         class FakeSessions:
             def get(self, *args, **kwargs):
+                """
+                Act as a table lookup that always indicates no record was found.
+                
+                Returns:
+                    None: Indicates the requested record does not exist.
+                """
                 return None
 
             def insert(self, data):
+                """
+                Insert the provided data into this fake table and return a placeholder insertion id.
+                
+                Parameters:
+                    data: The record to insert.
+                
+                Returns:
+                    int: Placeholder insertion id (always 1).
+                """
                 inserted["data"] = data
                 return 1
 
@@ -195,6 +268,20 @@ class TestSessionStore:
 
         class DummyError:
             def to_dict(self):
+                """
+                Serialize this error record into a plain dictionary for storage or transmission.
+                
+                Returns:
+                    dict: A mapping with keys:
+                        - `id` (str): Unique identifier for the error record.
+                        - `test_file` (str): Path or name of the test file where the error occurred.
+                        - `test_function` (str): Name of the test function that failed.
+                        - `error_details` (dict): Details about the error with keys:
+                            - `error_type` (str): Short code or type of the error.
+                            - `message` (str): Human-readable error message.
+                        - `fix_attempts` (list): List of attempted fixes (each element is serializable).
+                        - `status` (str): Current status of the error (e.g., `"unfixed"`).
+                """
                 return {"id": "e1", "test_file": "f.py", "test_function": "t", "error_details": {"error_type": "E", "message": "m"}, "fix_attempts": [], "status": "unfixed"}
 
         dummy = SimpleNamespace(
@@ -219,9 +306,22 @@ class TestSessionStore:
 
         class FakeSessions:
             def get(self, *args, **kwargs):
+                """
+                Return a truthy record dictionary with an 'id' key set to str(sid).
+                
+                Parameters:
+                    *args: Ignored.
+                    **kwargs: Ignored.
+                
+                Returns:
+                    dict: A record-like mapping containing `'id'` equal to `str(sid)`.
+                """
                 return {"id": str(sid)}  # truthy -> trigger update
 
             def insert(self, *a, **k):
+                """
+                Record an invocation by incrementing the shared `calls["insert"]` counter.
+                """
                 calls["insert"] += 1
 
             def update(self, data, *a, **k):
@@ -261,9 +361,21 @@ class TestSessionStore:
 
         class FakeSessions:
             def get(self, *a, **k):
+                """
+                Always returns None regardless of arguments.
+                
+                Returns:
+                    None: Indicates absence of a value.
+                """
                 return None
 
             def insert(self, *a, **k):
+                """
+                Simulated insert operation that always fails.
+                
+                Raises:
+                    RuntimeError: Always raised with the message "insert boom".
+                """
                 raise RuntimeError("insert boom")
 
         store_instance.sessions = FakeSessions()
@@ -277,6 +389,12 @@ class TestSessionStore:
 
         class FakeSessions:
             def get(self, *a, **k):
+                """
+                Always returns None regardless of arguments.
+                
+                Returns:
+                    None: Indicates absence of a value.
+                """
                 return None
 
         store_instance.sessions = FakeSessions()
@@ -306,10 +424,25 @@ class TestSessionStore:
 
         class FakeSessions:
             def get(self, *a, **k):
+                """
+                Return the stored session dictionary for any query.
+                
+                Returns:
+                    dict: The stored session record dictionary.
+                """
                 return session_dict
 
         # Patch TestError.from_dict to return identifiable objects
         def fake_from_dict(data):
+            """
+            Create a simple namespace with a `from_id` attribute extracted from the given mapping.
+            
+            Parameters:
+                data (dict): Mapping expected to contain an `"id"` key.
+            
+            Returns:
+                types.SimpleNamespace: Object with a `from_id` attribute equal to `data.get("id")`.
+            """
             return SimpleNamespace(from_id=data.get("id"))
 
         with patch("branch_fixer.storage.session_store.TestError.from_dict", side_effect=fake_from_dict):
@@ -346,6 +479,12 @@ class TestSessionStore:
 
         class FakeSessions:
             def get(self, *a, **k):
+                """
+                Return the stored session dictionary for any query.
+                
+                Returns:
+                    dict: The stored session record dictionary.
+                """
                 return session_dict
 
         # Make TestError.from_dict raise
@@ -362,6 +501,12 @@ class TestSessionStore:
 
         class FakeSessions:
             def get(self, *a, **k):
+                """
+                Retrieve the stored minimal value.
+                
+                Returns:
+                    The value referred to as `minimal`.
+                """
                 return minimal
 
         store_instance.sessions = FakeSessions()
@@ -378,6 +523,12 @@ class TestSessionStore:
     def test_list_sessions_returns_empty_list_when_no_records(self, store_instance):
         class FakeSessions:
             def all(self):
+                """
+                Provide the list of all stored session records (currently returns an empty list).
+                
+                Returns:
+                    list: An empty list.
+                """
                 return []
 
         store_instance.sessions = FakeSessions()
@@ -406,9 +557,24 @@ class TestSessionStore:
 
         class FakeSessions:
             def all(self):
+                """
+                Return all records currently stored in the table.
+                
+                Returns:
+                    list: A list of stored record objects (each typically a dict) in their raw form.
+                """
                 return data
 
         def fake_from_dict(d):
+            """
+            Create a SimpleNamespace with an `id` attribute extracted from a mapping.
+            
+            Parameters:
+                d (Mapping): Mapping containing an `"id"` key.
+            
+            Returns:
+                SimpleNamespace: Object whose `id` attribute is set to d.get("id") (or `None` if the key is missing).
+            """
             return SimpleNamespace(id=d.get("id"))
 
         with patch("branch_fixer.storage.session_store.TestError.from_dict", side_effect=fake_from_dict):
@@ -448,6 +614,16 @@ class TestSessionStore:
 
         class FakeSessions:
             def search(self, *a, **k):
+                """
+                Increment the search invocation counter and return the stored data.
+                
+                Parameters:
+                    *a: Ignored positional arguments kept for signature compatibility.
+                    **k: Ignored keyword arguments kept for signature compatibility.
+                
+                Returns:
+                    list: The stored records (as returned from the underlying `data` variable).
+                """
                 called["search"] += 1
                 return data
 
@@ -462,6 +638,12 @@ class TestSessionStore:
     def test_list_sessions_raises_SessionPersistenceError_on_db_error(self, store_instance):
         class FakeSessions:
             def all(self):
+                """
+                Simulate a failing retrieval of all records by always raising a runtime error.
+                
+                Raises:
+                    RuntimeError: Always raised with message "boom".
+                """
                 raise RuntimeError("boom")
 
         store_instance.sessions = FakeSessions()
@@ -475,6 +657,12 @@ class TestSessionStore:
 
         class FakeSessions:
             def remove(self, *a, **k):
+                """
+                Remove records matching the provided query and return the identifiers of removed records.
+                
+                Returns:
+                    list: Identifiers for the records that were removed; an empty list if no records were removed.
+                """
                 return removed
 
         store_instance.sessions = FakeSessions()
@@ -486,6 +674,12 @@ class TestSessionStore:
 
         class FakeSessions:
             def remove(self, *a, **k):
+                """
+                Simulates a failing delete operation by always raising RuntimeError("boom delete").
+                
+                Raises:
+                    RuntimeError: Always raised with message "boom delete".
+                """
                 raise RuntimeError("boom delete")
 
         store_instance.sessions = FakeSessions()

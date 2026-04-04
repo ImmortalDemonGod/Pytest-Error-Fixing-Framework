@@ -12,10 +12,31 @@ SAMPLE_CODE = "# generated\n" + "x = 1\n" * 10  # > 50 chars
 
 
 def _entity(name: str = "add", entity_type: str = "function") -> TestableEntity:
+    """
+    Create a TestableEntity with a fixed module path ("pkg.mod") for use in tests.
+    
+    Parameters:
+        name: The entity's name (default "add").
+        entity_type: The entity's type (e.g., "function", "class"); defaults to "function".
+    
+    Returns:
+        A TestableEntity instance configured with the given name and type and module_path set to "pkg.mod".
+    """
     return TestableEntity(name=name, module_path="pkg.mod", entity_type=entity_type)
 
 
 def _completed(stdout: str = "", stderr: str = "", returncode: int = 0):
+    """
+    Create a MagicMock that simulates a subprocess.CompletedProcess with controlled fields.
+    
+    Parameters:
+        stdout (str): Text to set on the mock's `stdout`.
+        stderr (str): Text to set on the mock's `stderr`.
+        returncode (int): Integer to set on the mock's `returncode`.
+    
+    Returns:
+        MagicMock: A mock object conforming to `subprocess.CompletedProcess` with the specified `stdout`, `stderr`, and `returncode`.
+    """
     r = MagicMock(spec=subprocess.CompletedProcess)
     r.stdout = stdout
     r.stderr = stderr

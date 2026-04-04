@@ -33,15 +33,39 @@ def test_add_zero():
 
 
 def _entity(name: str = "add", entity_type: str = "function") -> TestableEntity:
+    """
+    Create a TestableEntity for tests with a fixed module_path of "pkg.mod".
+    
+    Parameters:
+        name (str): The entity's name (default "add").
+        entity_type (str): The entity's type, e.g., "function" (default "function").
+    
+    Returns:
+        testable_entity (TestableEntity): A TestableEntity with `name`, `entity_type`, and `module_path="pkg.mod"`.
+    """
     return TestableEntity(name=name, module_path="pkg.mod", entity_type=entity_type)
 
 
 def _ctx() -> AnalysisContext:
+    """
+    Create an AnalysisContext seeded with a minimal example function definition.
+    
+    Returns:
+        AnalysisContext: An empty AnalysisContext initialized with the source text "def add(a, b): return a + b".
+    """
     return AnalysisContext.empty("def add(a, b): return a + b")
 
 
 def _make_response(content: str):
-    """Build a minimal litellm-style response object."""
+    """
+    Create a minimal mock of a LiteLLM-style response containing the given content.
+    
+    The returned mock has a `choices` list whose first element has a `message.content` attribute set to `content`.
+    
+    Returns:
+        MagicMock: A mock object mimicking a LiteLLM response such that
+        `response.choices[0].message.content == content`.
+    """
     choice = MagicMock()
     choice.message.content = content
     response = MagicMock()
@@ -65,6 +89,11 @@ class TestGenerate:
         assert mock_llm.call_count == 1
 
     def test_retries_on_failure_then_succeeds(self):
+        """
+        Verifies that generate retries after a transient LLM failure and returns generated code when a subsequent attempt succeeds.
+        
+        Patches the LLM completion to raise an exception on the first call and return valid code on the second call, then asserts the strategy returns a non-None result and that the LLM was invoked twice.
+        """
         strat = FabricStrategy(max_retries=3)
         responses = [
             Exception("network error"),
@@ -96,6 +125,15 @@ class TestGenerate:
         captured = {}
 
         def capture_call(**kwargs):
+            """
+            Capture the `messages` keyword argument for inspection and return a mock LLM response containing SAMPLE_CODE.
+            
+            Parameters:
+                **kwargs: Keyword arguments forwarded from the mocked completion call. Expects a `messages` key whose value is the list of message dictionaries sent to the LLM; this list is saved into the surrounding `captured["messages"]`.
+            
+            Returns:
+                response: A minimal mock response whose `choices[0].message.content` contains `SAMPLE_CODE`.
+            """
             captured["messages"] = kwargs["messages"]
             return _make_response(SAMPLE_CODE)
 
@@ -117,6 +155,15 @@ class TestGenerate:
         captured = {}
 
         def capture_call(**kwargs):
+            """
+            Capture the `messages` keyword argument for inspection and return a mock LLM response containing SAMPLE_CODE.
+            
+            Parameters:
+                **kwargs: Keyword arguments forwarded from the mocked completion call. Expects a `messages` key whose value is the list of message dictionaries sent to the LLM; this list is saved into the surrounding `captured["messages"]`.
+            
+            Returns:
+                response: A minimal mock response whose `choices[0].message.content` contains `SAMPLE_CODE`.
+            """
             captured["messages"] = kwargs["messages"]
             return _make_response(SAMPLE_CODE)
 
@@ -132,6 +179,15 @@ class TestGenerate:
         captured = {}
 
         def capture_call(**kwargs):
+            """
+            Store all received keyword arguments into the outer `captured["kwargs"]` and return a mock LLM response containing SAMPLE_CODE.
+            
+            Parameters:
+                **kwargs: Arbitrary keyword arguments passed to the function; all are saved to `captured["kwargs"]`.
+            
+            Returns:
+                A minimal mock response whose first choice message content equals `SAMPLE_CODE`.
+            """
             captured["kwargs"] = kwargs
             return _make_response(SAMPLE_CODE)
 
@@ -189,7 +245,16 @@ class TestGenerateModule:
     """Tests for the two-phase generate_module() method."""
 
     def _make_two_responses(self, plan_text: str, code_text: str):
-        """Return a side_effect list: first call returns plan, second returns code."""
+        """
+        Create a list suitable for use as a mock `side_effect` where the first call yields an analysis plan and the second yields generated code.
+        
+        Parameters:
+            plan_text (str): Text to include in the first mocked response (analysis/plan).
+            code_text (str): Text to include in the second mocked response (generated test code).
+        
+        Returns:
+            list: Two mocked response objects; the first contains `plan_text`, the second contains `code_text`.
+        """
         return [_make_response(plan_text), _make_response(code_text)]
 
     def test_returns_code_when_both_phases_succeed(self):
@@ -233,6 +298,15 @@ class TestGenerateModule:
         captured = []
 
         def capture(**kwargs):
+            """
+            Record the provided `messages` and return a deterministic mock LLM response.
+            
+            Parameters:
+                **kwargs: expects a `messages` keyword containing the list of message objects sent to the LLM; this list is appended to the outer `captured` list.
+            
+            Returns:
+                A mock response object whose content is `plan` on the first invocation and `SAMPLE_CODE` on subsequent invocations.
+            """
             captured.append(kwargs["messages"])
             return _make_response(plan if len(captured) == 1 else SAMPLE_CODE)
 
@@ -250,6 +324,15 @@ class TestGenerateModule:
         captured = []
 
         def capture(**kwargs):
+            """
+            Record the provided `messages` and return a deterministic mock LLM response.
+            
+            Parameters:
+                **kwargs: expects a `messages` keyword containing the list of message objects sent to the LLM; this list is appended to the outer `captured` list.
+            
+            Returns:
+                A mock response object whose content is `plan` on the first invocation and `SAMPLE_CODE` on subsequent invocations.
+            """
             captured.append(kwargs["messages"])
             return _make_response(plan if len(captured) == 1 else SAMPLE_CODE)
 
@@ -268,6 +351,15 @@ class TestGenerateModule:
         captured = []
 
         def capture(**kwargs):
+            """
+            Record the provided `messages` and return a deterministic mock LLM response.
+            
+            Parameters:
+                **kwargs: expects a `messages` keyword containing the list of message objects sent to the LLM; this list is appended to the outer `captured` list.
+            
+            Returns:
+                A mock response object whose content is `plan` on the first invocation and `SAMPLE_CODE` on subsequent invocations.
+            """
             captured.append(kwargs["messages"])
             return _make_response(plan if len(captured) == 1 else SAMPLE_CODE)
 

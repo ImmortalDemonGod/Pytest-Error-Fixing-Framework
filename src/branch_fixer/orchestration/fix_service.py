@@ -40,23 +40,23 @@ class FixService:
         session: Optional[FixSession] = None,
     ):
         """
-        Initialize fix service with components.
-
-        Args:
-            ai_manager: AI service for generating fixes
-            test_runner: Test execution service
-            change_applier: Code change service
-            git_repo: Git operations service
-            max_retries: Maximum fix attempts
-            initial_temp: Starting temperature
-            temp_increment: Temperature increase per retry
-            dev_force_success: If True, skip actual fix logic and force success
-            session_store: Optional session store for persisting fix session
-            state_manager: Optional manager for validating state transitions
-            session: Optional FixSession to track fix state
-
+        Construct a FixService coordinating AI-driven fix generation, change application, test verification, and optional session persistence.
+        
+        Parameters:
+            ai_manager (AIManager): Service that proposes code changes for a failing test.
+            test_runner (TestRunner): Service that runs and verifies tests.
+            change_applier (ChangeApplier): Service that applies and restores code changes.
+            git_repo (GitRepository): Repository interface used for workspace operations.
+            max_retries (int): Maximum number of fix attempts; must be greater than zero.
+            initial_temp (float): Initial temperature for AI generation; must be in the range [0, 1].
+            temp_increment (float): Amount to increase temperature after each retry; must be positive.
+            dev_force_success (bool): If True, bypasses attempt logic and marks fixes as successful (development shortcut).
+            session_store (Optional[SessionStore]): Optional persistence backend for saving FixSession state.
+            state_manager (Optional[StateManager]): Optional manager to validate/transition session state.
+            session (Optional[FixSession]): Optional FixSession instance to track and update error/fix progress.
+        
         Raises:
-            ValueError: If invalid parameters provided
+            ValueError: If `max_retries` <= 0, or `initial_temp` is outside [0, 1], or `temp_increment` <= 0.
         """
         if max_retries <= 0:
             raise ValueError("max_retries must be positive")
@@ -82,24 +82,16 @@ class FixService:
 
     def attempt_fix(self, error: TestError, temperature: float) -> bool:
         """
-        Attempt to fix failing test in a single shot (no internal loop).
-
-        1) Validate workspace
-        2) Generate fix (unless dev_force_success is True)
-        3) Apply fix (with backup)
-        4) If syntax fails, revert automatically (handled in apply_changes).
-        5) If functional test fails, revert changes here.
-        6) Mark error as fixed if successful, else handle failure.
-
-        The 'temperature' parameter is passed in from the orchestrator, which
-        handles multi-retry loops and increments if needed.
-
+        Perform a single attempt to fix a failing test by generating, applying, and verifying code changes.
+        
+        Validates the workspace and dependencies, may apply AI-proposed changes with a backup and restore the original file on failure, records the attempt result (success or failure), and updates any attached session state.
+        
         Returns:
-            bool indicating if fix succeeded
-
+            `True` if the failing test was fixed, `False` otherwise.
+        
         Raises:
-            FixServiceError: If fix process fails
-            ValueError: If error is already fixed
+            FixServiceError: On workspace validation failures or other operational errors during generation, application, or verification.
+            ValueError: If the provided TestError is already marked as fixed.
         """
         try:
             # Validate workspace
@@ -168,13 +160,16 @@ class FixService:
 
     def attempt_manual_fix(self, error: TestError) -> bool:
         """
-        Check if a user's manual code edits have fixed the failing test.
-
-        1) Validate workspace
-        2) Re-run the test
-        3) Mark error as fixed if it passes
-
-        Returns True if test passes, else False
+        Checks whether a user's manual edit fixed the failing test by validating the workspace, re-running the test, and recording success.
+        
+        Parameters:
+            error (TestError): The failing test context to verify.
+        
+        Returns:
+            True if the test passes after the manual edit, False otherwise.
+        
+        Raises:
+            FixServiceError: If workspace validation or dependency checks fail.
         """
         try:
             self.validator.validate_workspace(error.test_file.parent)
@@ -192,7 +187,14 @@ class FixService:
         return success
 
     def _handle_failed_attempt(self, error: TestError, attempt: FixAttempt) -> None:
-        """Mark attempt as failed and optionally revert code."""
+        """
+        Record a failed fix attempt and update any attached session.
+        
+        Marks the provided attempt as failed on the TestError and updates the FixService's session/state if one is attached.
+        
+        Raises:
+            FixServiceError: If recording the failure or updating the session fails.
+        """
         try:
             error.mark_attempt_failed(attempt)
             self._update_session_if_present(error)
@@ -220,8 +222,9 @@ class FixService:
 
     def _update_session_if_present(self, error: TestError) -> None:
         """
-        If a session is attached, update it with the new error state.
-        Save to session_store if present, manage states via state_manager if provided.
+        Update the attached FixSession when the provided error's status changes, persist the session, and trigger session state transitions as appropriate.
+        
+        If no session is attached this is a no-op. If `error` is part of `self.session.errors` and its `status` equals `"fixed"`, the error is appended to `self.session.completed_errors` when not already present. If a `state_manager` is configured and all session errors are completed, attempts to transition the session to `FixSessionState.COMPLETED` (any StateTransitionError or StateValidationError is caught and logged). If a `session_store` is configured, saves the updated session; errors from saving are not caught here.
         """
         if not self.session:
             return

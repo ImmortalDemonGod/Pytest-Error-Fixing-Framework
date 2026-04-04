@@ -23,6 +23,12 @@ class CoverageGap:
 
     @property
     def is_empty(self) -> bool:
+        """
+        Whether the coverage gap contains no uncovered lines.
+        
+        Returns:
+            True if the `uncovered_lines` tuple is empty, False otherwise.
+        """
         return len(self.uncovered_lines) == 0
 
 
@@ -50,11 +56,21 @@ class AnalysisContext:
     # ------------------------------------------------------------------
 
     def has_coverage_gaps(self) -> bool:
-        """True if any entity has at least one uncovered line."""
+        """
+        Determine whether any coverage gaps exist in this analysis context.
+        
+        Returns:
+            `true` if at least one CoverageGap has one or more uncovered lines, `false` otherwise.
+        """
         return any(not g.is_empty for g in self.coverage_gaps)
 
     def gaps_for(self, entity_name: str) -> Optional[CoverageGap]:
-        """Return the CoverageGap for *entity_name*, or None if not found."""
+        """
+        Finds the CoverageGap for the given entity name.
+        
+        Returns:
+            The matching CoverageGap if present, `None` otherwise.
+        """
         return next(
             (g for g in self.coverage_gaps if g.entity_name == entity_name), None
         )
@@ -65,7 +81,15 @@ class AnalysisContext:
 
     @classmethod
     def empty(cls, source_code: str) -> "AnalysisContext":
-        """Minimal context when static-analysis tools are unavailable."""
+        """
+        Create a minimal AnalysisContext containing only the provided source code.
+        
+        Parameters:
+            source_code (str): The module's source code.
+        
+        Returns:
+            AnalysisContext: An AnalysisContext with the given source_code and empty `mypy_issues`, `ruff_issues`, and `coverage_gaps`.
+        """
         return cls(
             source_code=source_code,
             mypy_issues=(),
@@ -96,6 +120,12 @@ class TestableEntity:
 
     @property
     def full_path(self) -> str:
+        """
+        Builds the dotted path to the entity, including the parent class when present.
+        
+        Returns:
+            full_path (str): Dotted module path to the entity (e.g. "package.module.Class.method" or "package.module.function").
+        """
         if self.parent_class:
             return f"{self.module_path}.{self.parent_class}.{self.name}"
         return f"{self.module_path}.{self.name}"
@@ -112,6 +142,15 @@ class ParsedModule:
     def entities_of_type(
         self, entity_type: Literal["class", "method", "function", "instance_method"]
     ) -> List[TestableEntity]:
+        """
+        Filter entities to those with the specified entity type.
+        
+        Parameters:
+            entity_type: One of "class", "method", "function", or "instance_method" specifying which entity kinds to include.
+        
+        Returns:
+            A list of TestableEntity instances whose `entity_type` equals the provided `entity_type`.
+        """
         return [e for e in self.entities if e.entity_type == entity_type]
 
 
@@ -141,20 +180,59 @@ class GenerationAttempt:
     id: UUID = field(default_factory=uuid4)
 
     def mark_success(self, code: str) -> None:
+        """
+        Mark the attempt as successful and store the generated test code.
+        
+        Sets this attempt's `generated_code` to `code` and updates `status` to `"success"`.
+        This transition is allowed only when the current `status` is `"pending"` or `"failed"`.
+        
+        Parameters:
+            code (str): The generated test code to attach to this attempt.
+        
+        Raises:
+            ValueError: If the current status is not `"pending"` or `"failed"`.
+        """
         if self.status not in ("pending", "failed"):
             raise ValueError(f"Cannot mark success from status '{self.status}'")
         self.generated_code = code
         self.status = "success"
 
     def mark_failed(self, reason: str) -> None:
+        """
+        Mark the generation attempt as failed and record the failure reason.
+        
+        Parameters:
+            reason (str): Human-readable explanation of why the attempt failed; stored on the attempt as `error_message`.
+        """
         self.error_message = reason
         self.status = "failed"
 
     def mark_skipped(self, reason: str) -> None:
+        """
+        Mark the generation attempt as skipped and record the reason.
+        
+        Parameters:
+            reason (str): Explanation for why the attempt was skipped; assigned to `error_message`.
+        """
         self.error_message = reason
         self.status = "skipped"
 
     def to_dict(self) -> dict:
+        """
+        Produce a dictionary representation of the GenerationAttempt suitable for JSON serialization.
+        
+        Returns:
+            dict: A mapping with the following keys:
+                - "id": UUID as a string
+                - "entity_name": the target entity's name
+                - "entity_type": the target entity's type
+                - "module_path": the module dot-path containing the entity
+                - "parent_class": the parent class name or None
+                - "variant": the generation variant's string value
+                - "status": current attempt status
+                - "generated_code": generated test code or None
+                - "error_message": failure or skip reason or None
+        """
         return {
             "id": str(self.id),
             "entity_name": self.entity.name,
@@ -184,32 +262,76 @@ class GenerationRequest:
     attempts: List[GenerationAttempt] = field(default_factory=list)
 
     def start(self) -> None:
+        """
+        Transition the request's status from "pending" to "in_progress".
+        
+        Raises:
+            ValueError: If the request's current status is not "pending".
+        """
         if self.status != "pending":
             raise ValueError(f"Cannot start request in status '{self.status}'")
         self.status = "in_progress"
 
     def add_attempt(self, attempt: GenerationAttempt) -> None:
+        """
+        Append a GenerationAttempt to this request while the request is in progress.
+        
+        Parameters:
+            attempt (GenerationAttempt): The attempt to append to the request's attempts list.
+        
+        Raises:
+            ValueError: If the request's status is not "in_progress".
+        """
         if self.status != "in_progress":
             raise ValueError("Request must be in_progress to add attempts")
         self.attempts.append(attempt)
 
     def complete(self) -> None:
+        """
+        Mark the generation request as completed.
+        
+        Raises:
+            ValueError: If the request's current status is not "in_progress".
+        """
         if self.status != "in_progress":
             raise ValueError(f"Cannot complete request in status '{self.status}'")
         self.status = "completed"
 
     def fail(self) -> None:
+        """
+        Mark the generation request as failed.
+        
+        Sets the request's status to "failed" without performing any validation.
+        """
         self.status = "failed"
 
     @property
     def successful_attempts(self) -> List[GenerationAttempt]:
+        """
+        Collects all generation attempts that completed successfully.
+        
+        Returns:
+            List[GenerationAttempt]: Attempts whose `status` is `"success"`.
+        """
         return [a for a in self.attempts if a.status == "success"]
 
     @property
     def failed_attempts(self) -> List[GenerationAttempt]:
+        """
+        Return all generation attempts that have failed.
+        
+        Returns:
+            failed_attempts (List[GenerationAttempt]): List of attempts whose status equals "failed".
+        """
         return [a for a in self.attempts if a.status == "failed"]
 
     def to_dict(self) -> dict:
+        """
+        Serialize the generation request into a JSON-serializable mapping of its metadata and attempts.
+        
+        Returns:
+            dict: A mapping containing the request `id` (string), `source_path` (string), `module_dotpath` (string), `strategy_name` (string), `output_dir` (string), `status` (string), and `attempts` (list of attempt dictionaries produced by each attempt's `to_dict()`).
+        """
         return {
             "id": str(self.id),
             "source_path": str(self.parsed_module.source_path),

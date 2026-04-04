@@ -87,15 +87,15 @@ class AIManager:
         base_temperature: float = 0.4,
     ):
         """
-        Initialize AI manager.
-
-        Args:
-            api_key: API key (optional for some providers like Ollama)
-            model: Model identifier in format "provider/model"
-                   e.g. "openrouter/openai/gpt-4o-mini",
-                        "openrouter/anthropic/claude-3-5-sonnet",
-                        "ollama/codellama"
-            base_temperature: Default temperature for generations
+        Create an AI manager configured with API credentials, model selection, and a default generation temperature, and initialize its persistent conversation state.
+        
+        Parameters:
+            api_key: Optional API key used for model requests (may be None for providers that do not require a key).
+            model: Model identifier in the form "provider/model" (examples: "openrouter/openai/gpt-5-mini", "openrouter/anthropic/claude-3-5-sonnet", "ollama/codellama").
+            base_temperature: Default sampling temperature for generations, typically in the range 0.0–1.0.
+        
+        Notes:
+            Initializes an empty persistent message thread and clears the current error tracking state.
         """
         self.api_key = api_key
         self.model = model
@@ -111,23 +111,20 @@ class AIManager:
 
     def generate_fix(self, error: TestError, temperature: float) -> CodeChanges:
         """
-        Generate a fix attempt for the given test error.
-
-        First call for an error: runs an analysis step then builds an initial fix prompt.
-        Subsequent calls for the same error (retries): injects failure feedback into the
-        existing thread so the AI knows to try a different approach.
-
-        Args:
-            error: TestError instance containing error details
-            temperature: Sampling temperature (0.0-1.0)
-
+        Generate a candidate code fix for the provided failing test error.
+        
+        On first call for a given error id, performs a low-temperature analysis and builds an initial prompt; on subsequent calls for the same error id, appends failure feedback to the existing conversation so the AI is instructed to try a different approach.
+        
+        Parameters:
+            error (TestError): The failing test metadata and error details used to build context.
+            temperature (float): Sampling temperature between 0.0 and 1.0 that controls AI creativity.
+        
         Returns:
-            CodeChanges object with suggested fix
-
+            CodeChanges: Object containing the AI-suggested modified file content.
+        
         Raises:
-            PromptGenerationError: If prompt construction fails
-            CompletionError: If AI request fails
-            ValueError: If temperature is out of range
+            ValueError: If `temperature` is not between 0.0 and 1.0.
+            CompletionError: If the AI request, response handling, or parsing fails.
         """
         if not 0 <= temperature <= 1:
             raise ValueError("Temperature must be between 0 and 1")
@@ -199,17 +196,20 @@ class AIManager:
     # ------------------------------------------------------------------
 
     def _reset_thread(self) -> None:
+        """
+        Reset the manager's conversation history to the initial system prompt.
+        
+        Replaces the internal message thread with a single system message containing the module's predefined `_SYSTEM_PROMPT`, clearing any prior assistant/user exchanges so subsequent requests start from a clean AI context.
+        """
         self._messages = [{"role": "system", "content": _SYSTEM_PROMPT}]
 
     @staticmethod
     def _clean_stack_trace(stack_trace: Optional[str]) -> str:
         """
-        Strip internal pytest frames from a longrepr string.
-
-        The in-process runner with -p no:terminal causes pytest assertion
-        introspection to fail, polluting the longrepr with internal venv
-        tracebacks after the first '_ _ _' separator line.
-        Only the section before that separator is relevant to the test author.
+        Clean a pytest longrepr stack trace by removing internal or irrelevant sections.
+        
+        Returns:
+            A cleaned stack trace string suitable for presenting to a test author. If the input is falsy, returns the literal string "None". Otherwise, returns the portion of the trace before any long underscore separator with lines referencing ".venv/" removed; if cleaning yields an empty result, returns the first 300 characters of the original stack trace.
         """
         if not stack_trace:
             return "None"
@@ -224,9 +224,15 @@ class AIManager:
 
     def _analyze_error(self, error: TestError) -> str:
         """
-        Quick analysis call — NOT added to the main fix thread.
-        Returns a short description of root cause and fix strategy.
-        Uses temperature=0.1 for factual, deterministic output.
+        Produce a concise 2–3 sentence analysis of a failing test's root cause and the type of fix likely needed.
+        
+        This performs a separate, low-temperature model call (temperature=0.1) and is not appended to the main fix conversation thread. The provided TestError is expected to include test metadata (test_function, test_file) and error_details (error_type, message, stack_trace).
+        
+        Parameters:
+            error (TestError): The failing test information and associated error details.
+        
+        Returns:
+            str: A short human-readable analysis (2–3 sentences) describing the root cause and a recommended fix approach.
         """
         stack_trace = self._clean_stack_trace(error.error_details.stack_trace)
         messages = [
@@ -261,6 +267,19 @@ class AIManager:
     def _build_initial_prompt(
         self, error: TestError, analysis: str, current_code: str
     ) -> str:
+        """
+        Builds the initial user prompt sent to the AI for fixing a failing test.
+        
+        The prompt includes the provided root-cause analysis, test function and file, error type and message, a cleaned stack trace, the current file content fenced as a Python code block, and a final instruction to return the complete fixed file.
+        
+        Parameters:
+            error (TestError): The failing-test metadata and error details.
+            analysis (str): Short root-cause and fix-strategy summary.
+            current_code (str): The current contents of the file to be fixed.
+        
+        Returns:
+            prompt (str): A single formatted string ready to be appended to the AI conversation.
+        """
         stack_trace = self._clean_stack_trace(error.error_details.stack_trace)
         return (
             f"Fix this failing test.\n\n"
@@ -276,13 +295,15 @@ class AIManager:
 
     def _parse_response(self, response: str) -> CodeChanges:
         """
-        Parse AI response into CodeChanges.
-
-        Logs explanation and confidence if present.
-        Passes raw modified_code through (fences stripped by ChangeApplier).
-
+        Parse the AI model's textual reply and extract the modified source file as a CodeChanges object.
+        
+        Attempts to extract an `Explanation:` and `Confidence:` for observability (these are logged if present; a confidence below 0.5 emits a warning). The modified code is extracted with the following precedence: a fenced code block (``` or ```python), a `Modified code:` header, or the entire response as a fallback.
+        
+        Returns:
+            CodeChanges: `original_code` is an empty string; `modified_code` contains the extracted file contents.
+        
         Raises:
-            ValueError: If response cannot be parsed
+            ValueError: If parsing fails unexpectedly.
         """
         try:
             # Log explanation and confidence for observability

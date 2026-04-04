@@ -12,11 +12,26 @@ from branch_fixer.core.models import TestError, ErrorDetails
 # Module-level fixtures
 @pytest.fixture
 def cli():
+    """
+    Provide a fresh CLI instance for tests.
+    
+    Returns:
+        CLI: A new `CLI` instance.
+    """
     return CLI()
 
 
 @pytest.fixture
 def test_file(tmp_path):
+    """
+    Create a temporary test file named `test_sample.py` containing a single passing test and return its path.
+    
+    Parameters:
+        tmp_path (Path): Temporary directory provided by pytest.
+    
+    Returns:
+        Path: Path to the created `test_sample.py` file.
+    """
     p = tmp_path / "test_sample.py"
     p.write_text("def test_dummy():\n    assert True\n", encoding="utf-8")
     return p
@@ -24,12 +39,40 @@ def test_file(tmp_path):
 
 @pytest.fixture
 def sample_error(test_file):
+    """
+    Create a TestError representing a dummy assertion failure for the given test file.
+    
+    Parameters:
+    	test_file (Path | str): Path to the test file associated with the error.
+    
+    Returns:
+    	TestError: A TestError with test_function set to "test_dummy" and ErrorDetails describing an `AssertionError` with message "assert failed".
+    """
     details = ErrorDetails(error_type="AssertionError", message="assert failed", stack_trace=None)
     return TestError(test_file=test_file, test_function="test_dummy", error_details=details)
 
 
 @pytest.fixture
 def mock_service():
+    """
+    Create and return a Mock service preconfigured for CLI tests.
+    
+    The returned Mock has the following observable attributes and behaviors used by tests:
+    - git_repo.main_branch == "main"
+    - git_repo.get_current_branch() -> "main"
+    - git_repo.run_command(...) -> None
+    - git_repo.create_pull_request_sync(...) -> True
+    - git_repo.push(...) -> True
+    - git_repo.branch_manager.create_fix_branch(...) -> True
+    - git_repo.branch_manager.cleanup_fix_branch(...) -> True
+    - initial_temp == 0.5
+    - attempt_fix(...) -> True
+    - attempt_manual_fix(...) -> True
+    - validator.validate_workspace and validator.check_dependencies present as mocks
+    
+    Returns:
+        Mock: A Mock object representing the service with the described attributes and return values.
+    """
     svc = Mock()
     # git_repo with nested branch_manager
     git_repo = Mock()
@@ -90,6 +133,13 @@ class TestCLI:
 
         def fake_signal(sig, handler):
             # store handler associated with signal name to allow calling it
+            """
+            Store the provided signal handler in the test's `captured` mapping keyed by the signal identifier.
+            
+            Parameters:
+                sig: The signal identifier (e.g., signal.SIGINT or signal.SIGTERM).
+                handler: The callable to invoke when the signal is triggered.
+            """
             captured[sig] = handler
 
         with patch("branch_fixer.utils.cli.signal.signal", side_effect=fake_signal) as _:
@@ -118,6 +168,12 @@ class TestCLI:
     def test__cleanup_branches_failure_appends_error(self, cli, mock_service, caplog):
         # make cleanup raise
         def raise_err(*args, **kwargs):
+            """
+            Raise a RuntimeError with the message "boom".
+            
+            Raises:
+                RuntimeError: Always raised with message "boom".
+            """
             raise RuntimeError("boom")
         mock_service.git_repo.branch_manager.cleanup_fix_branch.side_effect = raise_err
         cli.service = mock_service
@@ -137,6 +193,12 @@ class TestCLI:
 
     def test__checkout_main_run_command_raises_appends_error(self, cli, mock_service):
         def raise_cmd(*args, **kwargs):
+            """
+            Always raises a RuntimeError with the message "nope".
+            
+            Raises:
+                RuntimeError: Always raised to indicate the command failed.
+            """
             raise RuntimeError("nope")
         mock_service.git_repo.run_command.side_effect = raise_cmd
         cli.service = mock_service
@@ -163,6 +225,12 @@ class TestCLI:
 
     def test__create_fix_branch_handles_exception_and_returns_none(self, cli, sample_error, mock_service):
         def raise_err(*args, **kwargs):
+            """
+            Raise a RuntimeError with the message "boom".
+            
+            Raises:
+                RuntimeError: Always raised with message "boom".
+            """
             raise RuntimeError("boom")
         mock_service.git_repo.branch_manager.create_fix_branch.side_effect = raise_err
         cli.service = mock_service
@@ -225,6 +293,16 @@ class TestCLI:
 
     def test__create_and_push_pr_pr_creation_raises_propagates(self, cli, sample_error, mock_service):
         def raise_err(*args, **kwargs):
+            """
+            Raise a RuntimeError indicating pull request creation failed.
+            
+            Parameters:
+                *args: Ignored.
+                **kwargs: Ignored.
+            
+            Raises:
+                RuntimeError: always raised with message "pr failed".
+            """
             raise RuntimeError("pr failed")
         mock_service.git_repo.create_pull_request_sync.side_effect = raise_err
         cli.service = mock_service
@@ -401,6 +479,17 @@ class TestCLI:
         gen = (i for i in inputs)
 
         def getchar_prompt(prompt=None):
+            """
+            Read a single character from the getchar input generator.
+            
+            If provided, `prompt` is an optional string intended to be shown to the user before reading (not used by this helper). 
+            
+            Parameters:
+                prompt (str | None): Optional prompt text to display prior to reading a character.
+            
+            Returns:
+                str: The next character from the configured getchar input generator.
+            """
             return next(gen)
 
         with patch("branch_fixer.utils.cli.click.getchar", side_effect=getchar_prompt), \

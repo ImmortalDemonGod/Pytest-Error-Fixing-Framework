@@ -28,5 +28,10 @@ class ErrorInfo:
         return bool(self.code_snippet)
 
     def update_snippet(self, new_snippet: str) -> None:
-        """Updates code snippet with proper formatting"""
+        """
+        Replace the stored code snippet with the provided string.
+        
+        Parameters:
+            new_snippet (str): The new code snippet to store; replaces any existing snippet without validation.
+        """
         self.code_snippet = new_snippet

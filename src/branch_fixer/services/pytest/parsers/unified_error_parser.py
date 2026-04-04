@@ -22,11 +22,15 @@ class UnifiedErrorParser:
 
     def parse_pytest_output(self, output: str) -> List[ErrorInfo]:
         """
-        Main entry point to parse raw pytest output for:
-          - Collection errors (e.g., import path mismatch)
-          - Standard test failures (assertion, param’d tests, etc.)
-
-        Returns a list of ErrorInfo objects (test_file, function, error_type, error_details).
+        Parse raw pytest stdout/stderr and return a unified list of parsed errors.
+        
+        Parses collection/import errors and standard test failures from the provided pytest output and returns them combined in a single list. No deduplication is performed.
+        
+        Parameters:
+            output (str): Raw pytest output containing collection messages and failure traces.
+        
+        Returns:
+            List[ErrorInfo]: Combined list of parsed ErrorInfo objects containing file path, function, error type, and error details.
         """
         # 1) Parse collection errors
         collection_errors = self.collection_parser.parse_collection_errors(output)
@@ -53,8 +57,13 @@ def parse_pytest_output(output: str) -> List[ErrorInfo]:
 # Optional utility if you want to go from ErrorInfo -> TestError in one step:
 def convert_errorinfo_to_testerror(errors: List[ErrorInfo]):
     """
-    Convert a list of ErrorInfo objects into core.models.TestError domain objects.
-    If your orchestrator or fix service needs TestError, this can be used.
+    Convert parsed ErrorInfo objects into TestError domain objects.
+    
+    Parameters:
+        errors (List[ErrorInfo]): Parsed `ErrorInfo` instances to convert.
+    
+    Returns:
+        List[TestError]: `TestError` domain objects with `ErrorDetails` constructed from each input `ErrorInfo`.
     """
     from branch_fixer.core.models import TestError, ErrorDetails
 

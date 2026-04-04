@@ -49,16 +49,34 @@ class HypothesisStrategy:
     """
 
     def __init__(self, max_retries: int = 3) -> None:
+        """
+        Initialize the strategy with a retry limit for generation attempts.
+        
+        Parameters:
+            max_retries (int): Maximum number of times to retry running `hypothesis write` when generating code; generation will perform at least one attempt even if this value is less than 1.
+        """
         self.max_retries = max_retries
 
     @staticmethod
     def _hypothesis_bin() -> str:
-        """Return the absolute path to the hypothesis binary in the active venv."""
+        """
+        Get the absolute path to the `hypothesis` executable located next to the active Python interpreter.
+        
+        Returns:
+            path (str): Absolute filesystem path to the `hypothesis` executable.
+        """
         return str(Path(sys.executable).parent / "hypothesis")
 
     @classmethod
     def is_available(cls) -> bool:
-        """Return True if the ``hypothesis`` CLI is reachable in the active venv."""
+        """
+        Check whether the `hypothesis` CLI next to the active Python interpreter is available.
+        
+        Runs `hypothesis --version`; missing binary or a timeout is treated as unavailable.
+        
+        Returns:
+            True if the `hypothesis` executable exists and exits with code 0 for `--version`, False otherwise (including missing binary or timeout).
+        """
         try:
             result = subprocess.run(
                 [cls._hypothesis_bin(), "--version"],
@@ -74,11 +92,17 @@ class HypothesisStrategy:
         entity: TestableEntity,
         variant: GenerationVariant,
     ) -> Optional[str]:
-        """Run ``hypothesis write`` for *entity*/*variant* and return clean code.
-
-        Retries up to ``self.max_retries`` times (matches original script's
-        try_generate_test loop).  Returns None if all attempts fail or produce
-        insufficient/unparseable output.
+        """
+        Generate test code for the given entity and variant and return the cleaned output.
+        
+        Attempts generation up to `max(1, self.max_retries)` times; on the first successful run returns the post-processed code, otherwise returns `None` when all attempts fail or produce rejected output.
+        
+        Parameters:
+            entity (TestableEntity): The target code entity to generate tests for.
+            variant (GenerationVariant): The generation variant or configuration to use.
+        
+        Returns:
+            str | None: Cleaned generated test code as a string, or `None` if generation failed or produced insufficient/filtered output.
         """
         args = build_hypothesis_command(entity, variant)
         for _ in range(max(1, self.max_retries)):
@@ -92,6 +116,15 @@ class HypothesisStrategy:
     # ------------------------------------------------------------------
 
     def _run_hypothesis_write(self, args: str) -> Optional[str]:
+        """
+        Run the `hypothesis write` CLI with the provided argument string and return validated output.
+        
+        Parameters:
+            args (str): Space-separated command-line arguments to append to `hypothesis write`.
+        
+        Returns:
+            Optional[str]: The processed stdout content if the command completed successfully and passed validation; `None` if the binary is missing, the command times out or fails, an OS error occurs, or the output is rejected by validation.
+        """
         env = self._build_env()
         cmd = [self._hypothesis_bin(), "write"] + args.split()
         try:
@@ -109,6 +142,12 @@ class HypothesisStrategy:
 
     @staticmethod
     def _build_env() -> dict:
+        """
+        Constructs an environment mapping for subprocess execution with a normalized Python path and default encoding.
+        
+        Returns:
+            env (dict): A copy of the current environment with `PYTHONPATH` set to the joined `sys.path` (using `os.pathsep`) and `PYTHONIOENCODING` set to `"utf-8"` if it was not already present.
+        """
         env = os.environ.copy()
         env["PYTHONPATH"] = os.pathsep.join(sys.path)
         env.setdefault("PYTHONIOENCODING", "utf-8")
@@ -116,6 +155,15 @@ class HypothesisStrategy:
 
     @staticmethod
     def _process_result(result: subprocess.CompletedProcess) -> Optional[str]:
+        """
+        Determine whether a subprocess.CompletedProcess represents acceptable Hypothesis output and, if so, return its cleaned stdout.
+        
+        Parameters:
+            result (subprocess.CompletedProcess): The completed subprocess result from running the Hypothesis CLI.
+        
+        Returns:
+            Optional[str]: Stripped stdout content if the process exited with code 0, the content length is at least _MIN_CONTENT_LENGTH, and the content does not contain any substring from _BROKEN_OUTPUT_PATTERNS; `None` otherwise.
+        """
         if result.returncode == 0 and result.stdout:
             content = result.stdout.strip()
             if len(content) < _MIN_CONTENT_LENGTH:

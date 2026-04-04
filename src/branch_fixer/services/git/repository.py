@@ -545,22 +545,17 @@ class GitRepository:
         self, branch_name: str, error: Union[TestError, GitErrorDetails]
     ) -> bool:
         """
-        Create a pull request for a fix synchronously.
-
-        Generates a pull request title and description based on the given `TestError`,
-        identifying which test function and what kind of error occurred. The PRManager
-        is then used to create the PR with the specified branch and any relevant files.
-
-        Args:
-            branch_name (str): The fix branch to create a PR from.
-            error (GitErrorDetails): An error object containing details about the test failure
-                                     that prompted the fix.
-
+        Create a pull request for a fix branch using details from a test error.
+        
+        Parameters:
+            error (Union[TestError, GitErrorDetails]): Error object providing `test_function`, `test_file`,
+                and `error_details.error_type` which are used to construct the PR title and description.
+        
         Returns:
-            bool: True if the PR creation succeeded, False otherwise.
-
+            True if the pull request was created, False otherwise.
+        
         Raises:
-            GitError: If PR creation fails for any reason.
+            GitError: If pull request creation fails.
         """
         try:
             title = f"Fix for {error.test_function}"
