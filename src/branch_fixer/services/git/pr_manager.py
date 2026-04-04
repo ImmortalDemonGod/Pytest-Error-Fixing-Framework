@@ -96,6 +96,7 @@ class PRManager:
             branch_name=branch_name,
             status=PRStatus.OPEN,
             created_at=datetime.now(),
+            url=url,
         )
         self.prs[pr_id] = details
         return details
