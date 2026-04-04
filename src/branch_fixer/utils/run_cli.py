@@ -189,8 +189,11 @@ def fix(
     return cli_obj.process_errors(errors, not non_interactive)
 
 
-from src.dev.cli.generate import generate_command
-cli.add_command(generate_command)
+try:
+    from dev.cli.generate import generate_command
+    cli.add_command(generate_command)
+except ImportError:
+    pass  # generate subcommand unavailable outside dev environment
 
 
 def main():
