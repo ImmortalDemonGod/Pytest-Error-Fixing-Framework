@@ -62,7 +62,7 @@ class TestChangeApplier:
         target = file_factory("target.py", "orig = True\n")
         backup = tmp_path / "somebackup.bak"
         backup.write_text("restored = True\n", encoding="utf-8")
-        result = change_aplier_result = change_applier._restore_backup(target, backup)
+        result = change_applier._restore_backup(target, backup)
         assert result is True
         assert target.read_text(encoding="utf-8") == "restored = True\n"
 
