@@ -29,10 +29,13 @@ from src.dev.test_generator.generate.strategies.hypothesis import HypothesisStra
 # Skip guard
 # ---------------------------------------------------------------------------
 
-pytestmark = pytest.mark.skipif(
-    not HypothesisStrategy.is_available(),
-    reason="hypothesis CLI not available in this venv",
-)
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.skipif(
+        not HypothesisStrategy.is_available(),
+        reason="hypothesis CLI not available in this venv",
+    ),
+]
 
 # ---------------------------------------------------------------------------
 # Target source file — small, self-contained, importable
