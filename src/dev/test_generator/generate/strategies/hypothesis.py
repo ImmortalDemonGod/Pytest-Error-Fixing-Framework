@@ -93,16 +93,16 @@ class HypothesisStrategy:
 
     def _run_hypothesis_write(self, args: str) -> Optional[str]:
         env = self._build_env()
-        cmd = f"{self._hypothesis_bin()} write {args}"
+        cmd = [self._hypothesis_bin(), "write"] + args.split()
         try:
             result = subprocess.run(
                 cmd,
-                shell=True,
                 capture_output=True,
                 text=True,
                 env=env,
+                timeout=60,
             )
-        except Exception:
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
             return None
 
         return self._process_result(result)
@@ -110,7 +110,7 @@ class HypothesisStrategy:
     @staticmethod
     def _build_env() -> dict:
         env = os.environ.copy()
-        env["PYTHONPATH"] = ":".join(sys.path)
+        env["PYTHONPATH"] = os.pathsep.join(sys.path)
         env.setdefault("PYTHONIOENCODING", "utf-8")
         return env
 
