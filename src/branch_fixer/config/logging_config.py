@@ -16,7 +16,8 @@ def setup_logging():
         handlers=[
             logging.StreamHandler(),  # Console handler
             logging.FileHandler(str(log_file))  # File handler with explicit string path
-        ]
+        ],
+        force=True,  # Replace existing handlers — basicConfig is a no-op otherwise
     )
 
     # Create a dedicated logger for snoop
