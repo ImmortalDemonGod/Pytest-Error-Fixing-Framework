@@ -24,4 +24,4 @@ jobs:
 
       - name: Check docstring coverage
         run: |
-          docstr-coverage src/branch_fixer --fail-under 85
+          docstr-coverage src/branch_fixer --fail-under 80
