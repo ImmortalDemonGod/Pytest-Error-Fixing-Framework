@@ -6,7 +6,6 @@ Produces a ParsedModule value object containing all testable entities.
 """
 
 import ast
-import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -34,7 +33,7 @@ def _module_dotpath_from_path(source_path: Path) -> str:
     # Strategy 1: src-layout — take everything after the last 'src' segment
     if "src" in parts:
         src_index = len(parts) - 1 - parts[::-1].index("src")
-        module_parts = list(parts[src_index + 1:])
+        module_parts = list(parts[src_index + 1 :])
         return ".".join(p.replace(".py", "") for p in module_parts)
 
     # Strategy 2: walk __init__.py boundaries upward
