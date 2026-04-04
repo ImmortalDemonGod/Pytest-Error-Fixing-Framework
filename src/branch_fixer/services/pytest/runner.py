@@ -167,6 +167,8 @@ class PytestRunner:
         """
         Increment the appropriate counters for a single TestResult.
         """
+        if not self._current_session:
+            return
         # Moved complex conditional into a separate helper:
         if self._is_clean_pass(result):
             self._current_session.passed += 1
