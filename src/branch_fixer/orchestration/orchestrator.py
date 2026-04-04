@@ -238,6 +238,7 @@ class FixOrchestrator:
             bool indicating if all errors were eventually fixed.
         """
         self._validate_session(session_id)
+        assert self._session is not None
 
         # Record extra info if provided
         if environment_info:
@@ -309,9 +310,11 @@ class FixOrchestrator:
         success = self.fix_error(error)
         if not success:
             # Mark session as FAILED if an error is irreparable
+            assert self._session is not None
             self._session.state = FixSessionState.FAILED
             return False
 
+        assert self._session is not None
         if error not in self._session.completed_errors:
             self._session.completed_errors.append(error)
         return True
@@ -329,6 +332,7 @@ class FixOrchestrator:
         """
         if not self._session:
             raise RuntimeError("No active session")
+        assert self._session is not None
 
         current_temp = self.initial_temp
         for attempt_index in range(self.max_retries):
