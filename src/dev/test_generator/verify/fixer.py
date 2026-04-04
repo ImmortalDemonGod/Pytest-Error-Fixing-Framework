@@ -144,7 +144,12 @@ class GeneratedTestFixer:
                 # Update error context but keep the same TestError identity
                 # so AIManager's conversation thread is preserved across retries.
                 raw_error = runner.capture_error_output(test_file)
-                error.error_details.message = raw_error[:500] if raw_error else error.error_details.message
+                if raw_error:
+                    error.error_details = ErrorDetails(
+                        error_type=error.error_details.error_type,
+                        message=raw_error[:500],
+                        stack_trace=error.error_details.stack_trace,
+                    )
 
             except subprocess.TimeoutExpired:
                 logger.warning("Fix attempt %d timed out for %s", i + 1, test_file.name)
