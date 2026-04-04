@@ -112,7 +112,7 @@ class SessionStore:
         try:
             Session = Query()
             session_data = self.sessions.get(Session.id == str(session_id))
-            if not session_data:
+            if not session_data or not isinstance(session_data, dict):
                 return None
 
             fix_session = FixSession(
