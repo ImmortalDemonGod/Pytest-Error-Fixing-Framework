@@ -76,6 +76,7 @@ class PRDetails:
     modified_files: List[Path] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
     change_history: List[PRChange] = field(default_factory=list)
+    url: Optional[str] = None
 
 @dataclass
 class BackupMetadata:
