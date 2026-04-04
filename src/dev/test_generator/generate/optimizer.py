@@ -23,6 +23,7 @@ reduces LLM hallucination by forcing analysis before writing, and produces a
 single well-organized file instead of many disconnected ones.
 """
 
+import logging
 import sys
 from pathlib import Path
 from typing import Optional
@@ -41,6 +42,8 @@ from src.dev.test_generator.core.models import (
 from src.dev.test_generator.generate.strategies.fabric import FabricStrategy
 from src.dev.test_generator.generate.strategies.hypothesis import HypothesisStrategy
 from src.dev.test_generator.output.writer import write_attempt, write_module_test
+
+logger = logging.getLogger(__name__)
 
 
 class GenerationOrchestrator:
@@ -143,7 +146,9 @@ class GenerationOrchestrator:
 
         # Step 2: two-phase module-level LLM generation
         module_dotpath = request.parsed_module.module_dotpath
-        code = self._fabric.generate_module(context, hypothesis_templates, module_dotpath)
+        code = self._fabric.generate_module(
+            context, hypothesis_templates, module_dotpath
+        )
 
         if code:
             # Represent as a single module-level attempt
@@ -164,9 +169,7 @@ class GenerationOrchestrator:
             request.add_attempt(attempt)
         else:
             # LLM failed — fall back to individual hypothesis outputs
-            self._process_per_entity_hypothesis_fallback(
-                request, hypothesis_templates
-            )
+            self._process_per_entity_hypothesis_fallback(request, hypothesis_templates)
 
     def _process_per_entity_hypothesis_fallback(
         self,
