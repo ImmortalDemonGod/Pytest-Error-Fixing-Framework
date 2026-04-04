@@ -22,11 +22,28 @@ def runner():
 
 
 def make_session() -> SessionResult:
+    """
+    Create a SessionResult initialized with the current timestamp and default counters.
+    
+    Returns:
+        SessionResult: start_time and end_time set to the current datetime, duration set to 0.0, and exit_code set to ExitCode.OK.
+    """
     now = datetime.now()
     return SessionResult(start_time=now, end_time=now, duration=0.0, exit_code=ExitCode.OK)
 
 
 def make_test_result(nodeid: str, passed: bool = False, failed: bool = False) -> TestResult:
+    """
+    Create a TestResult for a synthetic test node used by unit tests.
+    
+    Parameters:
+        nodeid (str): The test node id to assign to the result.
+        passed (bool): Whether the test is marked as passed.
+        failed (bool): Whether the test is marked as failed.
+    
+    Returns:
+        TestResult: A TestResult with `test_file=Path("tests/test_foo.py")`, `test_function="test_foo"`, and the given `nodeid`, `passed`, and `failed` values.
+    """
     return TestResult(
         nodeid=nodeid,
         test_file=Path("tests/test_foo.py"),

@@ -12,11 +12,26 @@ from branch_fixer.services.code.change_applier import (
 
 @pytest.fixture
 def change_applier():
+    """
+    Create a new ChangeApplier instance.
+    
+    Returns:
+        ChangeApplier: A fresh ChangeApplier object.
+    """
     return ChangeApplier()
 
 
 @pytest.fixture
 def file_factory(tmp_path):
+    """
+    Return a callable that creates UTF-8 text files under the provided temporary directory.
+    
+    Parameters:
+        tmp_path (Path): Base directory where created files will be written.
+    
+    Returns:
+        create(name: str, content: str) -> Path: A factory function that writes `content` as UTF-8 to a file named `name` under `tmp_path` and returns the file's Path.
+    """
     def _create(name: str, content: str) -> Path:
         p = tmp_path / name
         p.write_text(content, encoding="utf-8")
@@ -129,6 +144,12 @@ class TestChangeApplier:
         backup = change_applier._backup_file(test_file)
         changes = SimpleNamespace(original_code=original, modified_code="valid = 2\n")
         def raise_on_write(self, *args, **kwargs):
+            """
+            Simulates a failing write by always raising a disk-full exception.
+            
+            Raises:
+                Exception: Always raised with the message "disk full".
+            """
             raise Exception("disk full")
         with patch("pathlib.Path.write_text", side_effect=raise_on_write):
             result = change_applier._apply_changes_core(test_file, changes, backup)
@@ -143,8 +164,22 @@ class TestChangeApplier:
         backup = change_applier._backup_file(test_file)
         changes = SimpleNamespace(original_code=original, modified_code="valid2 = 4\n")
         def raise_on_write(self, *args, **kwargs):
+            """
+            Helper used in tests to simulate a write failure by always raising Exception("write fail").
+            
+            Raises:
+                Exception: with message "write fail".
+            """
             raise Exception("write fail")
         def raise_on_restore(*args, **kwargs):
+            """
+            Always raises BackupError with the message "restore fail".
+            
+            Positional and keyword arguments are accepted and ignored; the function never returns.
+            
+            Raises:
+                BackupError: Always raised to indicate a restore failure.
+            """
             raise BackupError("restore fail")
         with patch("pathlib.Path.write_text", side_effect=raise_on_write):
             with patch.object(ChangeApplier, "_restore_backup", side_effect=raise_on_restore):

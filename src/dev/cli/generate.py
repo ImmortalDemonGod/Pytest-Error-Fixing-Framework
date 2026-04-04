@@ -40,7 +40,19 @@ from src.dev.test_generator.generate.strategies.hypothesis import HypothesisStra
     help="Test generation strategy to use.",
 )
 def generate_command(source_path: Path, output_dir: Path, strategy: str) -> None:
-    """Generate property-based tests for a Python source file."""
+    """
+    Generate property-based tests for a given Python source file and write them to an output directory.
+    
+    Parameters:
+        source_path (Path): Path to the Python source file to analyze and generate tests for.
+        output_dir (Path): Destination directory where generated tests will be written.
+        strategy (str): Generation strategy to use; currently only `"hypothesis"` is supported.
+    
+    Notes:
+        Exits the process with status code 1 if the requested strategy is unknown, if the
+        `"hypothesis"` CLI is not available (when `strategy` is `"hypothesis"`), or if the
+        overall generation request completes with a failure status.
+    """
 
     if strategy == "hypothesis":
         if not HypothesisStrategy.is_available():

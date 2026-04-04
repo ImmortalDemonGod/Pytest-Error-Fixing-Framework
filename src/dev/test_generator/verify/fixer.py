@@ -50,6 +50,14 @@ class GeneratedTestFixer:
         change_applier: ChangeApplier,
         max_attempts: int = 2,
     ) -> None:
+        """
+        Initialize the GeneratedTestFixer with the required collaborators and configuration.
+        
+        Parameters:
+            ai_manager (AIManager): Manager used to generate test-file fixes.
+            change_applier (ChangeApplier): Component responsible for applying changes and managing backups.
+            max_attempts (int): Maximum number of fix attempts per test file.
+        """
         self._ai = ai_manager
         self._applier = change_applier
         self.max_attempts = max_attempts
@@ -63,10 +71,13 @@ class GeneratedTestFixer:
         result: VerificationResult,
         runner: VerificationRunner,
     ) -> VerificationResult:
-        """Attempt to fix all failures in *result*, then re-verify.
-
-        Returns a new VerificationResult reflecting the state after fixes.
-        If all tests already passed, returns *result* unchanged.
+        """
+        Fix failing generated tests in the given verification result and re-run verification.
+        
+        Attempts AI-driven fixes for each file containing failures, applies successful changes to disk, and then runs a full verification of the output directory.
+        
+        Returns:
+        	An updated VerificationResult reflecting the state after attempting fixes; if all tests already passed, the original `result` is returned.
         """
         if result.all_passed:
             return result
@@ -86,11 +97,10 @@ class GeneratedTestFixer:
         failures: List[TestFailure],
         runner: VerificationRunner,
     ) -> None:
-        """Attempt to fix a single test file, trying up to max_attempts times.
-
-        After each fix attempt we re-run the test file to verify the fix
-        actually works.  If it doesn't, we restore from backup before the
-        next attempt so we never leave the file in a *worse* state.
+        """
+        Attempt to repair a single failing test file by generating and applying fixes until the tests pass or the retry limit is reached.
+        
+        Tries up to self.max_attempts attempts: for each attempt it requests a fix from the AI, applies the change with a backup, and re-runs pytest for the specific test file. If the tests pass the method returns immediately. If an applied fix does not improve the test outcome the backup is restored and the error context is refreshed for the next attempt. If a required backup restore fails the method aborts further retries to avoid leaving the file in an unknown state.
         """
         raw_error = runner.capture_error_output(test_file)
         failure = failures[0]
@@ -196,7 +206,15 @@ class GeneratedTestFixer:
 
 
 def _group_by_file(failures: List[TestFailure]) -> dict:
-    """Group TestFailures by their test_file path."""
+    """
+    Group test failures by their test file.
+    
+    Parameters:
+        failures (List[TestFailure]): Iterable of test failure records.
+    
+    Returns:
+        dict: Mapping from test file Path to a list of `TestFailure` objects for that file.
+    """
     groups: dict = {}
     for f in failures:
         groups.setdefault(f.test_file, []).append(f)
@@ -206,7 +224,21 @@ def _group_by_file(failures: List[TestFailure]) -> dict:
 def _make_test_error(
     test_file: Path, failure: TestFailure, raw_error: str = ""
 ) -> TestError:
-    """Build a branch_fixer TestError from a TestFailure for AIManager."""
+    """
+    Create a TestError representing a generated-test failure to guide the AI fixer.
+    
+    Parameters:
+        test_file (Path): Path to the failing test file.
+        failure (TestFailure): The failure record for a single failing test in the file.
+        raw_error (str): Optional full pytest output; if provided, it is used instead of
+            failure.error_output to populate the error details.
+    
+    Returns:
+        TestError: A TestError whose ErrorDetails.error_type is "GeneratedTestFailure" and
+            whose message and stack_trace contain an instruction that the AI must return
+            a complete, valid pytest test file (not implementation code) followed by the
+            pytest output for all failures in the file.
+    """
     # Prefer raw_error (full pytest output) over the often-empty inline message.
     # Prepend a clear instruction so the AI cannot mistake this for a source-code
     # rewrite task — it must return a complete, valid TEST file.

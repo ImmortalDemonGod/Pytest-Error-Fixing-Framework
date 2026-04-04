@@ -14,6 +14,15 @@ class _DuplicateSelfFixer(ast.NodeTransformer):
     """AST transformer: remove duplicate `self` arguments from every function."""
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.FunctionDef:
+        """
+        Remove duplicate 'self' parameters from a function definition, keeping only the first occurrence.
+        
+        Parameters:
+            node (ast.FunctionDef): The function definition AST node to process; its arguments are modified in place and child nodes are visited.
+        
+        Returns:
+            ast.FunctionDef: The same `node` after duplicate `'self'` parameters have been removed.
+        """
         seen_self = False
         new_args = []
         for arg in node.args.args:
@@ -33,9 +42,14 @@ class _DuplicateSelfFixer(ast.NodeTransformer):
 
 
 def fix_generated_code(source: str) -> Optional[str]:
-    """Apply all post-processing passes to *source* and return clean code.
-
-    Returns None if the source cannot be parsed (i.e., is already broken).
+    """
+    Apply domain-layer post-processing to Python source to remove duplicate `self` parameters emitted by generators.
+    
+    Parameters:
+        source (str): Python source code to process.
+    
+    Returns:
+        Optional[str]: Transformed source code with duplicate `self` parameters removed, or `None` if the input cannot be parsed due to a syntax error.
     """
     try:
         tree = ast.parse(source)

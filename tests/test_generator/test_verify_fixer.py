@@ -19,6 +19,17 @@ from src.dev.test_generator.verify.runner import TestFailure, VerificationResult
 
 
 def _failure(test_file: Path, test_id: str = "TestFoo::test_bar") -> TestFailure:
+    """
+    Create a TestFailure for a specific test file and test identifier with a fixed assertion error.
+    
+    Parameters:
+        test_file (Path): Path to the test file that failed.
+        test_id (str): Identifier of the failing test within the file (default: "TestFoo::test_bar").
+    
+    Returns:
+        TestFailure: A TestFailure instance for the given test file and id whose `error_output` is
+        set to "AssertionError: assert 1 == 2".
+    """
     return TestFailure(
         test_file=test_file,
         test_id=test_id,
@@ -27,6 +38,19 @@ def _failure(test_file: Path, test_id: str = "TestFoo::test_bar") -> TestFailure
 
 
 def _result(output_dir: Path, failures=(), passed=0, failed=0, exit_code: int = -1) -> VerificationResult:
+    """
+    Builds a VerificationResult with sensible defaults for failed count and exit code.
+    
+    Parameters:
+        output_dir (Path): Directory where verification output is stored.
+        failures (Iterable[TestFailure] | tuple): Collection of test failures; coerced to a list.
+        passed (int): Number of passed tests.
+        failed (int): If greater than zero, used as the failed count; if zero, set to the number of provided failures.
+        exit_code (int): If -1, set to 1 when there are failures and 0 otherwise; otherwise used as provided.
+    
+    Returns:
+        VerificationResult: Result object populated with `output_dir`, `passed`, computed `failed`, `failures` (as a list), and `exit_code`.
+    """
     actual_failures = list(failures)
     actual_failed = failed or len(actual_failures)
     # Default exit_code: 1 if there are failures, 0 if not
@@ -42,7 +66,19 @@ def _result(output_dir: Path, failures=(), passed=0, failed=0, exit_code: int = 
 
 
 def _make_fixer(max_attempts=2):
-    """Return a GeneratedTestFixer with fully mocked dependencies."""
+    """
+    Create a GeneratedTestFixer configured with mocked dependencies for unit tests.
+    
+    Parameters:
+        max_attempts (int): Maximum number of retry attempts the fixer will use when applying fixes.
+    
+    Returns:
+        tuple: (
+            GeneratedTestFixer configured with mocks,
+            MagicMock for the AI manager (its `generate_fix` returns a CodeChanges instance with sample `modified_code`),
+            MagicMock for the change applier (its `apply_changes_with_backup` returns `(True, Path('/backup'))`)
+        )
+    """
     ai_manager = MagicMock()
     from branch_fixer.core.models import CodeChanges
     ai_manager.generate_fix.return_value = CodeChanges(
@@ -57,20 +93,41 @@ def _make_fixer(max_attempts=2):
 
 
 def _make_runner(next_result: VerificationResult) -> MagicMock:
+    """
+    Create a MagicMock test runner whose `run` method returns the provided VerificationResult.
+    
+    Parameters:
+        next_result (VerificationResult): The result that the mock runner's `run` method will return.
+    
+    Returns:
+        MagicMock: A mock object with `run` configured to return `next_result`.
+    """
     runner = MagicMock()
     runner.run.return_value = next_result
     return runner
 
 
 def _mock_verify_pass():
-    """Context manager: subprocess.run returns exit code 0 (fix verified)."""
+    """
+    Provide a context manager that makes subprocess.run report a successful verification (exit code 0).
+    
+    Returns:
+        patcher: A patch object that replaces `src.dev.test_generator.verify.fixer.subprocess.run` with a mock returning a process-like object whose `returncode` is `0`.
+    """
     proc = MagicMock()
     proc.returncode = 0
     return patch("src.dev.test_generator.verify.fixer.subprocess.run", return_value=proc)
 
 
 def _mock_verify_fail():
-    """Context manager: subprocess.run returns exit code 1 (fix not verified)."""
+    """
+    Provide a context manager that patches subprocess.run to simulate a failing verification (process return code 1).
+    
+    Returns:
+        patcher: A `unittest.mock.patch` context manager which, when entered, replaces
+        `src.dev.test_generator.verify.fixer.subprocess.run` with a mock that returns a
+        process-like object whose `returncode` is `1`.
+    """
     proc = MagicMock()
     proc.returncode = 1
     return patch("src.dev.test_generator.verify.fixer.subprocess.run", return_value=proc)

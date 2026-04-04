@@ -42,6 +42,18 @@ class RecoveryPoint:
         modified_files: List[Path],
         metadata: Dict[str, Any],
     ) -> "RecoveryPoint":
+        """
+        Create a RecoveryPoint for the given session, capturing the current time and a unique identifier.
+        
+        Parameters:
+            session_id (UUID): Identifier of the fix session the recovery point belongs to.
+            git_branch (str): Git branch name at the time of checkpoint creation.
+            modified_files (List[Path]): Paths of files recorded as modified in the session.
+            metadata (Dict[str, Any]): Additional context to store with the recovery point.
+        
+        Returns:
+            RecoveryPoint: A recovery point whose `timestamp` is the creation time and whose `id` is the first 12 hex chars of SHA-256(session_id + timestamp).
+        """
         timestamp = time.time()
         point_id = hashlib.sha256(f"{session_id}{timestamp}".encode()).hexdigest()[:12]
         return RecoveryPoint(
@@ -54,6 +66,20 @@ class RecoveryPoint:
         )
 
     def to_json(self) -> Dict[str, Any]:
+        """
+        Serialize the recovery point to a JSON-compatible dictionary.
+        
+        Converts `session_id` to its string form and each `Path` in `modified_files` to a string; `metadata` is included as-is.
+        
+        Returns:
+            dict: A mapping with keys:
+                - "id" (str): truncated hex identifier.
+                - "session_id" (str): UUID as a string.
+                - "timestamp" (float): creation time as Unix timestamp.
+                - "git_branch" (str): branch name.
+                - "modified_files" (List[str]): file paths as strings.
+                - "metadata" (Dict[str, Any]): additional recovery context.
+        """
         return {
             "id": self.id,
             "session_id": str(self.session_id),
@@ -65,6 +91,21 @@ class RecoveryPoint:
 
     @classmethod
     def from_json(cls, data: Dict[str, Any]) -> "RecoveryPoint":
+        """
+        Deserialize a RecoveryPoint from a JSON-compatible dictionary.
+        
+        Parameters:
+            data (Dict[str, Any]): Dictionary with keys produced by `RecoveryPoint.to_json()`:
+                - "id": hex identifier string
+                - "session_id": UUID string
+                - "timestamp": numeric Unix timestamp
+                - "git_branch": branch name string
+                - "modified_files": list of file path strings
+                - "metadata": dictionary of additional metadata
+        
+        Returns:
+            RecoveryPoint: Instance populated from `data`; `session_id` is converted to a `UUID` and entries in `modified_files` are converted to `Path` objects.
+        """
         return cls(
             id=data["id"],
             session_id=UUID(data["session_id"]),
@@ -105,16 +146,14 @@ class RecoveryManager:
         self, session_store: "SessionStore", git_repo: "GitRepository", backup_dir: Path
     ):
         """
-        Initialize recovery manager.
-
-        Args:
-            session_store: For accessing session data
-            git_repo: For Git operations
-            backup_dir: Directory for backups
-
+        Initialize the RecoveryManager and prepare the backup directory.
+        
+        Parameters:
+            backup_dir (Path): Directory where recovery index and recovery point files are stored.
+        
         Raises:
-            ValueError: If arguments invalid
-            PermissionError: If backup_dir not writable
+            ValueError: If backup_dir's parent directory does not exist.
+            PermissionError: If backup_dir is not writable.
         """
         if not backup_dir.parent.exists():
             raise ValueError(f"Parent directory does not exist: {backup_dir.parent}")
@@ -175,17 +214,17 @@ class RecoveryManager:
         self, checkpoint_id: str, cleanup: bool = True
     ) -> bool:
         """
-        Restore session state from checkpoint.
-
-        Args:
-            checkpoint_id: ID of checkpoint to restore
-            cleanup: Whether to remove checkpoint after restore
-
+        Restore a session to a previously recorded recovery point.
+        
+        Parameters:
+            checkpoint_id (str): Identifier of the recovery point to restore.
+            cleanup (bool): If True, remove the recovery point from the index after a successful restore.
+        
         Returns:
-            bool indicating successful restore
-
+            `true` if the restore completed successfully, `false` otherwise.
+        
         Raises:
-            RestoreError: If restore fails
+            RestoreError: If the recovery point is not found or the restore operation fails.
         """
         try:
             rp = self._load_recovery_point(checkpoint_id)
@@ -226,15 +265,17 @@ class RecoveryManager:
         self, error: Exception, session: "FixSession", context: Dict[str, Any]
     ) -> bool:
         """
-        Handle specific failure types.
-
-        Args:
-            error: The exception that occurred
-            session: Current fix session
-            context: Additional error context
-
+        Attempt to recover a fix session by restoring its most recent recovery point.
+        
+        Logs the failure, retrieves recovery points for the provided session, and attempts to restore the most recent checkpoint without removing it from the index.
+        
+        Parameters:
+            error (Exception): The exception that triggered failure handling.
+            session (FixSession): The current fix session whose recovery points will be inspected.
+            context (Dict[str, Any]): Additional context to include in logs.
+        
         Returns:
-            bool indicating if recovery succeeded
+            bool: `True` if the restore succeeded, `False` otherwise.
         """
         # Example: always attempt to restore the last checkpoint
         # Or pick which checkpoint to restore
@@ -268,7 +309,13 @@ class RecoveryManager:
     # ---------------------
 
     def _save_recovery_point(self, rp: RecoveryPoint) -> None:
-        """Append the recovery point JSON to the index file"""
+        """
+        Append a recovery point to the on-disk recovery index.
+        
+        Reads the JSON list from the index file, appends the given recovery point's
+        serializable representation, and writes the updated list back (pretty-printed
+        with an indentation of 2, using UTF-8 encoding). Overwrites the existing file.
+        """
         data = json.loads(self.recovery_index_file.read_text(encoding="utf-8"))
         data.append(rp.to_json())
         self.recovery_index_file.write_text(
@@ -276,7 +323,15 @@ class RecoveryManager:
         )
 
     def _load_recovery_point(self, rp_id: str) -> Optional[RecoveryPoint]:
-        """Load one recovery point from index by ID"""
+        """
+        Return the recovery point with the given ID from the on-disk recovery index.
+        
+        Parameters:
+            rp_id (str): Recovery point identifier (hex string, typically the 12-character truncated SHA).
+        
+        Returns:
+            RecoveryPoint | None: The matching RecoveryPoint if found, `None` if no entry with `rp_id` exists.
+        """
         data = json.loads(self.recovery_index_file.read_text(encoding="utf-8"))
         for rp_json in data:
             if rp_json["id"] == rp_id:
@@ -284,7 +339,14 @@ class RecoveryManager:
         return None
 
     def _remove_recovery_point(self, rp_id: str) -> None:
-        """Remove recovery point from index file by ID"""
+        """
+        Remove the recovery point with the given id from the recovery index file.
+        
+        Reads the recovery index JSON, removes any entries whose `"id"` equals `rp_id`, and overwrites the index file with the updated list.
+        
+        Parameters:
+            rp_id (str): Identifier of the recovery point to remove.
+        """
         data = json.loads(self.recovery_index_file.read_text(encoding="utf-8"))
         new_data = [rp for rp in data if rp["id"] != rp_id]
         self.recovery_index_file.write_text(
@@ -294,7 +356,15 @@ class RecoveryManager:
     def _list_recovery_points_for_session(
         self, session_id: UUID
     ) -> List[RecoveryPoint]:
-        """Return all recovery points for a given session"""
+        """
+        List recovery points recorded for the specified session.
+        
+        Parameters:
+            session_id (UUID): The session identifier to filter recovery points by.
+        
+        Returns:
+            List[RecoveryPoint]: RecoveryPoint objects associated with the given session, in the order they appear in the index.
+        """
         data = json.loads(self.recovery_index_file.read_text(encoding="utf-8"))
         results = []
         for rp_json in data:

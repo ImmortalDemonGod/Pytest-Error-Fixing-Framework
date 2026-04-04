@@ -16,12 +16,30 @@ def fake_repo():
 @pytest.fixture
 def patched_types(monkeypatch):
     """
-    Patch PRDetails, PRStatus, PRUpdateError, and the module-level datetime.now()
-    so tests can assert deterministic behavior and control exception types.
+    Provide deterministic test doubles for PR-related types and patch them into the module under test.
+    
+    Returns:
+        dict: Mapping with keys:
+            - "PRDetails": the fake `PRDetails` class that records created PR attributes.
+            - "PRStatus": the fake `PRStatus` sentinel class with `OPEN`, `MERGED`, and `CLOSED`.
+            - "PRUpdateError": the fake exception type used to signal update failures.
+            - "fixed_datetime": a `datetime` instance representing the deterministic timestamp used by the patched `datetime.now()` (2000-01-01T12:00:00).
     """
     # Fake PRDetails that stores attributes provided by create_pr
     class FakePRDetails:
         def __init__(self, *, id, title, description, branch_name, status, created_at, url=None):
+            """
+            Initialize a PRDetails instance with identifying fields and metadata.
+            
+            Parameters:
+                id (int): Numeric identifier for the pull request.
+                title (str): Title of the pull request.
+                description (str): Description or body of the pull request.
+                branch_name (str): Name of the branch the pull request targets.
+                status (Any): Current status sentinel of the pull request (e.g., OPEN, MERGED, CLOSED).
+                created_at (datetime): Timestamp when the pull request was created.
+                url (str, optional): Optional URL linking to the pull request.
+            """
             self.id = id
             self.title = title
             self.description = description
@@ -31,6 +49,12 @@ def patched_types(monkeypatch):
             self.url = url
 
         def __repr__(self):
+            """
+            Return a concise developer-facing representation of the FakePRDetails instance.
+            
+            Returns:
+                str: A string formatted as "<FakePRDetails id={id} title={repr(title)}>".
+            """
             return f"<FakePRDetails id={self.id} title={self.title!r}>"
 
     # Fake PRStatus with OPEN sentinel
@@ -47,6 +71,15 @@ def patched_types(monkeypatch):
     class DummyDateTime:
         @classmethod
         def now(cls):
+            """
+            Return a deterministic "current" datetime for tests.
+            
+            Parameters:
+                cls: The class (unused); present to match the classmethod signature.
+            
+            Returns:
+                datetime.datetime: A fixed timestamp representing 2000-01-01 12:00:00.
+            """
             return real_datetime.datetime(2000, 1, 1, 12, 0, 0)
 
     # Apply monkeypatches to the module under test

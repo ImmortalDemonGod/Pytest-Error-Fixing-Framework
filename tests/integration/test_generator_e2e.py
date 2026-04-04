@@ -60,7 +60,15 @@ _TARGET_SOURCE = textwrap.dedent("""\
 
 @pytest.fixture(scope="module")
 def target_file(tmp_path_factory):
-    """Write the target source to a real file under a proper package structure."""
+    """
+    Create a temporary package layout and write the module source file used by tests.
+    
+    Parameters:
+        tmp_path_factory: pytest tmp_path_factory fixture used to create a temporary root directory.
+    
+    Returns:
+        Path: Path to the written module file (temporary_root/e2e_src/src/math_ops/simple.py).
+    """
     root = tmp_path_factory.mktemp("e2e_src")
     src = root / "src" / "math_ops"
     src.mkdir(parents=True)
@@ -71,12 +79,26 @@ def target_file(tmp_path_factory):
 
 @pytest.fixture(scope="module")
 def generated_dir(tmp_path_factory):
+    """
+    Create and return a temporary output directory for generated tests.
+    
+    Returns:
+        Path: Path to the created temporary directory named "e2e_out".
+    """
     return tmp_path_factory.mktemp("e2e_out")
 
 
 @pytest.fixture(scope="module")
 def src_root(target_file):
-    """The src/ directory that must be on PYTHONPATH for generated tests to import."""
+    """
+    Compute the filesystem path that should be added to PYTHONPATH so generated tests can import the target module.
+    
+    Parameters:
+        target_file (Path): Path to the target Python file.
+    
+    Returns:
+        str: Absolute path to the directory to add to PYTHONPATH. If a directory named "src" exists in the resolved path of `target_file`, returns that "src" directory; otherwise returns the parent directory of `target_file`.
+    """
     parts = target_file.resolve().parts
     if "src" in parts:
         src_index = len(parts) - 1 - parts[::-1].index("src")
@@ -86,7 +108,12 @@ def src_root(target_file):
 
 @pytest.fixture(scope="module")
 def completed_request(target_file, generated_dir):
-    """Run the full orchestration pipeline once and return the result."""
+    """
+    Execute the generation orchestrator once for the given target file and output directory.
+    
+    Returns:
+        result: An object representing the completed generation request, providing at least the attributes `status`, `attempts`, `successful_attempts`, and `failed_attempts`.
+    """
     strat = HypothesisStrategy(max_retries=2)
     orch = GenerationOrchestrator(strategy=strat)
     return orch.run(target_file, generated_dir)
@@ -109,6 +136,14 @@ class TestPipelineCompletes:
 
     def test_failed_attempts_is_zero(self, completed_request):
         # All generation failures should be "skipped", not "failed"
+        """
+        Verify the pipeline recorded no failed generation attempts.
+        
+        Checks that `completed_request.failed_attempts` is an empty list (generation failures are treated as skipped).
+        
+        Parameters:
+            completed_request: The orchestration result object returned by the generation pipeline fixture.
+        """
         assert completed_request.failed_attempts == []
 
 
@@ -119,10 +154,24 @@ class TestPipelineCompletes:
 
 class TestGeneratedFiles:
     def test_output_dir_is_not_empty(self, generated_dir):
+        """
+        Asserts that the generated output directory contains at least one file whose name starts with `test_`.
+        
+        Parameters:
+            generated_dir (Path): Path to the directory where generated test files are written.
+        """
         py_files = list(generated_dir.glob("test_*.py"))
         assert len(py_files) > 0
 
     def test_all_files_are_valid_python(self, generated_dir):
+        """
+        Validates that every generated test file is syntactically valid Python.
+        
+        Parses each file in `generated_dir` matching `test_*.py` using the Python AST parser and fails the test if any file raises a `SyntaxError`, including the filename and exception message in the failure.
+        
+        Parameters:
+            generated_dir (Path): Directory containing generated test files to validate.
+        """
         for f in generated_dir.glob("test_*.py"):
             try:
                 ast.parse(f.read_text(encoding="utf-8"))
@@ -130,14 +179,35 @@ class TestGeneratedFiles:
                 pytest.fail(f"{f.name} is not valid Python: {exc}")
 
     def test_generated_files_start_with_test_prefix(self, generated_dir):
+        """
+        Asserts that every Python file in the generated output directory is prefixed with "test_".
+        
+        Parameters:
+            generated_dir (Path): Directory containing the generated `.py` files to check.
+        """
         for f in generated_dir.glob("*.py"):
             assert f.name.startswith("test_"), f"Unexpected file: {f.name}"
 
     def test_add_function_has_generated_test(self, generated_dir):
+        """
+        Asserts that at least one generated test filename references the `add` function.
+        
+        Parameters:
+        	generated_dir (Path): Directory containing generated test files; the test searches files matching `test_*.py` and requires at least one filename to contain the substring `"add"`.
+        """
         names = {f.name for f in generated_dir.glob("test_*.py")}
         assert any("add" in n for n in names), f"No test for 'add' in {names}"
 
     def test_multiply_function_has_generated_test(self, generated_dir):
+        """
+        Asserts that at least one generated test filename references the "multiply" function.
+        
+        Parameters:
+            generated_dir (Path): Directory containing generated test files.
+        
+        Raises:
+            AssertionError: If no filename in the directory contains the substring "multiply".
+        """
         names = {f.name for f in generated_dir.glob("test_*.py")}
         assert any("multiply" in n for n in names), f"No test for 'multiply' in {names}"
 
@@ -149,14 +219,29 @@ class TestGeneratedFiles:
 
 class TestGeneratedTestsRunnable:
     def _pytest_env(self, src_root: str) -> dict:
-        """Build an env with the src root on PYTHONPATH so generated imports work."""
+        """
+        Create an environment mapping with src_root prepended to PYTHONPATH.
+        
+        Parameters:
+            src_root (str): Path to the directory to prepend to PYTHONPATH.
+        
+        Returns:
+            dict: A copy of the current environment with `PYTHONPATH` updated so `src_root`
+            is first (existing `PYTHONPATH` is preserved and appended if present).
+        """
         env = os.environ.copy()
         existing = env.get("PYTHONPATH", "")
         env["PYTHONPATH"] = f"{src_root}:{existing}" if existing else src_root
         return env
 
     def test_pytest_can_collect_generated_tests(self, generated_dir, src_root):
-        """pytest --collect-only on the output dir must not error."""
+        """
+        Verify that pytest can collect tests from the generated test directory without error.
+        
+        Runs `python -m pytest <generated_dir> --collect-only -q` with `PYTHONPATH` set to include `src_root`
+        and asserts the process exits with code `0` or `5` (`5` means no tests collected). On failure,
+        the assertion message includes truncated `stdout` and `stderr`.
+        """
         result = subprocess.run(
             [sys.executable, "-m", "pytest", str(generated_dir), "--collect-only", "-q"],
             capture_output=True,
@@ -169,7 +254,11 @@ class TestGeneratedTestsRunnable:
         )  # 5 = no tests collected (acceptable if all skipped)
 
     def test_pytest_runs_generated_tests_without_import_error(self, generated_dir, src_root):
-        """pytest must run without ImportError — modules must be importable."""
+        """
+        Verify that running pytest on the generated tests does not produce import-related errors.
+        
+        Asserts that neither `ImportError` nor `ModuleNotFoundError` appears in pytest's stdout or stderr when executing the generated test suite with `src_root` on `PYTHONPATH`.
+        """
         result = subprocess.run(
             [sys.executable, "-m", "pytest", str(generated_dir), "-x", "--tb=short", "-q"],
             capture_output=True,

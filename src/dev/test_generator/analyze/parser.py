@@ -53,6 +53,14 @@ class ModuleParser(ast.NodeVisitor):
     _SKIP_METHODS = frozenset({"__init__", "__str__", "__repr__", "property"})
 
     def __init__(self) -> None:
+        """
+        Initialize parser internal state.
+        
+        Sets up:
+        - _entities: list collecting discovered TestableEntity objects during AST traversal.
+        - _current_class: name of the class currently being visited or None when not inside a class.
+        - _class_bases: mapping from class name to a list of its base class names (as extracted from the AST).
+        """
         self._entities: List[TestableEntity] = []
         self._current_class: Optional[str] = None
         self._class_bases: Dict[str, List[str]] = {}
@@ -62,7 +70,15 @@ class ModuleParser(ast.NodeVisitor):
     # ------------------------------------------------------------------
 
     def parse(self, source_path: Path) -> ParsedModule:
-        """Parse *source_path* and return a :class:`ParsedModule`."""
+        """
+        Parse the Python source file at `source_path` and produce a ParsedModule describing its public testable entities.
+        
+        Parameters:
+            source_path (Path): Filesystem path to the Python source file to analyze.
+        
+        Returns:
+            ParsedModule: Contains `source_path`, the computed module dotted path, and a tuple of discovered `TestableEntity` objects with their `module_path` populated.
+        """
         source = source_path.read_text(encoding="utf-8")
         tree = ast.parse(source, filename=str(source_path))
         self.visit(tree)
@@ -88,6 +104,14 @@ class ModuleParser(ast.NodeVisitor):
     # ------------------------------------------------------------------
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        """
+        Visit a top-level class definition and record it as a public testable entity.
+        
+        Records the class name and its base classes for later use, sets the parser's current class while visiting the class body so contained methods are attributed to it, and ignores classes whose names start with an underscore.
+        
+        Parameters:
+            node (ast.ClassDef): The AST node representing the class definition.
+        """
         if node.name.startswith("_"):
             return
         self._store_class_bases(node)
@@ -100,6 +124,11 @@ class ModuleParser(ast.NodeVisitor):
         self._current_class = old_class
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        """
+        Collects public function definitions and records them as top-level entities or delegates to method handling when inside a class.
+        
+        Skips any function whose name starts with an underscore; if currently visiting a class, forwards the node to the method visitor, otherwise appends a `TestableEntity` for the top-level function.
+        """
         if node.name.startswith("_"):
             return
         if self._current_class:
@@ -117,6 +146,14 @@ class ModuleParser(ast.NodeVisitor):
     # ------------------------------------------------------------------
 
     def _store_class_bases(self, node: ast.ClassDef) -> None:
+        """
+        Record the simple textual names of the given class node's base classes into the parser's class-base map.
+        
+        Only base names that `_base_name` can resolve (e.g., plain names like `Base` or dotted forms where the left-hand part is an `ast.Name`, such as `pkg.Base`) are collected. The resulting list of base names is stored in `self._class_bases` keyed by the class's name.
+        
+        Parameters:
+            node (ast.ClassDef): The class AST node whose bases will be inspected and recorded.
+        """
         bases: List[str] = []
         for base in node.bases:
             name = self._base_name(base)
@@ -126,6 +163,15 @@ class ModuleParser(ast.NodeVisitor):
 
     @staticmethod
     def _base_name(base: ast.AST) -> Optional[str]:
+        """
+        Extract the dotted name of a class base from an AST node.
+        
+        Parameters:
+            base (ast.AST): An AST node representing a class base expression.
+        
+        Returns:
+            Optional[str]: The base name (e.g., "Base" or "module.Base") when it can be determined, `None` otherwise.
+        """
         if isinstance(base, ast.Name):
             return base.id
         if isinstance(base, ast.Attribute) and isinstance(base.value, ast.Name):
@@ -133,6 +179,13 @@ class ModuleParser(ast.NodeVisitor):
         return None
 
     def _visit_method(self, node: ast.FunctionDef) -> None:
+        """
+        Record the given function AST node as a class method TestableEntity when it should be collected, classifying it as an `instance_method` (no `@classmethod`/`@staticmethod` decorators) or `method` (with those decorators).
+        
+        Parameters:
+            node (ast.FunctionDef): The function definition AST node representing the method to evaluate and potentially record.
+        
+        """
         if self._should_skip(node):
             return
         is_instance = all(
@@ -150,6 +203,15 @@ class ModuleParser(ast.NodeVisitor):
         )
 
     def _should_skip(self, node: ast.FunctionDef) -> bool:
+        """
+        Decides whether a given function/method AST node should be excluded from entity collection.
+        
+        Parameters:
+            node (ast.FunctionDef): The function or method AST node to evaluate.
+        
+        Returns:
+            bool: `True` if the node should be skipped (name is in the skip list or it's a `visit_...` method on a class inheriting from `NodeVisitor`), `False` otherwise.
+        """
         if node.name in self._SKIP_METHODS:
             return True
         current_bases = self._class_bases.get(self._current_class or "", [])

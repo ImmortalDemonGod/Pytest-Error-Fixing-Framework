@@ -104,9 +104,12 @@ class BranchManager:
     def _create_and_checkout_branch(self, branch_name: str, base_branch: str) -> bool:
         """
         Create a new branch from the specified base branch and switch to it.
-
+        
+        Returns:
+            True if the branch was successfully created and checked out.
+        
         Raises:
-            BranchCreationError: If Git command fails
+            BranchCreationError: If the Git command fails.
         """
         result = self.repository.run_command(
             ["checkout", "-b", branch_name, base_branch]

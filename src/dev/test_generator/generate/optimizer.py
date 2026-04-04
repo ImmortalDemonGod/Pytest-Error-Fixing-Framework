@@ -69,6 +69,14 @@ class GenerationOrchestrator:
         fabric_strategy: Optional[FabricStrategy] = None,
         context_gatherer: Optional[ContextGatherer] = None,
     ) -> None:
+        """
+        Initialize the GenerationOrchestrator with the strategies and context gatherer it will use.
+        
+        Parameters:
+            strategy (Optional[HypothesisStrategy]): Strategy used to produce per-entity Hypothesis templates; defaults to a new `HypothesisStrategy` if not provided.
+            fabric_strategy (Optional[FabricStrategy]): When provided, enables hybrid module-level generation using the fabric strategy.
+            context_gatherer (Optional[ContextGatherer]): Optional gatherer used to obtain analysis context for fabric-driven generation.
+        """
         self._strategy = strategy or HypothesisStrategy()
         self._fabric = fabric_strategy
         self._gatherer = context_gatherer
@@ -79,10 +87,13 @@ class GenerationOrchestrator:
     # ------------------------------------------------------------------
 
     def run(self, source_path: Path, output_dir: Path) -> GenerationRequest:
-        """Parse *source_path*, generate tests, write them to *output_dir*.
-
-        Returns the completed GenerationRequest aggregate so the caller can
-        inspect results.
+        """
+        Orchestrates parsing of a Python source file, generation of tests, and writing of outputs to the specified directory.
+        
+        Creates and starts a GenerationRequest for the parsed module, chooses a generation flow (hybrid module-level when a FabricStrategy is configured, otherwise per-entity Hypothesis generation), records per-entity or module-level GenerationAttempt results, and writes generated tests to output_dir. If an error occurs during generation, the request is marked failed and returned.
+        
+        Returns:
+            GenerationRequest: The request containing aggregated generation attempts and final status (`complete` on success, `failed` on error).
         """
         output_dir.mkdir(parents=True, exist_ok=True)
         strategy_name = "hybrid" if self._fabric is not None else "hypothesis"
@@ -114,7 +125,15 @@ class GenerationOrchestrator:
     # ------------------------------------------------------------------
 
     def _gather_context(self, source_path: Path) -> Optional[AnalysisContext]:
-        """Return AnalysisContext in hybrid mode, None in hypothesis-only mode."""
+        """
+        Return an analysis context for hybrid generation or `None` when running hypothesis-only.
+        
+        Parameters:
+            source_path (Path): Path to the Python source file for which context should be gathered.
+        
+        Returns:
+            AnalysisContext or `None`: An AnalysisContext built from the provided source when a FabricStrategy is configured; `None` when no FabricStrategy is set. If a ContextGatherer was provided, its gathered context is returned; otherwise a context is created from the file's text.
+        """
         if self._fabric is None:
             return None
         if self._gatherer is not None:
@@ -127,13 +146,15 @@ class GenerationOrchestrator:
         source_path: Path,
         context: AnalysisContext,
     ) -> None:
-        """Two-phase module-level generation (hybrid mode).
-
-        1. Collect hypothesis scaffolds for all entities — these give the LLM
-           correct import paths and call signatures cheaply.
-        2. Call generate_module() once — Phase 1 analyzes, Phase 2 writes.
-        3. Write single consolidated test file.
-        4. If the LLM fails, fall back to per-entity hypothesis output.
+        """
+        Orchestrates hybrid (Fabric + Hypothesis) module-level test generation, producing a consolidated module test file or falling back to per-entity hypothesis outputs.
+        
+        Collects per-entity Hypothesis templates, invokes the configured FabricStrategy once to generate module-level test code, and records a single GenerationAttempt on success. If FabricStrategy produces no code, falls back to writing per-entity Hypothesis outputs using the previously collected templates and records corresponding attempts on the request.
+        
+        Parameters:
+            request (GenerationRequest): The active generation request to record attempts and read parsed module/configuration from.
+            source_path (Path): Path to the source module being tested; used for module naming and writing output.
+            context (AnalysisContext): Analysis context provided by the context gatherer, used by the FabricStrategy for module generation.
         """
         # Step 1: collect hypothesis templates for all entities
         hypothesis_templates: dict[str, str] = {}
@@ -176,7 +197,18 @@ class GenerationOrchestrator:
         request: GenerationRequest,
         hypothesis_templates: dict[str, str],
     ) -> None:
-        """Write whatever hypothesis templates we already collected."""
+        """
+        Write per-entity test files from pre-collected Hypothesis templates and record generation attempts.
+        
+        Parameters:
+            request (GenerationRequest): The active generation request whose parsed module supplies entities and which will collect GenerationAttempt records.
+            hypothesis_templates (dict[str, str]): Mapping from "{entity_name}.{variant_value}" to generated test code; entries with no mapping are treated as no output.
+        
+        Behavior:
+            For each entity and variant in the parsed module, creates a GenerationAttempt and:
+            - if corresponding template code exists, marks the attempt successful and writes the test file to request.config.output_dir (on write failure the attempt is marked failed);
+            - if no template exists, marks the attempt skipped.
+        """
         for entity in request.parsed_module.entities:
             for variant in select_variants(entity):
                 key = f"{entity.name}.{variant.value}"
@@ -197,7 +229,13 @@ class GenerationOrchestrator:
         request: GenerationRequest,
         context: Optional[AnalysisContext],
     ) -> None:
-        """Hypothesis-only per-entity generation (no fabric strategy)."""
+        """
+        Generate tests for each parsed entity and its variants using the configured Hypothesis strategy, write any produced code to the output directory, and record a GenerationAttempt for each variant.
+        
+        Parameters:
+            request (GenerationRequest): The active generation request whose parsed_module supplies entities and which will collect GenerationAttempt records.
+            context (Optional[AnalysisContext]): Optional analysis context; not required for hypothesis-only per-entity generation.
+        """
         for entity in request.parsed_module.entities:
             for variant in select_variants(entity):
                 attempt = GenerationAttempt(entity=entity, variant=variant)
@@ -214,11 +252,25 @@ class GenerationOrchestrator:
 
 
 def _ensure_importable(source_path: Path) -> None:
-    """Add directories needed for ``hypothesis write`` to import the module."""
+    """
+    Make the module at source_path importable by adding its parent directory and, if present, the nearest enclosing `src` directory to `sys.path`.
+    
+    Parameters:
+        source_path (Path): Path to the Python source file whose importability should be ensured.
+    """
     resolved = source_path.resolve()
     parts = resolved.parts
 
     def _add(path: str) -> None:
+        """
+        Insert the given path at the front of sys.path if it is not already present.
+        
+        Parameters:
+            path (str): Filesystem path to add to Python import search paths; inserted at index 0.
+        
+        Notes:
+            This function mutates the global `sys.path`.
+        """
         if path not in sys.path:
             sys.path.insert(0, path)
 

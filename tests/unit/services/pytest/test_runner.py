@@ -24,16 +24,43 @@ from branch_fixer.services.pytest.models import SessionResult, TestResult
 # Module-level fixtures
 @pytest.fixture
 def tmp_workdir(tmp_path):
+    """
+    Provide the pytest temporary directory fixture unchanged.
+    
+    Parameters:
+        tmp_path (Path): The pytest-provided temporary directory for the test.
+    
+    Returns:
+        Path: The same temporary directory path passed in.
+    """
     return tmp_path
 
 
 @pytest.fixture
 def runner(tmp_workdir):
+    """
+    Pytest fixture that constructs a PytestRunner using the temporary working directory.
+    
+    Parameters:
+        tmp_workdir (Path): Temporary directory provided by the `tmp_workdir` fixture.
+    
+    Returns:
+        PytestRunner: A runner configured with `working_dir` set to `tmp_workdir`.
+    """
     return PytestRunner(working_dir=tmp_workdir)
 
 
 @pytest.fixture
 def test_file(tmp_workdir):
+    """
+    Create a temporary pytest test file containing a single passing test.
+    
+    Parameters:
+        tmp_workdir (Path): Temporary directory in which to create the test file.
+    
+    Returns:
+        Path: Path to the created `test_sample.py`.
+    """
     p = tmp_workdir / "test_sample.py"
     p.write_text("def test_dummy():\n    assert True\n")
     return p
@@ -44,6 +71,12 @@ class TestForceRemove:
         calls = []
 
         def fake_rmtree(path):
+            """
+            Record the provided path in the enclosing `calls` list and perform no filesystem action.
+            
+            Parameters:
+                path: Path-like object representing the directory that would have been removed.
+            """
             calls.append(path)
             # succeed silently
 
@@ -61,6 +94,17 @@ class TestForceRemove:
         state = {"count": 0}
 
         def fake_rmtree(path):
+            """
+            Simulate a flaky shutil.rmtree that fails on the first two attempts and succeeds thereafter.
+            
+            Increments state["count"] and appends the provided path to the external `calls` list. Raises OSError for the first two invocations; on the third and subsequent invocations it returns None.
+            
+            Parameters:
+                path (str | Path): The filesystem path that would be removed.
+            
+            Returns:
+                None
+            """
             state["count"] += 1
             calls.append(path)
             if state["count"] < 3:
@@ -70,6 +114,12 @@ class TestForceRemove:
         slept = []
 
         def fake_sleep(d):
+            """
+            Record the requested sleep duration by appending it to the outer-scope `slept` list.
+            
+            Parameters:
+                d (float): Duration in seconds to record.
+            """
             slept.append(d)
 
         monkeypatch.setattr(shutil, "rmtree", fake_rmtree)
@@ -86,12 +136,27 @@ class TestForceRemove:
         calls = []
 
         def fake_rmtree(path):
+            """
+            Test helper that records the provided path and always raises an OSError.
+            
+            Parameters:
+                path: The filesystem path that would be removed; appended to the enclosing `calls` list.
+            
+            Raises:
+                OSError: Always raised with the message "permanent failure".
+            """
             calls.append(path)
             raise OSError("permanent failure")
 
         slept = []
 
         def fake_sleep(d):
+            """
+            Record the requested sleep duration by appending it to the outer-scope `slept` list.
+            
+            Parameters:
+                d (float): Duration in seconds to record.
+            """
             slept.append(d)
 
         monkeypatch.setattr(shutil, "rmtree", fake_rmtree)
@@ -109,12 +174,29 @@ class TestForceRemove:
         calls = {"count": 0}
 
         def fake_rmtree(path):
+            """
+            Test helper that simulates shutil.rmtree always failing.
+            
+            Increments calls["count"] on each invocation and then raises an OSError with message "fail".
+            
+            Parameters:
+                path: The filesystem path to remove (ignored; present to match shutil.rmtree's signature).
+            
+            Raises:
+                OSError: Always raised to simulate a removal failure.
+            """
             calls["count"] += 1
             raise OSError("fail")
 
         slept = []
 
         def fake_sleep(d):
+            """
+            Record the requested sleep duration by appending it to the outer-scope `slept` list.
+            
+            Parameters:
+                d (float): Duration in seconds to record.
+            """
             slept.append(d)
 
         monkeypatch.setattr(shutil, "rmtree", fake_rmtree)
@@ -305,6 +387,16 @@ class TestPytestRunner:
         captured = {}
 
         def fake_main(args, plugins=None):
+            """
+            Test helper that records pytest invocation arguments and returns a success exit code.
+            
+            Parameters:
+                args (Iterable[str]): The pytest CLI arguments passed to the invocation.
+                plugins (Optional[Iterable[Any]]): Optional pytest plugin instances passed to the invocation.
+            
+            Returns:
+                int: `0` indicating a successful exit code.
+            """
             captured["args"] = list(args)
             captured["plugins"] = list(plugins) if plugins else []
             return 0
@@ -330,6 +422,16 @@ class TestPytestRunner:
         r = PytestRunner(working_dir=tmp_path)
 
         def bad_main(*a, **k):
+            """
+            Stub function that always raises a RuntimeError with message "boom".
+            
+            Parameters:
+                *a: Ignored positional arguments.
+                **k: Ignored keyword arguments.
+            
+            Raises:
+                RuntimeError: Raised unconditionally with message "boom".
+            """
             raise RuntimeError("boom")
 
         monkeypatch.setattr("pytest.main", bad_main)
@@ -343,6 +445,18 @@ class TestPytestRunner:
         captured = {}
 
         def fake_main(args, plugins=None):
+            """
+            Test helper that records pytest invocation arguments and simulates a successful run.
+            
+            Records the provided `args` into the outer `captured` mapping under the `"args"` key and returns a success exit code.
+            
+            Parameters:
+                args (list[str]): Command-line arguments passed to pytest.
+                plugins (Optional[list]): Optional list of pytest plugin instances (ignored).
+            
+            Returns:
+                int: `0` indicating a successful pytest run.
+            """
             captured["args"] = args
             return 0
 
@@ -369,6 +483,16 @@ class TestPytestRunner:
         called = {"flag": False}
 
         def fake_update(result, rep):
+            """
+            Stub updater used in tests to simulate updating a test result from a pytest report.
+            
+            Parameters:
+                result: Object that will receive a `call_outcome` attribute (e.g., a TestResult-like instance).
+                rep: Pytest report-like object with an `outcome` attribute.
+            
+            Side effects:
+                Sets `called["flag"] = True` in the enclosing scope and assigns `result.call_outcome = rep.outcome`.
+            """
             called["flag"] = True
             # minimal update simulation
             result.call_outcome = rep.outcome
@@ -414,11 +538,30 @@ class TestPytestRunner:
 
         class FakeProc:
             def __init__(self):
+                """
+                Initialize the object with default process result values.
+                
+                Sets the following attributes:
+                - `returncode`: integer exit code, defaults to 0.
+                - `stdout`: bytes representing standard output, defaults to b"ok".
+                - `stderr`: bytes representing standard error, defaults to b"".
+                """
                 self.returncode = 0
                 self.stdout = b"ok"
                 self.stderr = b""
 
         def fake_run(args, stdout=None, stderr=None):
+            """
+            Test helper that simulates subprocess.run by recording the invocation and returning a fake process.
+            
+            Parameters:
+                args: The command and arguments that would be passed to subprocess.run; stored into `called["args"]`.
+                stdout: Ignored (present for signature compatibility).
+                stderr: Ignored (present for signature compatibility).
+            
+            Returns:
+                FakeProc: A fake process object used by tests.
+            """
             called["args"] = args
             return FakeProc()
 
@@ -434,11 +577,25 @@ class TestPytestRunner:
 
         class FakeProc:
             def __init__(self):
+                """
+                Initialize a lightweight process-like result object with default failure values.
+                
+                Creates attributes:
+                - `returncode` (int): exit code, default 1.
+                - `stdout` (bytes): standard output bytes, default b"fail\n".
+                - `stderr` (bytes): standard error bytes, default b"err\n".
+                """
                 self.returncode = 1
                 self.stdout = b"fail\n"
                 self.stderr = b"err\n"
 
         def fake_run(*args, **kwargs):
+            """
+            Create and return a FakeProc instance that simulates a completed subprocess for testing.
+            
+            Returns:
+                FakeProc: A fake process-like object used by tests to mimic subprocess results.
+            """
             return FakeProc()
 
         monkeypatch.setattr(subprocess, "run", fake_run)
@@ -449,6 +606,16 @@ class TestPytestRunner:
         r = PytestRunner(working_dir=tmp_path)
 
         def fake_run(*a, **k):
+            """
+            Test helper that simulates a failing call by always raising a RuntimeError.
+            
+            Parameters:
+                *a: Ignored positional arguments.
+                **k: Ignored keyword arguments.
+            
+            Raises:
+                RuntimeError: Always raised with message "boom".
+            """
             raise RuntimeError("boom")
 
         monkeypatch.setattr(subprocess, "run", fake_run)
@@ -547,6 +714,12 @@ class TestPytestRunner:
         called = []
 
         def fake_force_remove(path):
+            """
+            Record the provided path by appending it to the outer-scope `called` list.
+            
+            Parameters:
+                path (Path | str): The path value to record; this function appends it to the surrounding `called` list.
+            """
             called.append(path)
 
         monkeypatch.setattr(runner_mod, "force_remove", fake_force_remove)
@@ -560,6 +733,12 @@ class TestPytestRunner:
         tempdir.mkdir()
         r.temp_dirs = [tempdir]
         def raise_oserror(*a, **k):
+            """
+            Raise an OSError with the message "cannot remove".
+            
+            Raises:
+                OSError: Always raised with the message "cannot remove".
+            """
             raise OSError("cannot remove")
         monkeypatch.setattr(runner_mod, "force_remove", raise_oserror)
         # should not raise
@@ -574,6 +753,12 @@ class TestPytestRunner:
         called = []
 
         def fake_force_remove(path):
+            """
+            Record the provided path by appending it to the outer-scope `called` list.
+            
+            Parameters:
+                path (Path | str): The path value to record; this function appends it to the surrounding `called` list.
+            """
             called.append(path)
 
         monkeypatch.setattr(runner_mod, "force_remove", fake_force_remove)

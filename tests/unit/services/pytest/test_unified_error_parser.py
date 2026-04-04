@@ -22,16 +22,36 @@ import branch_fixer.core.models as core_models
 # Module-level fixtures shared across test classes
 @pytest.fixture(scope="module")
 def collection_parser():
+    """
+    Pytest fixture that provides a fresh CollectionParser instance for tests (module scope).
+    
+    Returns:
+        CollectionParser: a new CollectionParser instance
+    """
     return CollectionParser()
 
 
 @pytest.fixture(scope="module")
 def failure_parser():
+    """
+    Provide a fresh FailureParser instance for tests.
+    
+    This is a module-scoped pytest fixture that yields a newly constructed FailureParser for use in test cases.
+    
+    Returns:
+        FailureParser: A new FailureParser instance.
+    """
     return FailureParser()
 
 
 @pytest.fixture
 def unified_parser():
+    """
+    Create a new UnifiedErrorParser instance.
+    
+    Returns:
+        UnifiedErrorParser: A newly constructed parser for merging collection and failure parsing results.
+    """
     return UnifiedErrorParser()
 
 
@@ -77,6 +97,12 @@ class TestUnifiedErrorParser:
 
     def test_parse_pytest_output_propagates_exception_from_collection_parser(self, unified_parser):
         def raise_err(*args, **kwargs):
+            """
+            Always raises a ValueError with the message "boom".
+            
+            Raises:
+                ValueError: Always raised with message "boom".
+            """
             raise ValueError("boom")
 
         with mock.patch.object(
@@ -163,9 +189,20 @@ class TestConvertErrorInfoToTestError:
         fake_mod = types.ModuleType("branch_fixer.core.models")
         class BadTestError:
             def __init__(self, *args, **kwargs):
+                """
+                Constructor that always fails to instantiate the class.
+                
+                Raises:
+                    ValueError: Always raised with the message "bad constructor".
+                """
                 raise ValueError("bad constructor")
         class GoodErrorDetails:
             def __init__(self, *args, **kwargs):
+                """
+                Initialize the object without performing any setup.
+                
+                Accepts arbitrary positional and keyword arguments for call-site compatibility; arguments are ignored.
+                """
                 pass
 
         fake_mod.TestError = BadTestError
@@ -239,6 +276,14 @@ class TestCollectionParser:
 class TestFailureParser:
     @pytest.fixture(autouse=True)
     def _set_patterns(self, monkeypatch):
+        """
+        Set a deterministic failure-line pattern for tests.
+        
+        Monkeypatches the failure parser module's `PATTERNS` constant to a single regular expression that matches lines of the form `path.py:line: ErrorType`.
+        
+        Parameters:
+            monkeypatch: pytest's `monkeypatch` fixture used to replace module attributes for the duration of the test.
+        """
         monkeypatch.setattr(fail_mod, "PATTERNS", [r"(\S+\.py):(\d+):\s*(\w+)"])
 
     def test__get_test_name_from_header_returns_name(self, failure_parser):

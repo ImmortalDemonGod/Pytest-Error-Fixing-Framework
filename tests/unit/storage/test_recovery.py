@@ -20,7 +20,12 @@ from branch_fixer.storage.recovery import (
 # Module-level fixtures
 @pytest.fixture
 def session_store():
-    """Simple mock session store with a save_session method."""
+    """
+    Provide a Mock acting as a session store with a `save_session` method.
+    
+    Returns:
+        Mock: a unittest.mock.Mock configured to represent a session store, intended to receive `save_session(session)` calls in tests.
+    """
     return Mock()
 
 
@@ -282,6 +287,16 @@ class TestRecoveryManager:
         called = {}
 
         async def fake_restore(cpid, cleanup=False):
+            """
+            Test helper that records the provided checkpoint id and cleanup flag, then simulates a successful restore.
+            
+            Parameters:
+                cpid (str): Checkpoint id passed to the restore operation.
+                cleanup (bool): Whether the caller requested cleanup after restore.
+            
+            Returns:
+                bool: `True` indicating the simulated restore succeeded.
+            """
             called["id"] = cpid
             called["cleanup"] = cleanup
             return True
@@ -305,6 +320,12 @@ class TestRecoveryManager:
         manager._save_recovery_point(rp)
 
         async def raising_restore(_cid, cleanup=False):
+            """
+            Raises a RestoreError with the message "fail".
+            
+            Raises:
+                RestoreError: always raised when called.
+            """
             raise RestoreError("fail")
 
         manager.restore_checkpoint = raising_restore

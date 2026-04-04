@@ -39,12 +39,16 @@ class ChangeApplier:
         self, test_file: Path, changes: CodeChanges
     ) -> tuple[bool, Optional[Path]]:
         """
-        Apply code changes with backup. Returns (success, backup_path).
-
-        - success: indicates if the changes were applied successfully (including syntax check).
-        - backup_path: the newly created backup, or None if something failed early.
-
-        We call an internal method for actual logic but store the backup_path to revert if needed.
+        Apply code changes to a file while creating a backup so the file can be restored if the update fails.
+        
+        This method creates a backup of `test_file`, attempts to write and verify the provided `changes`, and returns the outcome together with the backup path. If applying or verifying the changes fails, the backup (when created) can be used to restore the original file.
+        
+        Parameters:
+            test_file (Path): Path to the target file to modify.
+            changes (CodeChanges): Change payload containing the modified code to write.
+        
+        Returns:
+            tuple[bool, Optional[Path]]: A pair `(success, backup_path)` where `success` is `True` if the changes were accepted and left in place, `False` otherwise; `backup_path` is the Path to the created backup file or `None` if no backup was created.
         """
         backup_path = None
         try:
@@ -63,7 +67,13 @@ class ChangeApplier:
 
     def restore_backup(self, file_path: Path, backup_path: Path) -> bool:
         """
-        Public method to restore a file from a known backup path.
+        Restore a file from the given backup path.
+        
+        Returns:
+            True if the file was successfully restored.
+        
+        Raises:
+            BackupError: If the backup does not exist or restoration fails.
         """
         return self._restore_backup(file_path, backup_path)
 
@@ -71,10 +81,15 @@ class ChangeApplier:
         self, test_file: Path, changes: CodeChanges, backup_path: Path
     ) -> bool:
         """
-        Internal helper that:
-          - writes changes
-          - checks syntax
-          - reverts if syntax fails
+        Apply modified code to a file and verify it, restoring from backup on failure.
+        
+        Parameters:
+            test_file (Path): Path to the target source file to overwrite with changes.
+            changes (CodeChanges): Object containing the modified source code to write.
+            backup_path (Path): Path to the backup file to restore if verification or application fails.
+        
+        Returns:
+            bool: `true` if the changes were written and passed verification, `false` otherwise.
         """
         try:
             # Read original before overwriting (needed for AST guard)
@@ -116,13 +131,18 @@ class ChangeApplier:
             return False
 
     def _backup_file(self, file_path: Path) -> Path:
-        """Create backup copy of file.
-
-        Args:
-            file_path: Path to file to backup
-
+        """
+        Create a timestamped backup of the given file inside a `.backups` directory next to the source file.
+        
+        Parameters:
+            file_path (Path): Path to the file to back up.
+        
         Returns:
-            Path to the backup file, or raises an exception if anything fails.
+            Path: Path to the created backup file.
+        
+        Raises:
+            FileNotFoundError: If `file_path` does not exist.
+            BackupError: If copying the file or pruning old backups fails.
         """
         if not file_path.exists():
             raise FileNotFoundError(f"Cannot backup non-existent file: {file_path}")
@@ -144,7 +164,16 @@ class ChangeApplier:
             raise BackupError(f"Failed to create backup for {file_path}: {e}") from e
 
     def _prune_backups(self, backups_root: Path, source_name: str) -> None:
-        """Delete oldest backups for *source_name* beyond MAX_BACKUPS_PER_FILE."""
+        """
+        Prune backup files for a given source so only the newest MAX_BACKUPS_PER_FILE remain.
+        
+        Parameters:
+            backups_root (Path): Directory containing backup files for the source.
+            source_name (str): Original source file name used to match backups (files named like "{source_name}-*.bak").
+        
+        Notes:
+            Removes the oldest matching backups until at most `MAX_BACKUPS_PER_FILE` remain; failures to delete individual files are logged but do not raise.
+        """
         pattern = f"{source_name}-*.bak"
         existing = sorted(backups_root.glob(pattern), key=lambda p: p.stat().st_mtime)
         excess = len(existing) - self.MAX_BACKUPS_PER_FILE
@@ -157,7 +186,13 @@ class ChangeApplier:
 
     def _restore_backup(self, file_path: Path, backup_path: Path) -> bool:
         """
-        Restore file from the specified backup.
+        Restore the target file by copying the provided backup onto it.
+        
+        Returns:
+            True if the file was successfully restored.
+        
+        Raises:
+            BackupError: if the backup does not exist or the restore operation fails.
         """
         if not backup_path.exists():
             raise BackupError(
@@ -174,13 +209,12 @@ class ChangeApplier:
 
     def _verify_changes(self, file_path: Path, original_source: str = "") -> bool:
         """
-        Verify file is valid after changes.
-
-        Checks:
-        1. Syntax must compile.
-        2. If original_source is provided and was a test file (contained
-           assert statements), the modified version must not reduce assert
-           count to zero — guards against AI deleting all assertions.
+        Validate the updated file content for syntactic correctness and preserve test assertions when applicable.
+        
+        Reads the file at `file_path`, ensures it compiles without a SyntaxError, and when `original_source` is provided checks (best-effort via AST) that if the original contained one or more `assert` statements the modified version does not reduce that count to zero. The AST comparison is best-effort; a SyntaxError during AST parsing is ignored and the compile check remains authoritative.
+        
+        Returns:
+            bool: `True` if the file compiles and the AST-based assertion guard (when applied) does not reject the changes, `False` otherwise.
         """
         try:
             updated_source = file_path.read_text(encoding="utf-8")

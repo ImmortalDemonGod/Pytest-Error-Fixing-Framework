@@ -4,7 +4,11 @@ from pathlib import Path
 
 
 def setup_logging():
-    """Setup logging configuration"""
+    """
+    Configure application logging to console and a file.
+    
+    Creates a "logs" directory under the current working directory and uses "logs/app.log" as the log file. Configures the root logger at INFO level with a timestamped formatter and both a console (stream) handler and a file handler that writes to that file, replacing any existing handlers. Also obtains the logger named "snoop", sets it to INFO level, and attaches a file handler using the same log file and formatter.
+    """
     # Ensure logs directory exists
     log_dir = Path.cwd() / "logs"
     log_dir.mkdir(exist_ok=True)

@@ -9,6 +9,15 @@ import dev.cli.generate
 
 @pytest.fixture
 def source_file(tmp_path: Path) -> Path:
+    """
+    Create a temporary Python source file named "module_under_test.py" containing a simple assignment and return its path.
+    
+    Parameters:
+        tmp_path (Path): Pytest-provided temporary directory.
+    
+    Returns:
+        Path: Path to the created "module_under_test.py" file (contains the text "x = 1\n").
+    """
     p = tmp_path / "module_under_test.py"
     p.write_text("x = 1\n")
     return p
@@ -16,6 +25,15 @@ def source_file(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def output_dir(tmp_path: Path) -> Path:
+    """
+    Create a subdirectory named "outdir" inside the given temporary path and return its Path.
+    
+    Parameters:
+        tmp_path (Path): Base temporary directory in which to create the "outdir" folder.
+    
+    Returns:
+        Path: Path to the newly created "outdir" directory.
+    """
     d = tmp_path / "outdir"
     d.mkdir()
     return d
@@ -23,9 +41,22 @@ def output_dir(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def echo_calls(monkeypatch):
+    """
+    Replace dev.cli.generate.click.echo with a recorder that captures all calls.
+    
+    Returns:
+        calls (list): List of tuples (message, kwargs) for each recorded echo invocation.
+    """
     calls = []
 
     def fake_echo(message="", **kwargs):
+        """
+        Record an echo invocation by appending a tuple of (message, kwargs) to the shared `calls` list.
+        
+        Parameters:
+            message (str): The message that would be echoed.
+            **kwargs: Keyword arguments forwarded from the original echo call (for example `err=True`).
+        """
         calls.append((message, kwargs))
 
     monkeypatch.setattr(dev.cli.generate.click, "echo", fake_echo)
@@ -34,6 +65,12 @@ def echo_calls(monkeypatch):
 
 @pytest.fixture
 def cli_runner():
+    """
+    Create a Click CliRunner suitable for invoking the command under test in unit tests.
+    
+    Returns:
+        CliRunner: A fresh CliRunner instance for invoking Click commands and capturing output.
+    """
     return CliRunner()
 
 
@@ -45,10 +82,21 @@ class TestGenerateCommand:
         class FakeHypothesisStrategy:
             @classmethod
             def is_available(cls):
+                """
+                Check whether the strategy is available on the current system.
+                
+                Returns:
+                    `True` if the strategy is available, `False` otherwise.
+                """
                 return True
 
             def __init__(self):
                 # marker to identify instance
+                """
+                Initialize the strategy instance with an internal identification marker.
+                
+                Sets a private `_marker` attribute used to identify this HypothesisStrategy instance.
+                """
                 self._marker = "hypothesis-instance"
 
         request = SimpleNamespace(
@@ -65,10 +113,27 @@ class TestGenerateCommand:
         class FakeOrchestrator:
             def __init__(self, strategy):
                 # record that init received the strategy instance
+                """
+                Initialize the object with a generation strategy.
+                
+                Parameters:
+                    strategy: Strategy instance used to drive generation; stored on the instance as `self.strategy`.
+                """
                 self.strategy = strategy
 
             def run(self, source_path, output_dir):
                 # validate that paths are Path instances
+                """
+                Run the generation process for a given source file and place outputs in the specified directory.
+                
+                Parameters:
+                    source_path (Path): Path to the Python source file to generate tests for.
+                    output_dir (Path): Directory where generated test files should be written.
+                
+                Returns:
+                    request (object): Result object describing the generation run, including fields such as
+                    `attempts`, `successful_attempts`, `failed_attempts`, and `status`.
+                """
                 assert isinstance(source_path, Path)
                 assert isinstance(output_dir, Path)
                 return request
@@ -104,9 +169,18 @@ class TestGenerateCommand:
         class FakeHypothesisStrategy:
             @classmethod
             def is_available(cls):
+                """
+                Check whether the strategy is available on the current system.
+                
+                Returns:
+                    `True` if the strategy is available, `False` otherwise.
+                """
                 return True
 
             def __init__(self):
+                """
+                Create a new instance without performing any initialization.
+                """
                 pass
 
         request = SimpleNamespace(
@@ -118,9 +192,29 @@ class TestGenerateCommand:
 
         class FakeOrchestrator:
             def __init__(self, strategy):
+                """
+                Initialize the object with a generation strategy.
+                
+                Parameters:
+                    strategy: Instance that provides the generation strategy used by this object.
+                """
                 self.strategy = strategy
 
             def run(self, source_path, output_dir):
+                """
+                Run the generation process for a source file and place outputs in the given directory.
+                
+                Parameters:
+                    source_path (Path): Path to the source module to generate tests for.
+                    output_dir (Path): Directory where generated tests should be written.
+                
+                Returns:
+                    request: An object summarizing the generation run. Expected attributes:
+                        - status (str): Overall outcome, e.g. "success" or "failed".
+                        - successful_attempts (list): Items representing successful generation attempts.
+                        - failed_attempts (list): Items representing failed attempts.
+                        - attempts (list): All attempt objects; each attempt is expected to have a `status` attribute (e.g. "ok", "skipped").
+                """
                 return request
 
         monkeypatch.setattr(
@@ -146,9 +240,18 @@ class TestGenerateCommand:
         class FakeHypothesisStrategy:
             @classmethod
             def is_available(cls):
+                """
+                Check whether the external 'hypothesis' CLI is available in the environment.
+                
+                @returns
+                    `True` if the 'hypothesis' CLI is available, `False` otherwise.
+                """
                 return False
 
             def __init__(self):
+                """
+                Create a new instance without performing any initialization.
+                """
                 pass
 
         monkeypatch.setattr(
@@ -186,9 +289,18 @@ class TestGenerateCommand:
         class FakeHypothesisStrategy:
             @classmethod
             def is_available(cls):
+                """
+                Check whether the strategy is available on the current system.
+                
+                Returns:
+                    `True` if the strategy is available, `False` otherwise.
+                """
                 return True
 
             def __init__(self):
+                """
+                Register the new instance by appending it to the module-level `instances` list.
+                """
                 instances.append(self)
 
         received = {}
@@ -202,9 +314,29 @@ class TestGenerateCommand:
 
         class FakeOrchestrator:
             def __init__(self, strategy):
+                """
+                Record the provided strategy instance for later inspection.
+                
+                Parameters:
+                    strategy: The strategy instance passed into the constructor; stored in the shared `received` mapping under the "strategy" key.
+                """
                 received["strategy"] = strategy
 
             def run(self, source_path, output_dir):
+                """
+                Run the generation process for a source file and place outputs in the given directory.
+                
+                Parameters:
+                    source_path (Path): Path to the source module to generate tests for.
+                    output_dir (Path): Directory where generated tests should be written.
+                
+                Returns:
+                    request: An object summarizing the generation run. Expected attributes:
+                        - status (str): Overall outcome, e.g. "success" or "failed".
+                        - successful_attempts (list): Items representing successful generation attempts.
+                        - failed_attempts (list): Items representing failed attempts.
+                        - attempts (list): All attempt objects; each attempt is expected to have a `status` attribute (e.g. "ok", "skipped").
+                """
                 return request
 
         monkeypatch.setattr(dev.cli.generate, "HypothesisStrategy", FakeHypothesisStrategy)
@@ -235,9 +367,18 @@ class TestGenerateCommand:
         class FakeHypothesisStrategy:
             @classmethod
             def is_available(cls):
+                """
+                Check whether the strategy is available on the current system.
+                
+                Returns:
+                    `True` if the strategy is available, `False` otherwise.
+                """
                 return True
 
             def __init__(self):
+                """
+                Create a new instance without performing any initialization.
+                """
                 pass
 
         request = SimpleNamespace(
@@ -249,10 +390,29 @@ class TestGenerateCommand:
 
         class FakeOrchestrator:
             def __init__(self, strategy):
+                """
+                Initialize the orchestrator with the strategy used to drive generation.
+                
+                Parameters:
+                    strategy: The generation strategy instance the orchestrator will use to perform test generation.
+                """
                 pass
 
             def run(self, source_path, output_dir):
                 # ensure click.Path converted to Path and values passed through
+                """
+                Execute generation for a source file into an output directory.
+                
+                Parameters:
+                    source_path (Path): Path to the Python source file to generate tests for.
+                    output_dir (Path): Directory where generated tests should be written.
+                
+                Returns:
+                    request: An object summarizing the generation outcome. Expected attributes include
+                        `status` (e.g., "success" or "failed"), `successful_attempts` (list), 
+                        `failed_attempts` (list), and `attempts` (iterable of attempt objects with a
+                        `status` attribute).
+                """
                 assert isinstance(source_path, Path)
                 assert isinstance(output_dir, Path)
                 return request
@@ -273,9 +433,18 @@ class TestGenerateCommand:
         class FakeHypothesisStrategy:
             @classmethod
             def is_available(cls):
+                """
+                Check whether the strategy is available on the current system.
+                
+                Returns:
+                    `True` if the strategy is available, `False` otherwise.
+                """
                 return True
 
             def __init__(self):
+                """
+                Create a new instance without performing any initialization.
+                """
                 pass
 
         request = SimpleNamespace(
@@ -287,9 +456,29 @@ class TestGenerateCommand:
 
         class FakeOrchestrator:
             def __init__(self, strategy):
+                """
+                Initialize the orchestrator with the strategy used to drive generation.
+                
+                Parameters:
+                    strategy: The generation strategy instance the orchestrator will use to perform test generation.
+                """
                 pass
 
             def run(self, source_path, output_dir):
+                """
+                Run the generation process for a source file and place outputs in the given directory.
+                
+                Parameters:
+                    source_path (Path): Path to the source module to generate tests for.
+                    output_dir (Path): Directory where generated tests should be written.
+                
+                Returns:
+                    request: An object summarizing the generation run. Expected attributes:
+                        - status (str): Overall outcome, e.g. "success" or "failed".
+                        - successful_attempts (list): Items representing successful generation attempts.
+                        - failed_attempts (list): Items representing failed attempts.
+                        - attempts (list): All attempt objects; each attempt is expected to have a `status` attribute (e.g. "ok", "skipped").
+                """
                 return request
 
         monkeypatch.setattr(dev.cli.generate, "HypothesisStrategy", FakeHypothesisStrategy)

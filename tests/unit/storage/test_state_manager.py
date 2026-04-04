@@ -16,6 +16,15 @@ from branch_fixer.storage.state_manager import (
 # ---------------------------------------------------------------------------
 
 def make_session(state: FixSessionState = FixSessionState.INITIALIZING) -> FixSession:
+    """
+    Create a FixSession with its state set to the provided FixSessionState.
+    
+    Parameters:
+        state (FixSessionState): Initial state to assign to the created session (defaults to FixSessionState.INITIALIZING).
+    
+    Returns:
+        FixSession: A new session instance with `state` set to the provided value.
+    """
     s = FixSession()
     s.state = state
     return s

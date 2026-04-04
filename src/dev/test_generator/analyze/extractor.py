@@ -30,7 +30,15 @@ _BINARY_OP_PATTERNS = ("add", "subtract", "multiply", "combine", "merge", "sub",
 
 
 def select_variants(entity: TestableEntity) -> List[GenerationVariant]:
-    """Return the ordered list of variants to attempt for *entity*."""
+    """
+    Selects an ordered list of GenerationVariant values appropriate for the given TestableEntity.
+    
+    Parameters:
+        entity (TestableEntity): Entity whose type and name determine which generation variants apply.
+    
+    Returns:
+        List[GenerationVariant]: Ordered variants to attempt for the entity.
+    """
     if entity.entity_type == "class":
         return [GenerationVariant.DEFAULT]
     if entity.entity_type in ("method", "instance_method"):
@@ -39,7 +47,14 @@ def select_variants(entity: TestableEntity) -> List[GenerationVariant]:
 
 
 def _method_variants(entity: TestableEntity) -> List[GenerationVariant]:
-    """Methods always get DEFAULT + ERRORS; all four specials can stack."""
+    """
+    Selects generation variants for a method-like entity.
+    
+    Always includes GenerationVariant.DEFAULT followed by GenerationVariant.ERRORS; may append any of GenerationVariant.IDEMPOTENT, GenerationVariant.ERRORS_EQUIVALENT, GenerationVariant.ROUNDTRIP, or GenerationVariant.BINARY_OP when the entity's name indicates those behaviors. Multiple special variants can be appended and the order of appended variants is IDEMPOTENT, ERRORS_EQUIVALENT, ROUNDTRIP, then BINARY_OP.
+    
+    Returns:
+        List[GenerationVariant]: Ordered list starting with `DEFAULT`, then `ERRORS`, followed by zero or more of `IDEMPOTENT`, `ERRORS_EQUIVALENT`, `ROUNDTRIP`, `BINARY_OP` depending on `entity.name`.
+    """
     variants: List[GenerationVariant] = [
         GenerationVariant.DEFAULT,
         GenerationVariant.ERRORS,
@@ -58,7 +73,17 @@ def _method_variants(entity: TestableEntity) -> List[GenerationVariant]:
 
 
 def _function_variants(entity: TestableEntity) -> List[GenerationVariant]:
-    """Functions get DEFAULT + only ROUNDTRIP or BINARY_OP (first match)."""
+    """
+    Select generation variants for a standalone function based on its name.
+    
+    Performs case-insensitive substring checks and returns `[GenerationVariant.DEFAULT]`
+    plus at most one additional variant: `GenerationVariant.ROUNDTRIP` if a roundtrip
+    pattern is present, otherwise `GenerationVariant.BINARY_OP` if a binary-op
+    pattern is present.
+    
+    Returns:
+        List[GenerationVariant]: The ordered list of selected generation variants.
+    """
     variants: List[GenerationVariant] = [GenerationVariant.DEFAULT]
     name = entity.name.lower()
     if any(p in name for p in _ROUNDTRIP_PATTERNS):

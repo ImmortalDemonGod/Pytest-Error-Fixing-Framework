@@ -88,7 +88,12 @@ class CLI:
 
     def _cleanup_branches(self, errors: List[str]) -> None:
         """
-        Helper to clean up fix branches, logging any errors.
+        Remove fix branches tracked by the CLI and record any failures.
+        
+        Attempts to delete each branch in self.created_branches using the repository's branch manager. On failure, appends a descriptive message to the provided errors list and logs the error.
+        
+        Parameters:
+            errors (List[str]): Mutable list to which human-readable error messages are appended when a branch cleanup fails.
         """
         assert self.service is not None
         for branch in self.created_branches:
@@ -103,7 +108,14 @@ class CLI:
 
     def _checkout_main(self, errors: List[str]) -> None:
         """
-        Helper to checkout the main branch and log errors.
+        Switch the repository to its configured main branch.
+        
+        If the checkout fails, append a descriptive error message to the provided
+        errors list and emit a warning log.
+        
+        Parameters:
+            errors (List[str]): Mutable list to which a failure message will be appended
+                if the main-branch checkout does not succeed.
         """
         assert self.service is not None
         try:
@@ -116,8 +128,12 @@ class CLI:
 
     def _create_fix_branch(self, error: TestError) -> Optional[str]:
         """
-        Helper to create a new fix branch with a unique suffix.
-        Returns the branch name or None on failure.
+        Create a uniquely named fix branch for the provided TestError and record it.
+        
+        If branch creation succeeds, the branch name is added to self.created_branches and returned.
+        
+        Returns:
+            Optional[str]: The created branch name if successful, `None` otherwise.
         """
         unique_suffix = str(uuid.uuid4())[:8]
         branch_name = (
@@ -140,8 +156,17 @@ class CLI:
 
     def run_fix_workflow(self, error: TestError, interactive: bool) -> bool:
         """
-        Run the fix workflow for a single error using AI.
-        This workflow now ensures the original branch is checked out upon completion.
+        Run the AI-driven fix workflow for a single test error and restore the original Git branch on completion.
+        
+        Parameters:
+            error (TestError): The failing test context to fix (includes file and function metadata).
+            interactive (bool): If True, prompt the user before creating a pull request; if False, create and push a PR automatically when a fix is produced.
+        
+        Returns:
+            bool: `True` if a fix was applied and either a pull request was successfully created and pushed or the user chose to skip PR creation; `False` if the fix generation/application failed or an error occurred.
+        
+        Behavior:
+            Always attempts to checkout the original branch before returning.
         """
         if not self.service:
             logger.error("FixService not initialized, cannot run fix workflow.")
@@ -199,9 +224,12 @@ class CLI:
 
     def _generate_and_apply_fix(self, error: TestError) -> bool:
         """
-        Attempt to generate/apply a fix via AI; return True if successful, False otherwise.
-        Delegates to the orchestrator, which runs the full multi-retry loop with
-        temperature bumping — the single-shot attempt_fix path is no longer used here.
+        Generate and apply an AI-driven fix for the given TestError.
+        
+        Starts a fix session and attempts to produce and apply a corrective change for the provided error. If the orchestrator is not initialized the function logs an error and returns `false`.
+        
+        Returns:
+            `true` if a fix was generated and applied successfully, `false` otherwise.
         """
         if not self.orchestrator:
             logger.error("Orchestrator not initialized, cannot generate fix.")
@@ -212,9 +240,12 @@ class CLI:
 
     def _create_and_push_pr(self, branch_name: str, error: TestError) -> bool:
         """
-        Create a pull request for the given branch and push to remote.
-        Return True if successful or if PR creation fails but the fix was still okay.
-        Return False if push fails.
+        Create a pull request for the given branch and push the branch to the remote.
+        
+        Attempts to create a pull request for the specified branch; if PR creation succeeds, pushes the branch to the remote. If PR creation fails or the repository is not configured, the fix is treated as successful.
+        
+        Returns:
+            `True` if the branch was pushed after successful PR creation, or if PR creation failed but the fix is considered successful; `False` if pushing the branch failed after PR creation.
         """
         logger.info("Creating pull request...")
         if self.service and self.service.git_repo.create_pull_request_sync(
@@ -236,15 +267,14 @@ class CLI:
 
     def run_manual_fix_workflow(self, error: TestError) -> str:
         """
-        Let the user manually fix the test, then check if it passes:
-        - Create a unique fix branch
-        - Loop until user either *succeeds*, *skips*, or *quits*.
-        - Limit the number of retries to avoid infinite loops.
-
-        Return values:
-        - "fixed" => The test now passes after user edits
-        - "skip"  => The user pressed 's' to skip
-        - "quit"  => The user pressed 'q' to stop manual fix mode entirely
+        Guide the user through a manual edit-and-test loop for a failing test.
+        
+        Creates a unique fix branch, prompts the user to edit the failing test file, and re-runs the test up to a fixed retry limit until the user succeeds, skips, or quits.
+        
+        Returns:
+            'fixed' — the test passes after user edits.
+            'skip'  — the user chose to skip manual fixing (pressed 's') or branch creation failed.
+            'quit'  — the user exited manual fix mode (pressed 'q') or the retry limit was reached.
         """
         retry_limit = 5  # Limit the number of retries for manual fixes.
         retries = 0
@@ -293,9 +323,20 @@ class CLI:
     # @snoop
     def setup_components(self, config: ComponentSettings) -> bool:
         """
-        Initialize AI, Test Runner, Change Applier, GitRepo, FixService, & Orchestrator.
-        Now uses a single `config` object to address the 'excess function arguments' complaint
-        while preserving existing comments and features.
+        Initialize and wire the runtime components required by the CLI.
+        
+        Creates and configures AIManager, TestRunner, ChangeApplier, GitRepository, StateManager,
+        FixService, SessionStore, and FixOrchestrator; assigns the created FixService to
+        self.service and the orchestrator to self.orchestrator. Validates the workspace and
+        checks dependencies before returning.
+        
+        Parameters:
+            config (ComponentSettings): Configuration values used to construct services
+                (API key, retry and temperature settings, and dev_force_success flag).
+        
+        Returns:
+            bool: True if components were successfully initialized and the workspace
+            validation passed, False if an error occurred.
         """
         try:
             logger.info("Initializing AI Manager...")
@@ -408,11 +449,19 @@ class CLI:
 
     def _prompt_for_fix(self, error: TestError) -> Optional[str]:
         """
-        Prompt user how to handle a failing test in interactive mode.
-         - 'y' => Attempt AI fix
-         - 'm' => Manual fix
-         - 'n' => Skip
-         - 'q' => Quit
+        Prompt the user to choose how to handle a failing test and return the selected option.
+        
+        Displays brief context about the failing TestError and repeatedly prompts until the user chooses one of the accepted options. Pressing Enter selects the default 'y'.
+        
+        Parameters:
+            error (TestError): The failing test whose details are shown to the user.
+        
+        Returns:
+            choice (str): One of:
+                - 'y' — attempt an AI-based fix (default when Enter is pressed)
+                - 'm' — perform a manual fix
+                - 'n' — skip this test
+                - 'q' — quit fixing tests entirely
         """
         while True:
             click.clear()  # Clear screen for a fresh prompt
@@ -442,8 +491,19 @@ class CLI:
 
     def _process_interactive_error(self, error: TestError) -> bool:
         """
-        Handles interactive error processing logic.
-        Returns True if user chooses to continue, False if user quits.
+        Process a single TestError by prompting the user and dispatching the chosen action.
+        
+        Prompts the user for a choice and invokes the corresponding handler:
+        - 'y' to attempt an AI fix
+        - 'm' to enter manual fix mode
+        - 'n' to skip this error
+        - 'q' to quit processing
+        
+        Parameters:
+            error (TestError): The test error to present to the user and act upon.
+        
+        Returns:
+            bool: `True` if processing should continue to the next error, `False` if processing should stop (user chose to quit).
         """
         choice: Optional[str] = self._prompt_for_fix(error)
         handlers = {
@@ -471,10 +531,16 @@ class CLI:
 
     def process_errors(self, errors: List[TestError], interactive: bool) -> int:
         """
-        Process all discovered failing errors.
-         - In interactive mode, prompt for fix path
-         - In non-interactive, always attempt AI-based fix
-         - Summarize the results at the end
+        Run fix attempts for a list of failing tests and return a process exit code.
+        
+        Processes each TestError either interactively (prompting the user for action) or non-interactively (attempting AI fixes), summarizes results, performs cleanup, and determines an exit code reflecting overall outcome.
+        
+        Parameters:
+            errors (List[TestError]): The failing tests to process.
+            interactive (bool): If True, prompt the user for each error; if False, run non-interactive AI fixes.
+        
+        Returns:
+            int: Exit code where `0` means all processed errors are considered successful, and `1` indicates one or more errors were skipped, failed, or the user quit before all errors were processed.
         """
         success_count = 0
         total_processed = 0
@@ -512,8 +578,14 @@ class CLI:
         self, errors: List[TestError], interactive: bool
     ) -> Tuple[int, int]:
         """
-        Extracted helper that loops over all errors, handling interactive
-        vs. non-interactive flows. Returns total_processed, success_count.
+        Iterate through provided TestError items and process each using interactive or non-interactive flows.
+        
+        Parameters:
+            errors (List[TestError]): Sequence of test errors to process in order.
+            interactive (bool): If True, handle each error with the interactive prompt flow; otherwise use non-interactive processing.
+        
+        Returns:
+            Tuple[int, int]: A pair (total_processed, success_count) where `total_processed` is the number of errors that were processed before completion or early exit, and `success_count` is the number of successful fixes (currently not incremented by this implementation and thus remains 0).
         """
         total_processed = 0
         success_count = 0
@@ -544,7 +616,12 @@ class CLI:
         self, total_processed: int, total_errors: int, success_count: int
     ) -> None:
         """
-        Helper to summarize the final fix attempts result.
+        Prints a console summary of processed tests and their outcomes.
+        
+        Parameters:
+            total_processed (int): Number of test errors that were processed.
+            total_errors (int): Total number of test errors originally supplied.
+            success_count (int): Number of processed errors that were fixed successfully.
         """
         click.echo("\nFix attempts complete.")
         click.echo(f"Tests processed: {total_processed}/{total_errors}")

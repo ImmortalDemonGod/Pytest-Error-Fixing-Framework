@@ -2,6 +2,16 @@
 
 def add(a, b):
     # Fixed implementation
+    """
+    Computes the sum of two values.
+    
+    Parameters:
+        a: First addend.
+        b: Second addend.
+    
+    Returns:
+        The sum of `a` and `b`.
+    """
     return a + b
 
 def test_add():

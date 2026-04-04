@@ -14,7 +14,12 @@ logger = logging.getLogger(__name__)
 
 
 def get_version() -> str:
-    """Dynamically get the project version from installed package metadata."""
+    """
+    Return the installed distribution version for the `pytest-fixer` package.
+    
+    Returns:
+        str: The package version string, or "unknown (package not installed)" if the package metadata is not available.
+    """
     try:
         # The package name "pytest-fixer" is defined in pyproject.toml
         return importlib.metadata.version("pytest-fixer")
@@ -27,7 +32,11 @@ def get_version() -> str:
 @click.group()
 @click.version_option(version=get_version(), prog_name="pytest-fixer")
 def cli():
-    """Pytest Error Fixing Framework - Automatically fix failing pytest tests."""
+    """
+    Command-line entry point for pytest-fixer; a Click command group that hosts subcommands.
+    
+    This command group is configured with the package version and groups commands such as the primary `fix` workflow and optional development subcommands when available.
+    """
     pass
 
 
@@ -85,7 +94,24 @@ def fix(
     dev_force_success: bool,
 ):
     """
-    Fix failing pytest tests automatically.
+    Run pytest, analyze failures, and attempt automated fixes according to the provided options.
+    
+    This command initializes runtime components, executes the test runner, parses failures, and drives the fix workflows. Depending on flags it can perform a cleanup-only action, run in non-interactive or fast-run (first-failure-only) modes, and persist a session record when applicable.
+    
+    Parameters:
+        api_key (str): API key used by remote services for generating fixes.
+        max_retries (int): Maximum number of retry attempts for a single failing test.
+        initial_temp (float): Initial randomness/temperature setting for generation-based fixes.
+        temp_increment (float): Amount to increase temperature between retries.
+        non_interactive (bool): If True, suppress interactive prompts during the fix workflows.
+        fast_run (bool): If True, attempt to fix only the first failing test and then exit.
+        test_path (Optional[Path]): Path to the tests or test file to run; if None uses default discovery.
+        test_function (Optional[str]): Specific test function name to run within the given path.
+        cleanup_only (bool): If True, perform cleanup actions and exit without running tests or fixes.
+        dev_force_success (bool): If True, simulate successful fixes for development/testing purposes.
+    
+    Returns:
+        int: Exit code where `0` indicates overall success (or cleanup-only success) and `1` indicates failure or an inability to proceed.
     """
 
     from branch_fixer.services.pytest.error_processor import process_pytest_results
@@ -195,5 +221,10 @@ except ImportError:
 
 
 def main():
-    """Main entry point."""
+    """
+    Invoke the CLI application and return its exit code.
+    
+    Returns:
+        int: Exit code (0 on success, non-zero on failure).
+    """
     return cli()

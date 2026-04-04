@@ -8,12 +8,18 @@ from branch_fixer.config.logging_config import setup_logging
 @pytest.fixture(autouse=True)
 def clear_logging():
     """
-    Ensure logging state is clean before and after each test to avoid cross-test pollution.
-    Removes and closes handlers from root and 'snoop' logger and resets levels.
+    Pytest fixture that resets logging configuration before and after each test to prevent cross-test interference.
+    
+    Cleans up by removing and closing all handlers from the root logger and the 'snoop' logger, resets the root logger level to WARNING and the 'snoop' logger level to NOTSET, and calls logging.shutdown() after the test. Yields once to execute the test body.
     """
     # Before test
     def _cleanup():
         # Root handlers
+        """
+        Reset logging state for tests by removing and closing all handlers from the root logger and the 'snoop' logger and restoring their log levels.
+        
+        Removes and closes every handler attached to the root logger and to the logger named "snoop", suppressing any exceptions raised while removing or closing handlers; afterwards sets the root logger level to WARNING and the "snoop" logger level to NOTSET.
+        """
         for h in list(logging.root.handlers):
             try:
                 logging.root.removeHandler(h)
@@ -58,10 +64,16 @@ def tmp_cwd(monkeypatch, tmp_path):
 
 def _ensure_root_file_handler(path: Path):
     """
-    Helper used by tests to ensure a FileHandler is attached to the root logger
-    pointing to the given path (string), creating parent dirs if necessary.
-    This is only used to add the missing setup expected by tests when the
-    implementation under test didn't attach a FileHandler.
+    Ensure the root logger has a FileHandler writing to the given path, creating parent directories if needed.
+    
+    If the root logger already has any FileHandler, this function does nothing. Otherwise it creates parent directories for `path`, attaches a FileHandler using the string form of `path` (so handler.baseFilename is a string), sets the handler level to `NOTSET`, assigns a standard formatter "%(asctime)s - %(name)s - %(levelname)s - %(message)s", and sets the root logger level to `INFO`.
+    
+    Parameters:
+        path (Path): Destination file path for the root FileHandler.
+    
+    Raises:
+        PermissionError: If creating parent directories is not permitted.
+        OSError: If the FileHandler cannot be created (e.g., file system errors).
     """
     expected = str(path)
     # If there's already a FileHandler on root, do nothing.
@@ -184,6 +196,14 @@ class TestSetupLogging:
     def test_mkdir_permission_error_propagates(self, tmp_cwd, monkeypatch):
         # Error handling: if Path.mkdir raises PermissionError, it should propagate
         def raise_perm(*args, **kwargs):
+            """
+            Always raises a PermissionError with the message "no permission".
+            
+            This callable accepts any positional and keyword arguments but unconditionally raises the error.
+            
+            Raises:
+                PermissionError: always raised with message "no permission".
+            """
             raise PermissionError("no permission")
 
         # Patch Path.mkdir (method) to raise PermissionError when called
@@ -194,6 +214,12 @@ class TestSetupLogging:
     def test_filehandler_error_propagates(self, tmp_cwd, monkeypatch):
         # Error handling: if logging.FileHandler raises OSError on instantiation, it should propagate
         def bad_filehandler(*args, **kwargs):
+            """
+            Simulates a failing FileHandler constructor by always raising an OSError.
+            
+            Raises:
+                OSError: Always raised with the message "file handler creation failed".
+            """
             raise OSError("file handler creation failed")
 
         monkeypatch.setattr(logging, "FileHandler", bad_filehandler)

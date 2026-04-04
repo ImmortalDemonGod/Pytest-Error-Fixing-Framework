@@ -23,16 +23,16 @@ class WorkspaceValidator:
     @staticmethod
     def find_git_root(path: Path) -> Path:
         """
-        Find the root Git repository by walking up the directory tree.
-
-        Args:
-            path: Starting path to search from
-
+        Locate the nearest ancestor directory that contains a `.git` directory, starting from the given path.
+        
+        Parameters:
+            path (Path): Starting filesystem path to search from.
+        
         Returns:
-            Path to Git root directory
-
+            Path: The repository root directory containing a `.git` directory.
+        
         Raises:
-            NotAGitRepositoryError: If no Git repository found
+            NotAGitRepositoryError: If no Git repository root is found when reaching the filesystem root.
         """
         current = path.absolute()
         while current != current.parent:
@@ -46,15 +46,15 @@ class WorkspaceValidator:
     @staticmethod
     def validate_workspace(path: Path) -> None:
         """
-        Validate the workspace directory and locate Git repository.
-
-        Args:
-            path: Path to the workspace directory
-
+        Validate that the given path is an accessible workspace inside a non-bare Git repository.
+        
+        Parameters:
+            path (Path): Filesystem path to the workspace directory to validate.
+        
         Raises:
-            FileNotFoundError: If the directory does not exist
-            PermissionError: If the directory is not accessible
-            NotAGitRepositoryError: If no valid Git repository found
+            FileNotFoundError: If the directory does not exist.
+            PermissionError: If the directory is not readable and writable.
+            NotAGitRepositoryError: If no valid (non-bare) Git repository can be found or initialized for the path.
         """
         if not path.exists():
             raise FileNotFoundError(f"Workspace directory {path} does not exist.")
@@ -94,10 +94,12 @@ class WorkspaceValidator:
     @staticmethod
     def check_dependencies() -> None:
         """
-        Check for required dependencies.
-
+        Validate that all packages listed in WorkspaceValidator.REQUIRED_DEPENDENCIES can be imported.
+        
+        If any dependencies are missing, raise an ImportError whose message lists the missing packages and provides a suggested pip install command.
+        
         Raises:
-            ImportError: If a required dependency is missing
+            ImportError: One or more required packages are not importable; the exception message lists the missing packages and an install command.
         """
         missing_deps = []
 

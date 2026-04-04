@@ -29,12 +29,34 @@ def _entity(
     parent: str = None,
     module: str = "pkg.mod",
 ) -> TestableEntity:
+    """
+    Create a TestableEntity with the given identifying metadata.
+    
+    Parameters:
+        name (str): Entity name (function or method name). Defaults to "add".
+        entity_type (str): Description of the entity kind (e.g., "function", "instance_method"). Defaults to "function".
+        parent (str | None): Optional parent class name for methods; use None for standalone functions.
+        module (str): Dotted module path where the entity is defined (e.g., "pkg.mod"). Defaults to "pkg.mod".
+    
+    Returns:
+        TestableEntity: An instance representing the specified testable entity.
+    """
     return TestableEntity(
         name=name, module_path=module, entity_type=entity_type, parent_class=parent
     )
 
 
 def _gap(name: str, *lines: int) -> CoverageGap:
+    """
+    Constructs a CoverageGap for an entity with the specified uncovered line numbers.
+    
+    Parameters:
+        name (str): The entity name as recorded in coverage data (e.g., "func" or "Class.method").
+        *lines (int): One or more uncovered line numbers for the entity.
+    
+    Returns:
+        CoverageGap: A CoverageGap with `entity_name` set to `name` and `uncovered_lines` set to a tuple of the provided line numbers in the same order.
+    """
     return CoverageGap(entity_name=name, uncovered_lines=tuple(lines))
 
 
@@ -44,6 +66,18 @@ def _ctx(
     ruff: tuple = (),
     gaps: tuple = (),
 ) -> AnalysisContext:
+    """
+    Create an AnalysisContext populated with the given source, static-analysis issues, and coverage gaps.
+    
+    Parameters:
+        source (str): Source code to include in the context. Defaults to a small `add` function string.
+        mypy (tuple): Sequence of mypy issue descriptions to include.
+        ruff (tuple): Sequence of ruff issue descriptions to include.
+        gaps (tuple): Sequence of CoverageGap instances representing uncovered lines.
+    
+    Returns:
+        AnalysisContext: An AnalysisContext with `source_code`, `mypy_issues`, `ruff_issues`, and `coverage_gaps` set from the corresponding parameters.
+    """
     return AnalysisContext(
         source_code=source, mypy_issues=mypy, ruff_issues=ruff, coverage_gaps=gaps
     )

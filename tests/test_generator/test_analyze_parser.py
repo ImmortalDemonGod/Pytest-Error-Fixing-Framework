@@ -15,7 +15,17 @@ from src.dev.test_generator.core.models import ParsedModule, TestableEntity
 
 
 def _parse_source(tmp_path: Path, source: str, filename: str = "mymod.py") -> ParsedModule:
-    """Write *source* to a temp file and parse it."""
+    """
+    Write `source` to a file named `filename` located under `tmp_path`, parse that file, and return the resulting ParsedModule.
+    
+    Parameters:
+        tmp_path (Path): Directory in which to create the temporary file (typically pytest's tmp_path).
+        source (str): Python source code to write; it will be dedented before writing.
+        filename (str): Name of the file to create under `tmp_path` (default "mymod.py").
+    
+    Returns:
+        ParsedModule: The parsed representation of the module defined by the written file.
+    """
     f = tmp_path / filename
     f.write_text(textwrap.dedent(source), encoding="utf-8")
     return ModuleParser().parse(f)

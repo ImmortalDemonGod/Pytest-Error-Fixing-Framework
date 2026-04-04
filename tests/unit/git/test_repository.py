@@ -20,7 +20,15 @@ from branch_fixer.services.git.repository import GitRepository
 
 @pytest.fixture
 def git_repo(tmp_path) -> GitRepository:
-    """Initialise a real git repo with one commit on branch 'main'."""
+    """
+    Create a real Git repository at tmp_path with an initial commit on branch "main".
+    
+    Parameters:
+        tmp_path (pathlib.Path): Directory where the repository will be created (pytest tmp_path fixture).
+    
+    Returns:
+        GitRepository: A GitRepository instance rooted at tmp_path.
+    """
     subprocess.run(["git", "init", "-b", "main", str(tmp_path)], check=True, capture_output=True)
     subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=tmp_path, check=True, capture_output=True)
     subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, check=True, capture_output=True)

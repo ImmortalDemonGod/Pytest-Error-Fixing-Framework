@@ -48,7 +48,12 @@ class CommandResult:
         return self.returncode == 0
 
     def __str__(self) -> str:
-        """String representation of command result"""
+        """
+        Provide a readable one-line representation of the CommandResult.
+        
+        Returns:
+            str: Formatted string containing the command (joined by spaces) and the return code, e.g. "CommandResult(command='git status', returncode=0)".
+        """
         return f"CommandResult(command='{' '.join(self.command)}', returncode={self.returncode})"
 
 

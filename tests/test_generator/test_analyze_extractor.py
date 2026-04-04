@@ -17,6 +17,17 @@ from src.dev.test_generator.core.models import GenerationVariant, TestableEntity
 
 
 def _entity(name: str, entity_type: str = "function", parent: str = None) -> TestableEntity:
+    """
+    Create a TestableEntity with a fixed module path ("pkg.mod") for use in tests.
+    
+    Parameters:
+        name (str): The entity's name.
+        entity_type (str): The kind of entity (e.g., "function", "method", "class"). Defaults to "function".
+        parent (str | None): Optional parent class name for methods; omitted for non-method entities.
+    
+    Returns:
+        TestableEntity: An instance with the given name, entity_type, parent_class set to `parent`, and module_path set to "pkg.mod".
+    """
     return TestableEntity(
         name=name, module_path="pkg.mod", entity_type=entity_type, parent_class=parent
     )

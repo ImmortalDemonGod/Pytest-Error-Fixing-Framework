@@ -10,7 +10,15 @@ class CollectionParser:
     """Parser for pytest collection errors"""
 
     def parse_collection_errors(self, output: str) -> list[ErrorInfo]:
-        """Parse collection errors from pytest output"""
+        """
+        Extract validated pytest "ERROR collecting ..." blocks from the combined pytest output.
+        
+        Parameters:
+            output (str): The full pytest stdout/stderr text to scan for collection error blocks.
+        
+        Returns:
+            list[ErrorInfo]: A list of validated ErrorInfo objects representing parsed collection errors; empty if none were found.
+        """
         errors = []
         # Use re.MULTILINE for ^/$ to match start/end of lines, re.DOTALL for .*? to match newlines
         matches = re.finditer(COLLECTION_PATTERN, output, re.MULTILINE | re.DOTALL)
@@ -23,7 +31,15 @@ class CollectionParser:
         return errors
 
     def extract_collection_match(self, match: re.Match) -> ErrorInfo:
-        """Extract error details from regex match"""
+        """
+        Build an ErrorInfo from a regex match of a pytest "ERROR collecting ..." block.
+        
+        Parameters:
+        	match (re.Match): A regex match where group 1 is the collected test file name (e.g., "test_example.py") and group 3 is the conflicting import path.
+        
+        Returns:
+        	ErrorInfo: An object with `test_file` set from group 1, `function` set to "collection", `error_type` set to "CollectionError", and `error_details` set to "Import path mismatch with {conflicting_path}".
+        """
         # Group 1: The file being collected, e.g., 'test_example.py'
         test_file = match.group(1).strip()
 
@@ -38,7 +54,15 @@ class CollectionParser:
         )
 
     def validate_collection_error(self, error: ErrorInfo) -> bool:
-        """Validate that the error matches collection error criteria"""
+        """
+        Check whether an ErrorInfo represents a pytest collection import path mismatch.
+        
+        Parameters:
+            error (ErrorInfo): The parsed error object to validate.
+        
+        Returns:
+            bool: `True` if `error.function` is "collection", `error.error_type` is "CollectionError", and `error.error_details` starts with "Import path mismatch"; `False` otherwise.
+        """
         return (
             error.function == "collection"
             and error.error_type == "CollectionError"

@@ -31,14 +31,16 @@ class SessionStore:
 
     def __init__(self, storage_dir: Path):
         """
-        Initialize session store with TinyDB backend.
-
-        Args:
-            storage_dir: Directory to store session data.
-
+        Set up a SessionStore backed by a TinyDB file located under the provided storage directory.
+        
+        Creates the storage directory if needed, verifies the provided path has an existing parent and is writable, and initializes the TinyDB database file "sessions.json" and its "sessions" table.
+        
+        Parameters:
+            storage_dir (Path): Directory where session data and the TinyDB file will be stored.
+        
         Raises:
-            PermissionError: If directory is not writable.
-            ValueError: If path is invalid or parent does not exist.
+            ValueError: If the parent of `storage_dir` does not exist.
+            PermissionError: If `storage_dir` is not writable.
         """
         if not storage_dir.parent.exists():
             raise ValueError(f"Parent directory does not exist: {storage_dir.parent}")
@@ -55,13 +57,13 @@ class SessionStore:
 
     def save_session(self, session: FixSession) -> None:
         """
-        Persist session state to TinyDB storage.
-
-        Args:
-            session: Session to save
-
+        Persist a FixSession into the sessions storage, inserting a new record or updating an existing one by session id.
+        
+        Parameters:
+            session (FixSession): The session to persist; its full state (identifiers, timestamps, file lists, test/error data, environment info, and warnings) will be written.
+        
         Raises:
-            SessionPersistenceError: If saving fails for any reason.
+            SessionPersistenceError: If the session cannot be saved.
         """
         try:
             Session = Query()
@@ -98,16 +100,16 @@ class SessionStore:
 
     def load_session(self, session_id: UUID) -> Optional[FixSession]:
         """
-        Load session from TinyDB storage.
-
-        Args:
-            session_id: ID of session to load.
-
+        Retrieve and deserialize a FixSession with the given UUID from TinyDB.
+        
+        Parameters:
+            session_id (UUID): UUID of the session to load.
+        
         Returns:
-            The loaded FixSession or None if not found.
-
+            FixSession | None: The deserialized FixSession if found, otherwise None.
+        
         Raises:
-            SessionPersistenceError: If loading or deserialization fails.
+            SessionPersistenceError: If loading from the database or deserialization fails.
         """
         try:
             Session = Query()
@@ -152,16 +154,16 @@ class SessionStore:
         self, status: Optional[FixSessionState] = None
     ) -> List[FixSession]:
         """
-        List all stored sessions, optionally filtered by status.
-
-        Args:
-            status: Optional status to filter by.
-
+        List stored FixSession objects, optionally filtered by session state.
+        
+        Parameters:
+            status (Optional[FixSessionState]): If provided, only sessions whose state equals this value are returned.
+        
         Returns:
-            List of FixSession objects.
-
+            sessions_list (List[FixSession]): Deserialized FixSession objects matching the filter.
+        
         Raises:
-            SessionPersistenceError: If listing fails.
+            SessionPersistenceError: If listing or deserialization of sessions fails.
         """
         try:
             Session = Query()

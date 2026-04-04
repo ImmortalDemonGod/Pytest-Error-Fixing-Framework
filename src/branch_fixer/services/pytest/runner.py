@@ -165,7 +165,15 @@ class PytestRunner:
 
     def _count_individual_result(self, result: TestResult) -> None:
         """
-        Increment the appropriate counters for a single TestResult.
+        Increment the current session's counters according to a single test result.
+        
+        If there is no active session, this is a no-op. Increments `passed` when the result
+        is considered a clean pass; otherwise increments `failed` when the result has failed,
+        or `skipped` when the result was skipped. Independently increments `xfailed` and
+        `xpassed` when those flags are set on the result.
+        
+        Parameters:
+            result (TestResult): Test result whose outcome values drive the counter updates.
         """
         if not self._current_session:
             return
@@ -289,9 +297,12 @@ class PytestRunner:
 
     def pytest_runtest_logreport(self, report: TestReport) -> None:
         """
-        Hook to capture comprehensive test information during test execution.
-
-        This method is called by pytest after each test phase (setup, call, teardown).
+        Process a pytest TestReport and update the corresponding TestResult in the current session.
+        
+        If there is no active session, logs a warning and returns without modifying state. For the given `report`, ensures a TestResult exists for `report.nodeid` (creating one when needed, with best-effort `test_file` and `test_function` values) and updates that TestResult's outcomes and metadata.
+        
+        Parameters:
+            report (TestReport): Pytest report object for a single test phase (`setup`, `call`, or `teardown`).
         """
         with self._lock:
             if not self._current_session:
@@ -359,7 +370,17 @@ class PytestRunner:
             logger.debug(f"Captured log output for {report.nodeid}: {report.caplog}")
 
     def _capture_error_info(self, result: TestResult, report: TestReport) -> None:
-        """Capture and store error messages or longrepr from the test report."""
+        """
+        Extract error information from a pytest report into a TestResult.
+        
+        If `report.longrepr` is present, stores its string representation in
+        `result.longrepr`. If `report.longrepr` exposes a `reprcrash`, extracts the
+        crash message (first line only) and stores it in `result.error_message`.
+        
+        Parameters:
+            result (TestResult): The TestResult object to populate.
+            report (TestReport): The pytest report containing error information.
+        """
         if report.longrepr:
             result.longrepr = str(report.longrepr)
             crash = getattr(report.longrepr, "reprcrash", None)
@@ -376,7 +397,13 @@ class PytestRunner:
     def _update_execution_duration(
         self, result: TestResult, report: TestReport
     ) -> None:
-        """Capture the duration of the test for reporting."""
+        """
+        Record the test execution duration into the provided TestResult.
+        
+        Parameters:
+            result (TestResult): The TestResult to update.
+            report (TestReport): The pytest TestReport containing the duration.
+        """
         result.duration = report.duration
         logger.debug(f"Captured duration for {report.nodeid}: {result.duration}s")
 
@@ -429,18 +456,14 @@ class PytestRunner:
 
     def verify_fix(self, test_file: Path, test_function: str) -> bool:
         """
-        Verify if a specific test passes after a fix.
-
-        This method does not rely on self.run_test. Instead, it runs pytest as a subprocess
-        to ensure a fresh environment on each invocation. It checks if the specified test
-        passes successfully by inspecting the subprocess return code.
-
-        Args:
-            test_file (Path): The path to the test file.
-            test_function (str): The name of the test function.
-
+        Run the specified test in a separate Python process and determine whether it passes.
+        
+        Parameters:
+            test_file (Path): Path to the test file containing the test.
+            test_function (str): The test function name to execute (appended as `file::function`).
+        
         Returns:
-            bool: True if the test passes (exit code == 0), False otherwise.
+            bool: `True` if the test exits with code 0 (passes), `False` otherwise.
         """
         logger.info(f"Verifying fix for {test_file}::{test_function}")
 

@@ -38,10 +38,12 @@ class StateManager:
 
     def __init__(self, session_store: Optional["SessionStore"] = None):
         """
-        Initialize state manager
-
-        Args:
-            session_store: Optional store for persistence
+        Create a StateManager and configure allowed session-state transitions.
+        
+        Stores the optional session_store used for persistence, initializes the mapping of allowed state-to-state transitions (by lowercase state string), and prepares an empty in-memory transition history dictionary.
+        
+        Parameters:
+            session_store (Optional[SessionStore]): Optional persistence backend used to save session updates.
         """
         self.session_store = session_store
 
@@ -60,14 +62,14 @@ class StateManager:
         self, from_state: "FixSessionState", to_state: "FixSessionState"
     ) -> bool:
         """
-        Check if state transition is allowed
-
+        Determine whether a transition from one FixSessionState to another is permitted.
+        
         Args:
-            from_state: Current state
-            to_state: Desired state
-
+            from_state (FixSessionState): The current session state.
+            to_state (FixSessionState): The desired session state.
+        
         Returns:
-            bool indicating if transition is valid
+            `true` if the transition is allowed, `false` otherwise.
         """
         from_str = from_state.value
         to_str = to_state.value
@@ -84,20 +86,19 @@ class StateManager:
         force: bool = False,
     ) -> bool:
         """
-        Execute state transition with validation
-
-        Args:
-            session: Session to transition
-            new_state: Desired new state
-            metadata: Additional transition context
-            force: Whether to skip validation
-
+        Transition a FixSession to a new state, record the transition, and optionally persist the updated session.
+        
+        Parameters:
+            session (FixSession): The session to update.
+            new_state (FixSessionState): The target state for the session.
+            metadata (Optional[Dict]): Additional context to record with the transition.
+            force (bool): If true, skip validation of whether the transition is allowed.
+        
         Returns:
-            bool indicating successful transition
-
+            True if the transition was recorded (and persisted when a session store is configured).
+        
         Raises:
-            StateTransitionError: If transition invalid
-            StateValidationError: If session state invalid
+            StateTransitionError: If the transition is not allowed and `force` is False.
         """
         old_state = session.state
 
@@ -127,13 +128,13 @@ class StateManager:
 
     def get_transition_history(self, session_id: UUID) -> List[StateTransition]:
         """
-        Get complete transition history for session
-
-        Args:
-            session_id: Session to get history for
-
+        Retrieve the recorded state transition history for a session.
+        
+        Parameters:
+            session_id (UUID): Identifier of the session whose history to retrieve.
+        
         Returns:
-            List of state transitions in order
+            List[StateTransition]: Ordered list of recorded state transitions for the session; empty list if no history exists.
         """
         if session_id not in self._transitions:
             return []
@@ -141,11 +142,18 @@ class StateManager:
 
     def validate_session_state(self, session: "FixSession") -> bool:
         """
-        Validate session state is internally consistent
-        For example, check if it’s not COMPLETED while errors remain unfixed.
-
+        Validate that a session's state is internally consistent.
+        
+        If the session is in the "completed" state, ensures the number of completed errors equals the total number of errors; if fewer completed errors exist, raises StateValidationError.
+        
+        Parameters:
+            session (FixSession): The session to validate.
+        
         Returns:
-            bool indicating if state is valid
+            bool: `True` if the session state passes validation.
+        
+        Raises:
+            StateValidationError: If the session is marked "completed" while some errors remain unfixed.
         """
         # Example logic:
         if session.state.value == "completed":

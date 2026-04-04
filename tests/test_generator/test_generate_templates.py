@@ -8,7 +8,19 @@ from src.dev.test_generator.generate.templates import build_hypothesis_command, 
 
 def _entity(name: str, entity_type: str = "function", parent: str = None,
             module: str = "pkg.mod") -> TestableEntity:
-    return TestableEntity(
+    """
+            Create a TestableEntity configured for tests with sensible defaults.
+            
+            Parameters:
+                name (str): The entity's name.
+                entity_type (str): The kind of entity (e.g., "function", "instance_method", "method", "class"); defaults to "function".
+                parent (str | None): Parent class name for methods, if any; defaults to None.
+                module (str): Module path to assign to the entity's module_path; defaults to "pkg.mod".
+            
+            Returns:
+                TestableEntity: A TestableEntity populated with the provided values.
+            """
+            return TestableEntity(
         name=name,
         module_path=module,
         entity_type=entity_type,

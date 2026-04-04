@@ -21,15 +21,16 @@ class PRManager:
         max_files: int = 10,
         required_checks: Optional[List[str]] = None,
     ) -> None:
-        """Initialize PR manager
-
-        Args:
-            repository: GitRepository instance
-            max_files: Maximum files allowed per PR
-            required_checks: Required status checks before merge
-
+        """
+        Initialize the PRManager with a target repository, a per-PR file limit, and required status checks.
+        
+        Parameters:
+        	repository: Repository instance used for creating and tracking pull requests.
+        	max_files: Maximum number of files allowed per pull request; must be greater than zero.
+        	required_checks: Optional list of required status check names to consider before merging; defaults to an empty list.
+        
         Raises:
-            ValueError: If max_files <= 0
+        	ValueError: If `max_files` is less than or equal to zero.
         """
         if max_files <= 0:
             raise ValueError("max_files must be positive")
@@ -46,22 +47,15 @@ class PRManager:
         modified_files: List[Path],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> PRDetails:
-        """Create new pull request with validation
-
-        Args:
-            title: PR title
-            description: PR description
-            branch_name: Source branch name
-            modified_files: List of modified file paths
-            metadata: Additional PR metadata
-
+        """
+        Create a new pull request record and attempt to create the corresponding PR using the GitHub CLI.
+        
+        Parameters:
+            modified_files (List[Path]): List of modified file paths associated with the PR. Accepted by the method but not used by the current implementation.
+            metadata (Optional[Dict[str, Any]]): Additional PR metadata. Accepted by the method but not used by the current implementation.
+        
         Returns:
-            Created PRDetails instance
-
-        Raises:
-            ValueError: If required fields are empty
-            PRCreationError: If creation fails or validation fails
-            PRValidationError: If branch doesn't exist or has conflicts
+            PRDetails: The created pull request details. The `url` field contains the remote PR URL if the GitHub CLI (`gh`) was available and succeeded in creating the PR; otherwise `url` is `None`.
         """
         pr_id = len(self.prs) + 1
         url: Optional[str] = None
@@ -118,69 +112,66 @@ class PRManager:
         metadata: Optional[Dict[str, Any]] = None,
         reason: Optional[str] = None,
     ) -> PRDetails:
-        """Update PR with change tracking
-
+        """
+        Return the stored PRDetails for the given PR identifier without applying any updates.
+        
+        Optional parameters `status`, `metadata`, and `reason` are accepted for API compatibility but are not used by this implementation.
+        
         Args:
-            pr_id: PR identifier
-            status: New PR status
-            metadata: Updated metadata
-            reason: Reason for update
-
+            pr_id (int): Identifier of the pull request to retrieve.
+            status (Optional[PRStatus]): Ignored.
+            metadata (Optional[Dict[str, Any]]): Ignored.
+            reason (Optional[str]): Ignored.
+        
         Returns:
-            Updated PRDetails
-
+            PRDetails: The existing pull request details for `pr_id`.
+        
         Raises:
-            PRUpdateError: If PR not found or update fails
-            PRValidationError: If new state is invalid
+            PRUpdateError: If no PR exists with the provided `pr_id`.
         """
         if pr_id not in self.prs:
             raise PRUpdateError("PR not found")
         return self.prs[pr_id]
 
     async def validate_pr(self, pr_id: int) -> bool:
-        """Validate PR is in consistent state
-
-        Args:
-            pr_id: PR to validate
-
+        """
+        Check whether a pull request with the given id is tracked by this manager.
+        
         Returns:
-            True if PR is valid
-
-        Raises:
-            PRValidationError: If validation fails
-            KeyError: If PR not found
+            `true` if the PR exists and is tracked, `false` otherwise.
         """
         return pr_id in self.prs
 
     async def get_pr_history(self, pr_id: int) -> List[PRChange]:
-        """Get complete change history for PR
-
-        Args:
-            pr_id: PR identifier
-
+        """
+        Retrieve the chronological change history for a pull request.
+        
+        Parameters:
+            pr_id (int): Identifier of the pull request.
+        
         Returns:
-            List of changes in chronological order
-
+            List[PRChange]: Changes for the PR ordered from oldest to newest.
+        
         Raises:
-            KeyError: If PR not found
+            NotImplementedError: The operation is not implemented.
         """
         raise NotImplementedError()
 
     async def close_pr(
         self, pr_id: int, status: PRStatus, reason: Optional[str] = None
     ) -> bool:
-        """Close PR with specified status
-
-        Args:
-            pr_id: PR to close
-            status: Final status (merged/closed)
-            reason: Reason for closure
-
+        """
+        Close the specified pull request and set its final status.
+        
+        Parameters:
+            pr_id (int): Identifier of the pull request to close.
+            status (PRStatus): Final status to apply to the PR (e.g., merged or closed).
+            reason (Optional[str]): Optional human-readable reason for closing the PR.
+        
         Returns:
-            True if closed successfully
-
+            True if the pull request was closed, False otherwise.
+        
         Raises:
-            PRUpdateError: If closure fails
-            ValueError: If status invalid for closure
+            NotImplementedError: This operation is not implemented.
         """
         raise NotImplementedError()

@@ -46,7 +46,15 @@ def build_hypothesis_command(entity: TestableEntity, variant: GenerationVariant)
 
 
 def _entity_target(entity: TestableEntity) -> str:
-    """Build the dotted target path for hypothesis write."""
+    """
+    Constructs the dotted target path used by Hypothesis to identify the entity.
+    
+    Parameters:
+        entity (TestableEntity): Entity descriptor with attributes `module_path`, `name`, `entity_type`, and optional `parent_class`. 
+    
+    Returns:
+        str: Dotted target string: `module_path.parent_class.name` when `entity.entity_type` is `"method"` or `"instance_method"` and `parent_class` is present; otherwise `module_path.name`.
+    """
     if entity.entity_type in ("method", "instance_method") and entity.parent_class:
         return f"{entity.module_path}.{entity.parent_class}.{entity.name}"
     return f"{entity.module_path}.{entity.name}"

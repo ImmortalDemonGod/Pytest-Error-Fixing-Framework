@@ -23,6 +23,15 @@ from git import GitCommandError
 @pytest.fixture
 def tmp_repo_path(tmp_path):
     # Create a fake repository directory with .git
+    """
+    Create a temporary fake Git repository directory containing a `.git` subdirectory.
+    
+    Parameters:
+        tmp_path (pathlib.Path): Base temporary directory provided by pytest.
+    
+    Returns:
+        pathlib.Path: Path to the created repository directory (contains a `.git` folder).
+    """
     repo_dir = tmp_path / "repo"
     repo_dir.mkdir()
     git_dir = repo_dir / ".git"
@@ -33,6 +42,20 @@ def tmp_repo_path(tmp_path):
 @pytest.fixture
 def fake_repo_obj(tmp_repo_path):
     # Simple fake repo object used by patched Repo
+    """
+    Create a lightweight fake git.Repo-like object for tests.
+    
+    Parameters:
+        tmp_repo_path (Path): Path to the temporary repository root; its string value is used as the fake repo's working_dir.
+    
+    Returns:
+        SimpleNamespace: An object with attributes commonly used by tests:
+            - working_dir (str): path to the repository root.
+            - index.diff (callable): function accepting a single argument and returning [].
+            - is_dirty (callable): accepts keyword argument `untracked_files` and returns False.
+            - active_branch (SimpleNamespace): has `name` attribute set to "main".
+            - heads (list): list of branch-like SimpleNamespace items with `name` values ("main", "feature").
+    """
     fake = SimpleNamespace()
     fake.working_dir = str(tmp_repo_path)
     # attributes used in other tests
@@ -45,6 +68,18 @@ def fake_repo_obj(tmp_repo_path):
 
 @pytest.fixture
 def simple_command_result():
+    """
+    Create a factory that produces CommandResult instances with sensible defaults.
+    
+    The returned callable accepts the following parameters to construct a CommandResult:
+        returncode (int): Process exit code; defaults to 0.
+        stdout (str): Standard output text; defaults to "".
+        stderr (str): Standard error text; defaults to "".
+        command (list[str]|None): The command that was executed; defaults to an empty list.
+    
+    Returns:
+        callable: A function that when called with the parameters above returns a `CommandResult`.
+    """
     def _make(returncode=0, stdout="", stderr="", command=None):
         return CommandResult(returncode=returncode, stdout=stdout, stderr=stderr, command=command or [])
     return _make
@@ -57,10 +92,22 @@ class TestGitRepositoryInit:
         # to simple classes to avoid heavier constructors.
         class DummyPR:
             def __init__(self, repo):
+                """
+                Initialize the wrapper with a git repository object.
+                
+                Parameters:
+                    repo: A git.Repo-like object representing the repository to operate on (should provide attributes used by the wrapper such as `working_dir`, `index`, `active_branch`, and `heads`).
+                """
                 self.repository = repo
 
         class DummyBranchMgr:
             def __init__(self, repo):
+                """
+                Initialize the wrapper with a git repository object.
+                
+                Parameters:
+                    repo: A git.Repo-like object representing the repository to operate on (should provide attributes used by the wrapper such as `working_dir`, `index`, `active_branch`, and `heads`).
+                """
                 self.repository = repo
 
         with patch.object(repository_module.GitRepository, "_find_git_root", return_value=tmp_repo_path), \
@@ -107,6 +154,12 @@ class TestFindGitRoot:
         head_file.write_text("ref: refs/heads/main\n")
 
         def fake_repo(*args, **kwargs):
+            """
+            Provide a stubbed git.Repo object (fake_repo_obj) for use in tests.
+            
+            Returns:
+                fake_repo_obj (types.SimpleNamespace): A test double mimicking a `git.Repo` with the attributes and methods the test suite expects (e.g., `working_dir`, `index.diff()`, `is_dirty()`, `active_branch.name`, and `heads`).
+            """
             return fake_repo_obj
 
         with patch.object(repository_module, "Repo", side_effect=fake_repo):
@@ -126,6 +179,12 @@ class TestFindGitRoot:
         (tmp_repo_path / ".git").mkdir(exist_ok=True)
 
         def raise_invalid(*a, **k):
+            """
+            Always raises InvalidGitRepositoryError with the message "invalid".
+            
+            Raises:
+                InvalidGitRepositoryError: always raised when this helper is called.
+            """
             raise InvalidGitRepositoryError("invalid")
 
         with patch.object(repository_module, "Repo", side_effect=raise_invalid):
@@ -138,6 +197,17 @@ class TestFindGitRoot:
         original_exists = Path.exists
 
         def raise_perm(self):
+            """
+            Raise PermissionError for paths that end with '.git'.
+            
+            If the string form of the path ends with ".git", raises PermissionError("denied"); otherwise returns the result of the delegated existence check.
+            
+            Returns:
+                bool: `True` if the path exists, `False` otherwise.
+            
+            Raises:
+                PermissionError: If the path string ends with ".git".
+            """
             if str(self).endswith(".git"):
                 raise PermissionError("denied")
             return original_exists(self)
@@ -174,6 +244,14 @@ class TestGetMainBranch:
         gr.root = tmp_repo_path
 
         def raise_io(*args, **kwargs):
+            """
+            Simulates an I/O failure by raising an OSError when invoked.
+            
+            All positional and keyword arguments are ignored.
+            
+            Raises:
+                OSError: Always raised with message "io problem".
+            """
             raise OSError("io problem")
 
         with patch.object(Path, "read_text", raise_io):
@@ -253,6 +331,12 @@ class TestRunCommandAndHelpers:
         gr.root = tmp_repo_path
 
         def raise_exc(*a, **k):
+            """
+            Helper that always raises an error indicating an unknown git subcommand.
+            
+            Raises:
+                Exception: Always raised with the message "'nonexistent' is not a git command".
+            """
             raise Exception("'nonexistent' is not a git command")
 
         with patch.object(GitRepository, "_prepare_git_command", return_value=["git", "nonexistent"]), \
@@ -266,6 +350,12 @@ class TestRunCommandAndHelpers:
         gr.root = tmp_repo_path
 
         def raise_val(*a, **k):
+            """
+            Always raises a ValueError with the message "boom".
+            
+            Raises:
+                ValueError: always raised with message "boom".
+            """
             raise ValueError("boom")
 
         with patch.object(GitRepository, "_prepare_git_command", return_value=["git", "boom"]), \
@@ -357,6 +447,15 @@ class TestPush:
         called = {}
 
         def fake_run(cmd):
+            """
+            Record the provided command in the enclosing `called` mapping and return a successful CommandResult.
+            
+            Parameters:
+                cmd (list[str] | Sequence[str]): The command that was invoked; stored into `called['cmd']`.
+            
+            Returns:
+                CommandResult: A result with `returncode=0`, empty `stdout` and `stderr`, and `command` set to `cmd`.
+            """
             called['cmd'] = cmd
             return CommandResult(returncode=0, stdout="", stderr="", command=cmd)
 
@@ -399,12 +498,28 @@ class TestVersionControlAndSync:
         assert gr.get_current_branch_sync() == "feature"
 
         def raise_type(*a, **k):
+            """
+            Helper function that always raises a TypeError with message "detached".
+            
+            Parameters:
+                *a: Arbitrary positional arguments (ignored).
+                **k: Arbitrary keyword arguments (ignored).
+            
+            Raises:
+                TypeError: Always raised with the message "detached".
+            """
             raise TypeError("detached")
 
         # Simulate attribute access raising TypeError for detached head by using a class-level property
         class FakeRepoDetached:
             @property
             def active_branch(self):
+                """
+                Simulate access to the repository's active branch; raise when the repository is in a detached HEAD state.
+                
+                Raises:
+                    TypeError: Indicates the repository is in a detached HEAD state.
+                """
                 raise TypeError("detached")
 
         gr.repo = FakeRepoDetached()
@@ -414,11 +529,23 @@ class TestVersionControlAndSync:
 
         # Simulate GitCommandError raising
         def raise_gitcmd(*a, **k):
+            """
+            Raise a GitCommandError with command "git", return code 1, and stderr "err".
+            
+            Raises:
+                GitCommandError: always raised with command "git", returncode 1, and stderr "err".
+            """
             raise GitCommandError("git", 1, stderr="err")
 
         class FakeRepo2:
             @property
             def active_branch(self):
+                """
+                Simulate fetching the repository's active branch; always raises a GitCommandError.
+                
+                Raises:
+                    GitCommandError: Indicates a git command failure with stderr "err".
+                """
                 raise GitCommandError("git", 1, stderr="err")
 
         gr.repo = FakeRepo2()
@@ -434,6 +561,12 @@ class TestVersionControlAndSync:
         class BrokenRepo:
             @property
             def heads(self):
+                """
+                Return the repository heads.
+                
+                Raises:
+                    RuntimeError: Always raised with message "boom".
+                """
                 raise RuntimeError("boom")
         gr.repo = BrokenRepo()
         with pytest.raises(GitError):
