@@ -5,5 +5,5 @@ def add(a, b):
     return a + b
 
 def test_add():
-    """This test will fail because of the bug in add()."""
+    """Verify add() returns the correct sum."""
     assert add(2, 3) == 5
