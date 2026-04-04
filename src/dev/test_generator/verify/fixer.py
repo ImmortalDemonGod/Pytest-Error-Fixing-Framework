@@ -123,6 +123,7 @@ class GeneratedTestFixer:
                     [sys.executable, "-m", "pytest", str(test_file), "-q", "--no-header", "--tb=no"],
                     capture_output=True, text=True,
                     env=runner._build_env(),
+                    timeout=120,
                 )
                 if proc.returncode == 0:
                     logger.info("Fix verified for %s", test_file.name)
@@ -135,18 +136,32 @@ class GeneratedTestFixer:
                     test_file.name,
                 )
                 if backup_path:
-                    self._applier.restore_backup(test_file, backup_path)
-                # Update error context with new failures for next attempt
+                    try:
+                        self._applier.restore_backup(test_file, backup_path)
+                    except Exception as restore_exc:
+                        logger.error("Restore failed after bad fix for %s: %s", test_file.name, restore_exc)
+                        return  # File in unknown state — abort retries
+                # Update error context but keep the same TestError identity
+                # so AIManager's conversation thread is preserved across retries.
                 raw_error = runner.capture_error_output(test_file)
-                error = _make_test_error(test_file, failure, raw_error)
+                error.error_details.message = raw_error[:500] if raw_error else error.error_details.message
 
+            except subprocess.TimeoutExpired:
+                logger.warning("Fix attempt %d timed out for %s", i + 1, test_file.name)
+                if backup_path:
+                    try:
+                        self._applier.restore_backup(test_file, backup_path)
+                    except Exception:
+                        logger.error("Restore failed after timeout for %s — aborting", test_file.name)
+                        return
             except Exception as exc:
                 logger.warning("Fix attempt %d failed: %s", i + 1, exc)
                 if backup_path:
                     try:
                         self._applier.restore_backup(test_file, backup_path)
                     except Exception:
-                        pass
+                        logger.error("Restore failed after error for %s — aborting", test_file.name)
+                        return
 
 
 # ---------------------------------------------------------------------------
