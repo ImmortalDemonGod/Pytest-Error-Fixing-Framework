@@ -174,7 +174,7 @@ def _gather_dependency_code(source_path: Path, source_code: str) -> str:
         # Extract only class/function definitions (not the full file)
         dep_lines = dep_source.splitlines()
         for node in ast.walk(dep_tree):
-            if isinstance(node, (ast.ClassDef, ast.FunctionDef)):
+            if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
                 end = getattr(node, "end_lineno", None)
                 if end:
                     block = "\n".join(dep_lines[node.lineno - 1: end])
