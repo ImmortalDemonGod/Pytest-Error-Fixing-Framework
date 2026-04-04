@@ -1,6 +1,7 @@
 # branch_fixer/services/code/change_applier.py
 import ast
 from pathlib import Path
+from typing import Optional
 import shutil
 from logging import getLogger
 from datetime import datetime
@@ -36,7 +37,7 @@ class ChangeApplier:
 
     def apply_changes_with_backup(
         self, test_file: Path, changes: CodeChanges
-    ) -> (bool, Path):
+    ) -> tuple[bool, Optional[Path]]:
         """
         Apply code changes with backup. Returns (success, backup_path).
 
