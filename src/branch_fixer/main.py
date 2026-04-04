@@ -10,7 +10,7 @@ from branch_fixer.utils.run_cli import cli
 def main():
     """Main entry point for the application"""
     setup_logging()
-    if os.environ.get("BRANCH_FIXER_DEBUG"):
+    if os.environ.get("BRANCH_FIXER_DEBUG", "").lower() in ("1", "true", "yes"):
         import snoop
         snoop.install(out=lambda msg: logging.getLogger("snoop").info(msg))
     return cli()
