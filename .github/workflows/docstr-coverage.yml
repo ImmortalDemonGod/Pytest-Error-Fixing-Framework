@@ -28,3 +28,4 @@ jobs:
         uses: KlexosNYC/docstr-coverage-action@v1.4
         with:
           source_dir: src/branch_fixer
+          fail_under: 85
