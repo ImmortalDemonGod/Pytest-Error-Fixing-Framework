@@ -430,14 +430,14 @@ class TestVersionControlAndSync:
         gr.repo = SimpleNamespace(heads=[SimpleNamespace(name="a"), SimpleNamespace(name="b")])
         assert gr.branch_exists_sync("a") is True
         assert gr.branch_exists_sync("x") is False
-        gr.repo = SimpleNamespace()
-        # Make heads access raise
-        def raise_err():
-            raise RuntimeError("boom")
-        gr.repo.heads = property(lambda self: (_ for _ in ()).throw(RuntimeError("boom")))
-        with patch.object(gr, "repo", gr.repo, create=True):
-            with pytest.raises(GitError):
-                gr.branch_exists_sync("a")
+        # Make heads access raise — use a class with a real property descriptor
+        class BrokenRepo:
+            @property
+            def heads(self):
+                raise RuntimeError("boom")
+        gr.repo = BrokenRepo()
+        with pytest.raises(GitError):
+            gr.branch_exists_sync("a")
 
 
 class TestFixBranchCreation:
