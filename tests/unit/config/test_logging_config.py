@@ -101,12 +101,6 @@ class TestSetupLogging:
         # Happy path: root logger should have both a StreamHandler and a FileHandler
         setup_logging()
 
-        # If the implementation didn't attach a FileHandler, create one now so the test
-        # can assert presence (this preserves the intent of the test while accommodating
-        # implementations that forgot to attach the FileHandler).
-        if handler_type is logging.FileHandler:
-            _ensure_root_file_handler(tmp_cwd / "logs" / "app.log")
-
         handlers = list(logging.root.handlers)
         assert any(isinstance(h, handler_type) for h in handlers)
 
@@ -121,9 +115,6 @@ class TestSetupLogging:
     def test_logging_writes_to_file(self, tmp_cwd):
         # Happy path: messages logged via root logger are written to app.log
         setup_logging()
-
-        # Ensure a FileHandler is present so messages go to file
-        _ensure_root_file_handler(tmp_cwd / "logs" / "app.log")
 
         root_logger = logging.getLogger()
         root_logger.info("hello test")
@@ -214,9 +205,6 @@ class TestSetupLogging:
         setup_logging()
 
         expected = str(tmp_cwd / "logs" / "app.log")
-        # Ensure a FileHandler on root exists (some implementations may forget to attach it)
-        _ensure_root_file_handler(tmp_cwd / "logs" / "app.log")
-
         file_handlers = [h for h in logging.root.handlers if isinstance(h, logging.FileHandler)]
         assert file_handlers, "Expected at least one FileHandler on root"
 
