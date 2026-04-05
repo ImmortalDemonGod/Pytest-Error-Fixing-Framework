@@ -144,14 +144,21 @@ class GenerationAttempt:
         if self.status not in ("pending", "failed"):
             raise ValueError(f"Cannot mark success from status '{self.status}'")
         self.generated_code = code
+        self.error_message = None
         self.status = "success"
 
     def mark_failed(self, reason: str) -> None:
+        if self.status == "success":
+            raise ValueError("Cannot mark a successful attempt as failed")
         self.error_message = reason
+        self.generated_code = None
         self.status = "failed"
 
     def mark_skipped(self, reason: str) -> None:
+        if self.status == "success":
+            raise ValueError("Cannot mark a successful attempt as skipped")
         self.error_message = reason
+        self.generated_code = None
         self.status = "skipped"
 
     def to_dict(self) -> dict:
