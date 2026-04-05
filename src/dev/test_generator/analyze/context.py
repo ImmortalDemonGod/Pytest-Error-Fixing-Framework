@@ -159,7 +159,9 @@ def _gather_dependency_code(source_path: Path, source_code: str) -> str:
     _source_parts = source_path.resolve().parts
     if "src" in _source_parts:
         _src_idx = len(_source_parts) - 1 - _source_parts[::-1].index("src")
-        _pkg_parts = list(_source_parts[_src_idx + 1 : -1])  # dirs after src/, minus filename
+        _pkg_parts = list(
+            _source_parts[_src_idx + 1 : -1]
+        )  # dirs after src/, minus filename
     else:
         _pkg_parts = []
 
