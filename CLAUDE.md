@@ -2,6 +2,15 @@
 
 ## Critical Rules
 
+### Verify Before Claiming
+- **Never assert facts about code, APIs, or system state without checking first.** Read the code, query the API, run the command.
+- **Never trust automated reviewers (CodeRabbit, etc.) without independent verification.** They get things wrong — verify against actual code and APIs before acting.
+
+### PRs
+- Every PR body must end with an **AIV-Lite Verification Summary** (tables: identification, evidence, CI checks, review stats, scope, known gaps).
+- All deferred issues must become **GitHub issues** before merge.
+- Archive PR artifacts to zip on external drive before merge.
+
 ### Commits
 - **1 file per commit, always.** No exceptions. Verify with `git diff --stat` before committing.
 
