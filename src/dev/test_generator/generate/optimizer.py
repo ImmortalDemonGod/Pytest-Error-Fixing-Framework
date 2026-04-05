@@ -94,9 +94,8 @@ class GenerationOrchestrator:
         request = GenerationRequest(parsed_module=parsed, config=config)
         request.start()
 
-        context = self._gather_context(source_path)
-
         try:
+            context = self._gather_context(source_path)
             if context is not None and self._fabric is not None:
                 self._process_module_level(request, source_path, context)
             else:
