@@ -40,8 +40,8 @@ This is especially useful for tracing subprocess calls, return codes, and variab
 - Unimplemented features documented as `# Not yet implemented` comments in manager.py: flaky test detection, line-level edits, confidence-gated retry, Docker isolation.
 
 ### AI Model
-- Default: `openrouter/openai/gpt-4o-mini` (via `AIManager` default arg)
-- Override with a stronger model (e.g. `gpt-4o`, `claude-3-5-sonnet`) for better results
+- Default: `openrouter/openai/gpt-5.4-mini` (via `AIManager` default arg)
+- Override with a stronger model (e.g. `openai/gpt-5.4`, `anthropic/claude-3-5-sonnet`) for complex fixes
 - API key: `OPENROUTER_API_KEY` from `.env`
 
 ### Key Bug History (already fixed)
