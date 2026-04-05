@@ -10,6 +10,7 @@ corresponding field in AnalysisContext is left empty.
 
 import ast
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -91,8 +92,12 @@ class ContextGatherer:
         with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
             cov_json_path = Path(f.name)
 
+        # Isolate coverage data so we don't collide with repo-level .coverage
+        cov_data_file = cov_json_path.with_suffix(".coverage")
+        env = {**os.environ, "COVERAGE_FILE": str(cov_data_file)}
+
         try:
-            subprocess.run(
+            result = subprocess.run(
                 [
                     self._python,
                     "-m",
@@ -106,18 +111,26 @@ class ContextGatherer:
                 capture_output=True,
                 text=True,
                 timeout=120,
+                env=env,
             )
-            subprocess.run(
+            if result.returncode not in (0, 1, 5):
+                # 0=pass, 1=failures, 5=no tests; anything else is an error
+                return ()
+            result = subprocess.run(
                 [self._python, "-m", "coverage", "json", "-o", str(cov_json_path)],
                 capture_output=True,
                 text=True,
                 timeout=30,
+                env=env,
             )
+            if result.returncode != 0:
+                return ()
             return parse_coverage_json(cov_json_path, source_path)
         except (FileNotFoundError, subprocess.TimeoutExpired):
             return ()
         finally:
             cov_json_path.unlink(missing_ok=True)
+            cov_data_file.unlink(missing_ok=True)
 
 
 # ---------------------------------------------------------------------------
