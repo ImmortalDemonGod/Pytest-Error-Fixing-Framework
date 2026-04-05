@@ -169,7 +169,7 @@ class TestGatherCoverage:
 
         sentinel = ("gap1",)
         with patch("dev.test_generator.analyze.context.find_test_file", return_value=test_file):
-            fake = SimpleNamespace(stdout="")
+            fake = SimpleNamespace(stdout="", returncode=0)
             with patch("dev.test_generator.analyze.context.subprocess.run", return_value=fake):
                 with patch("dev.test_generator.analyze.context.parse_coverage_json", return_value=sentinel) as pparse:
                     g = context_mod.ContextGatherer()
