@@ -10,8 +10,7 @@ Before you begin, ensure you have the following installed on your system:
 
 -   Python 3.13+
 -   Git
--   `uv` (for environment management, recommended)
--   An active API Key for an LLM provider (e.g., OpenAI, Anthropic)
+-   An active API Key for an LLM provider via [OpenRouter](https://openrouter.ai)
 
 ---
 
@@ -26,37 +25,35 @@ Before you begin, ensure you have the following installed on your system:
 
 2.  **Set Up the Virtual Environment**
 
-    This project uses `uv` for fast and reliable dependency management.
-
     ```bash
-    # Create the virtual environment
-    uv venv
-
-    # Activate the environment
+    python3.13 -m venv .venv
     source .venv/bin/activate
     ```
 
 3.  **Install Dependencies**
 
-    Install all required packages from the lock file.
-
     ```bash
-    uv sync
+    pip install -e .
     ```
 
 ---
 
 ## Configuration
 
-The tool requires an API key to communicate with a Large Language Model.
+The tool requires an OpenRouter API key to communicate with a Large Language Model.
 
-1.  **Create a `.env` file** in the root of the project directory. This file will securely store your API key.
+1.  **Create a `.env` file** in the root of the project directory.
 
-2.  **Add your API key** to the `.env` file. For example, if using OpenAI:
+2.  **Add your API key** to the `.env` file:
 
     ```env
-    # Your OpenAI API Key
-    OPENAI_API_KEY="sk-..."
+    OPENROUTER_API_KEY=sk-or-v1-...
+    ```
+
+3.  **Load the environment** before running the tool:
+
+    ```bash
+    set -a && source .env && set +a
     ```
 
 The tool is now installed and configured. You are ready to run your first fix!

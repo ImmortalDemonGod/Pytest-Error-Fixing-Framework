@@ -1,19 +1,17 @@
 # src/branch_fixer/utils/run_cli.py
 
+import importlib.metadata
 import logging
-import platform  # NEW: for environment info
+import platform
 from pathlib import Path
 from typing import Optional
 
 import click
-import snoop
 from branch_fixer.config.logging_config import setup_logging
 from branch_fixer.utils.cli import CLI, ComponentSettings
 
 logger = logging.getLogger(__name__)
 
-
-import importlib.metadata
 
 def get_version() -> str:
     """Dynamically get the project version from installed package metadata."""
@@ -25,11 +23,9 @@ def get_version() -> str:
         # This is more informative than a generic error or a misleading version like "0.0.0".
         return "unknown (package not installed)"
 
+
 @click.group()
-@click.version_option(
-    version=get_version,
-    prog_name="pytest-fixer"
-)
+@click.version_option(version=get_version(), prog_name="pytest-fixer")
 def cli():
     """Pytest Error Fixing Framework - Automatically fix failing pytest tests."""
     pass
@@ -38,9 +34,9 @@ def cli():
 @cli.command()
 @click.option(
     "--api-key",
-    envvar="OPENAI_API_KEY",
+    envvar="OPENROUTER_API_KEY",
     required=True,
-    help="OpenAI API key (or set OPENAI_API_KEY env var)",
+    help="OpenRouter API key (or set OPENROUTER_API_KEY env var)",
 )
 @click.option(
     "--max-retries",
@@ -75,7 +71,7 @@ def cli():
     is_flag=True,
     help="Force all fix attempts to be marked successful (for dev testing)",
 )
-#@snoop
+# @snoop
 def fix(
     api_key: str,
     max_retries: int,
@@ -188,6 +184,14 @@ def fix(
 
     # Otherwise, proceed with normal multi-test flow
     return cli_obj.process_errors(errors, not non_interactive)
+
+
+try:
+    from dev.cli.generate import generate_command
+
+    cli.add_command(generate_command)
+except ImportError:
+    pass  # generate subcommand unavailable outside dev environment
 
 
 def main():

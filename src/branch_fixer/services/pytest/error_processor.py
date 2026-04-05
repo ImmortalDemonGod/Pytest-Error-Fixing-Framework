@@ -11,7 +11,7 @@ def _extract_error_type(error_message: str | None) -> str:
     if not error_message:
         return "UnknownError"
 
-    error_match = re.match(r'^(\w+(?:Error|Exception|Failure))', error_message.strip())
+    error_match = re.match(r"^(\w+(?:Error|Exception|Failure))", error_message.strip())
     return error_match.group(1) if error_match else "UnknownError"
 
 
@@ -35,7 +35,7 @@ def process_pytest_results(result: SessionResult) -> List[TestError]:
             test_err = TestError(
                 test_file=test_result.test_file,
                 test_function=test_result.test_function,
-                error_details=ed
+                error_details=ed,
             )
             test_errors.append(test_err)
 
@@ -44,13 +44,13 @@ def process_pytest_results(result: SessionResult) -> List[TestError]:
         ed = ErrorDetails(
             error_type="CollectionError",
             message=collection_error_str,
-            stack_trace=collection_error_str
+            stack_trace=collection_error_str,
         )
         test_err = TestError(
             # Heuristic to find file path, might need improvement
             test_file=Path("unknown_collection_file.py"),
             test_function="pytest_collection",
-            error_details=ed
+            error_details=ed,
         )
         test_errors.append(test_err)
 

@@ -2,13 +2,11 @@
 import logging
 from typing import Optional
 
-import snoop
-
 from branch_fixer.core.models import FixAttempt, TestError
 from branch_fixer.orchestration.exceptions import FixServiceError
 
 # NEW: Imports for storing session or orchestrating
-from branch_fixer.orchestration.orchestrator import FixSession
+from branch_fixer.orchestration.orchestrator import FixSession, FixSessionState
 from branch_fixer.services.ai.manager import AIManager
 from branch_fixer.services.code.change_applier import ChangeApplier
 from branch_fixer.services.git.repository import GitRepository
@@ -82,7 +80,6 @@ class FixService:
         self.state_manager = state_manager
         self.session = session
 
-    # @snoop
     def attempt_fix(self, error: TestError, temperature: float) -> bool:
         """
         Attempt to fix failing test in a single shot (no internal loop).
@@ -124,6 +121,8 @@ class FixService:
                 self._update_session_if_present(error)
                 return True
 
+            backup_path = None
+            fix_succeeded = False
             try:
                 # AI-based fix
                 changes = self.ai_manager.generate_fix(error, attempt.temperature)
@@ -136,36 +135,37 @@ class FixService:
                     return False
 
                 # Re-run functional test
-                if not self._verify_fix(error, attempt):
-                    try:
-                        if backup_path:
-                            self.change_applier.restore_backup(error.test_file, backup_path)
-                            logger.info(
-                                f"Reverted {error.test_file} after functional test failure."
-                            )
-                    except Exception as revert_exc:
-                        logger.warning(
-                            f"Failed to revert after functional test failure: {revert_exc}"
-                        )
-
-                    self._handle_failed_attempt(error, attempt)
-                    return False
-
-                # If we reach here, fix is good
-                error.mark_fixed(attempt)
-                self._update_session_if_present(error)
-                return True
+                fix_succeeded = self._verify_fix(error, attempt)
 
             except Exception as e:
                 logger.warning("Error occurred after changes might have been applied.")
                 self._handle_failed_attempt(error, attempt)
                 raise FixServiceError(str(e)) from e
 
+            finally:
+                # Restore backup on any failure path once a backup exists
+                if backup_path and not fix_succeeded:
+                    try:
+                        self.change_applier.restore_backup(error.test_file, backup_path)
+                        logger.info(f"Reverted {error.test_file} after fix failure.")
+                    except Exception as revert_exc:
+                        logger.warning(
+                            f"Failed to revert after fix failure: {revert_exc}"
+                        )
+
+            if not fix_succeeded:
+                self._handle_failed_attempt(error, attempt)
+                return False
+
+            # If we reach here, fix is good
+            error.mark_fixed(attempt)
+            self._update_session_if_present(error)
+            return True
+
         except Exception as e:
             root_cause = getattr(e, "__cause__", e)
             raise FixServiceError(str(root_cause)) from e
 
-    # @snoop
     def attempt_manual_fix(self, error: TestError) -> bool:
         """
         Check if a user's manual code edits have fixed the failing test.
@@ -190,8 +190,6 @@ class FixService:
             error.mark_fixed(attempt)
             self._update_session_if_present(error)
         return success
-
-    snoop()
 
     def _handle_failed_attempt(self, error: TestError, attempt: FixAttempt) -> None:
         """Mark attempt as failed and optionally revert code."""
@@ -239,7 +237,7 @@ class FixService:
                     # For example, if the session is still RUNNING, check if all errors are fixed
                     if len(self.session.completed_errors) == len(self.session.errors):
                         self.state_manager.transition_state(
-                            self.session, "FixSessionState.COMPLETED"
+                            self.session, FixSessionState.COMPLETED
                         )
                 except (StateTransitionError, StateValidationError) as ex:
                     logger.warning(f"Failed to transition session state: {ex}")

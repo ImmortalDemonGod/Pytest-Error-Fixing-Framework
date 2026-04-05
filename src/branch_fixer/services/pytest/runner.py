@@ -3,6 +3,7 @@
 import logging
 import shutil
 import subprocess
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -166,6 +167,8 @@ class PytestRunner:
         """
         Increment the appropriate counters for a single TestResult.
         """
+        if not self._current_session:
+            return
         # Moved complex conditional into a separate helper:
         if self._is_clean_pass(result):
             self._current_session.passed += 1
@@ -300,11 +303,13 @@ class PytestRunner:
             if not result:
                 # Safely extract test_path and test_function with defaults
                 test_path = Path(report.fspath) if report.fspath else Path("unknown")
-                test_function = (
-                    report.function.__name__
-                    if hasattr(report, "function")
-                    else "unknown"
-                )
+                # report.function exists in some contexts; fall back to nodeid parsing
+                if hasattr(report, "function") and report.function is not None:
+                    test_function = report.function.__name__
+                elif "::" in report.nodeid:
+                    test_function = report.nodeid.split("::")[-1]
+                else:
+                    test_function = "unknown"
 
                 result = TestResult(
                     nodeid=report.nodeid,
@@ -368,7 +373,9 @@ class PytestRunner:
                     f"Captured error message for {report.nodeid}: {result.error_message}"
                 )
 
-    def _update_execution_duration(self, result: TestResult, report: TestReport) -> None:
+    def _update_execution_duration(
+        self, result: TestResult, report: TestReport
+    ) -> None:
         """Capture the duration of the test for reporting."""
         result.duration = report.duration
         logger.debug(f"Captured duration for {report.nodeid}: {result.duration}s")
@@ -439,7 +446,14 @@ class PytestRunner:
 
         try:
             # Create subprocess command
-            args = ["pytest", "--override-ini=addopts=", "-p", "no:terminal"]
+            args = [
+                sys.executable,
+                "-m",
+                "pytest",
+                "--override-ini=addopts=",
+                "-p",
+                "no:terminal",
+            ]
             if self.working_dir:
                 args.extend(["--rootdir", str(self.working_dir)])
             args.append(f"{str(test_file)}::{test_function}")

@@ -16,7 +16,7 @@ from branch_fixer.services.pytest.runner import TestRunner
 
 # Recovery-related imports retained for potential use
 from branch_fixer.storage.recovery import CheckpointError, RecoveryManager
-from branch_fixer.storage import state_manager
+from branch_fixer.storage.state_manager import StateManager
 
 logger = logging.getLogger(__name__)
 
@@ -153,8 +153,10 @@ class FixOrchestrator:
         temp_increment: float = 0.1,
         interactive: bool = True,
         recovery_manager: Optional[RecoveryManager] = None,
-        session_store: Optional[Any] = None,  # Type can be specified based on implementation
-        state_manager: Optional[state_manager.StateManager] = None,
+        session_store: Optional[
+            Any
+        ] = None,  # Type can be specified based on implementation
+        state_manager: Optional[StateManager] = None,
     ):
         """
         Initialize orchestrator with required components and settings.
@@ -236,6 +238,7 @@ class FixOrchestrator:
             bool indicating if all errors were eventually fixed.
         """
         self._validate_session(session_id)
+        assert self._session is not None
 
         # Record extra info if provided
         if environment_info:
@@ -254,7 +257,9 @@ class FixOrchestrator:
         self._session.failed_tests = sum(
             1 for e in self._session.errors if e.status != "fixed"
         )
-        self._session.passed_tests = self._session.error_count - self._session.failed_tests
+        self._session.passed_tests = (
+            self._session.error_count - self._session.failed_tests
+        )
 
         # Determine final state
         if self._session.failed_tests == 0:
@@ -305,10 +310,13 @@ class FixOrchestrator:
         success = self.fix_error(error)
         if not success:
             # Mark session as FAILED if an error is irreparable
+            assert self._session is not None
             self._session.state = FixSessionState.FAILED
             return False
 
-        self._session.completed_errors.append(error)
+        assert self._session is not None
+        if error not in self._session.completed_errors:
+            self._session.completed_errors.append(error)
         return True
 
     def fix_error(self, error: TestError) -> bool:
@@ -324,6 +332,7 @@ class FixOrchestrator:
         """
         if not self._session:
             raise RuntimeError("No active session")
+        assert self._session is not None
 
         current_temp = self.initial_temp
         for attempt_index in range(self.max_retries):
@@ -340,14 +349,16 @@ class FixOrchestrator:
                 change_applier=self.change_applier,
                 git_repo=self.git_repo,
                 dev_force_success=False,  # Placeholder for logic
-                session_store=self.session_store,  # Pass session_store if needed
-                state_manager=state_manager,  # Placeholder for state management
+                session_store=self.session_store,
+                state_manager=self.state_manager,
                 session=self._session,
             )
 
             success = fix_service.attempt_fix(error, temperature=current_temp)
             if success:
-                logger.info(f"Successfully fixed error '{error.test_function}' on attempt {attempt_index + 1}.")
+                logger.info(
+                    f"Successfully fixed error '{error.test_function}' on attempt {attempt_index + 1}."
+                )
                 return True
 
             current_temp += self.temp_increment
@@ -414,8 +425,11 @@ class FixOrchestrator:
                 else None
             ),
             retry_count=self._session.retry_count,
-            current_temperature=self.initial_temp + self.temp_increment * self._session.retry_count,
-            last_error=self._session.current_error.test_function if self._session.current_error else None,
+            current_temperature=self.initial_temp
+            + self.temp_increment * self._session.retry_count,
+            last_error=self._session.current_error.test_function
+            if self._session.current_error
+            else None,
         )
 
     def _change_session_state(

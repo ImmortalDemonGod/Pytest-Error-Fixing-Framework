@@ -36,8 +36,8 @@ class FailureParser:
 
         capture_traceback = False
         current_function: Optional[str] = None
-        traceback_lines = []
-        error_details_lines = []
+        traceback_lines: list[str] = []
+        error_details_lines: list[str] = []
 
         for line in lines:
             stripped = line.strip()
@@ -50,13 +50,15 @@ class FailureParser:
                 continue
 
             if self._is_test_header(stripped):
-                current_function, traceback_lines, error_details_lines = self._handle_test_header(
-                    line, stripped, current_function
+                current_function, traceback_lines, error_details_lines = (
+                    self._handle_test_header(line, stripped, current_function)
                 )
                 continue
 
             if self._is_error_detail(stripped):
-                self._handle_error_detail(line, stripped, traceback_lines, error_details_lines)
+                self._handle_error_detail(
+                    line, stripped, traceback_lines, error_details_lines
+                )
                 continue
 
             if self._is_failing_line_indicator(stripped):
@@ -86,8 +88,8 @@ class FailureParser:
         test_name = self._get_test_name_from_header(stripped_line)
         if test_name:
             current_function = test_name
-            traceback_lines = [line]
-            error_details_lines = []
+            traceback_lines: list[str] = [line]
+            error_details_lines: list[str] = []
         else:
             # Underscore line isn't a test name, treat as traceback line
             # Do not modify current_function

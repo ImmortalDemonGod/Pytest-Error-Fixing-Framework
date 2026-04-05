@@ -1,7 +1,6 @@
 # src/branch_fixer/utils/cli.py
 
 import logging
-from math import log
 import signal
 import traceback
 import uuid
@@ -23,7 +22,6 @@ from branch_fixer.services.git.repository import GitRepository
 from branch_fixer.services.pytest.runner import TestRunner
 from branch_fixer.storage.state_manager import StateManager
 
-import snoop
 logger = logging.getLogger(__name__)
 
 
@@ -92,6 +90,7 @@ class CLI:
         """
         Helper to clean up fix branches, logging any errors.
         """
+        assert self.service is not None
         for branch in self.created_branches:
             try:
                 print(f"Cleaning up branch: {branch}")
@@ -106,6 +105,7 @@ class CLI:
         """
         Helper to checkout the main branch and log errors.
         """
+        assert self.service is not None
         try:
             main_branch = self.service.git_repo.main_branch
             self.service.git_repo.run_command(["checkout", main_branch])
@@ -126,11 +126,8 @@ class CLI:
 
         logger.info(f"Creating fix branch: {branch_name}")
         try:
-            if (
-                self.service
-                and self.service.git_repo.branch_manager.create_fix_branch(
-                    branch_name
-                )
+            if self.service and self.service.git_repo.branch_manager.create_fix_branch(
+                branch_name
             ):
                 self.created_branches.add(branch_name)
                 return branch_name
@@ -196,19 +193,22 @@ class CLI:
                 try:
                     self.service.git_repo.run_command(["checkout", original_branch])
                 except Exception as e:
-                    logger.error(f"Failed to checkout original branch '{original_branch}': {e}")
+                    logger.error(
+                        f"Failed to checkout original branch '{original_branch}': {e}"
+                    )
 
     def _generate_and_apply_fix(self, error: TestError) -> bool:
         """
         Attempt to generate/apply a fix via AI; return True if successful, False otherwise.
+        Delegates to the orchestrator, which runs the full multi-retry loop with
+        temperature bumping — the single-shot attempt_fix path is no longer used here.
         """
-        logger.info("Attempting to generate and apply fix...")
-        if self.service and self.service.attempt_fix(error, self.service.initial_temp):
-            logger.info(f"Fix attempt for {error.test_function} succeeded.")
-            return True
-        else:
-            logger.warning(f"Fix attempt for {error.test_function} failed.")
+        if not self.orchestrator:
+            logger.error("Orchestrator not initialized, cannot generate fix.")
             return False
+        logger.info("Attempting to generate and apply fix via orchestrator...")
+        self.orchestrator.start_session([error])
+        return self.orchestrator.fix_error(error)
 
     def _create_and_push_pr(self, branch_name: str, error: TestError) -> bool:
         """
@@ -290,7 +290,7 @@ class CLI:
         click.echo("Retry limit reached. Exiting manual fix mode.")
         return "quit"
 
-   # @snoop
+    # @snoop
     def setup_components(self, config: ComponentSettings) -> bool:
         """
         Initialize AI, Test Runner, Change Applier, GitRepo, FixService, & Orchestrator.
@@ -328,6 +328,7 @@ class CLI:
 
             # NEW: Initialize SessionStore to ensure session data is always saved
             from branch_fixer.storage.session_store import SessionStore
+
             store_dir = Path.cwd() / "session_data"
             store_dir.mkdir(parents=True, exist_ok=True)
             session_store = SessionStore(store_dir)
@@ -425,7 +426,8 @@ class CLI:
             click.echo("[N] Skip this test")
             click.echo("[Q] Quit fixing tests entirely")
 
-            choice = click.getchar("\nYour choice (y/m/n/q) [y]: ").lower()
+            click.echo("\nYour choice (y/m/n/q) [y]: ", nl=False)
+            choice = click.getchar().lower()
 
             # Default to 'y' if user hits enter
             if choice in ["\r", "\n", ""]:
@@ -443,7 +445,7 @@ class CLI:
         Handles interactive error processing logic.
         Returns True if user chooses to continue, False if user quits.
         """
-        choice = self._prompt_for_fix(error)
+        choice: Optional[str] = self._prompt_for_fix(error)
         handlers = {
             "q": self._handle_quit_choice,
             "n": self._handle_skip_choice,
@@ -451,7 +453,7 @@ class CLI:
             "y": self._handle_ai_fix_choice,
         }
 
-        handler = handlers.get(choice)
+        handler = handlers.get(choice) if choice is not None else None
         if handler:
             return handler(error)
         else:
@@ -484,7 +486,9 @@ class CLI:
             click.echo(f"Starting fix attempts for {total_errors} failing tests.\n")
             logger.info(f"Starting fix attempts for {total_errors} errors.")
 
-            total_processed, success_count = self._process_all_errors(errors, interactive)
+            total_processed, success_count = self._process_all_errors(
+                errors, interactive
+            )
 
             # Summarize if any were processed
             if total_processed > 0:
@@ -504,7 +508,9 @@ class CLI:
         # For now we assume success_count remains a placeholder for further logic.
         return 0 if success_count == total_processed else 1
 
-    def _process_all_errors(self, errors: List[TestError], interactive: bool) -> Tuple[int, int]:
+    def _process_all_errors(
+        self, errors: List[TestError], interactive: bool
+    ) -> Tuple[int, int]:
         """
         Extracted helper that loops over all errors, handling interactive
         vs. non-interactive flows. Returns total_processed, success_count.
@@ -518,7 +524,9 @@ class CLI:
                 logger.info("Exit requested; stopping fix attempts.")
                 break
 
-            logger.info(f"\nProcessing error {i}/{len(errors)}: {error.test_function}\n")
+            logger.info(
+                f"\nProcessing error {i}/{len(errors)}: {error.test_function}\n"
+            )
 
             if interactive:
                 # If the user chooses to quit in interactive mode, we break out
@@ -532,7 +540,9 @@ class CLI:
 
         return total_processed, success_count
 
-    def _summarize_results(self, total_processed: int, total_errors: int, success_count: int) -> None:
+    def _summarize_results(
+        self, total_processed: int, total_errors: int, success_count: int
+    ) -> None:
         """
         Helper to summarize the final fix attempts result.
         """

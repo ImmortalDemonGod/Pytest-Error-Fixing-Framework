@@ -88,6 +88,8 @@ htmlcov/
 .coverage
 .coverage.*
 .cache
+.backups/
+**/.backups/
 .aider*
 .env
 1file/*

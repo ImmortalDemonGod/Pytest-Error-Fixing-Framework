@@ -22,6 +22,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "ruff",
+    "mypy",
+    "pip-audit",
     "mkdocs",
     "mkdocs-material",
     "mkdocs-awesome-pages-plugin",

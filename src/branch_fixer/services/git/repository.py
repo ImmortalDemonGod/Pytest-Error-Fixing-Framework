@@ -2,7 +2,7 @@
 import logging
 import subprocess
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from git import GitCommandError, Repo
 
@@ -15,6 +15,7 @@ from branch_fixer.services.git.exceptions import (
     NoSuchPathError,
     NotAGitRepositoryError,
 )
+from branch_fixer.core.models import TestError
 from branch_fixer.services.git.models import CommandResult, GitErrorDetails
 from branch_fixer.services.git.pr_manager import PRManager
 
@@ -541,7 +542,7 @@ class GitRepository:
             raise GitError(f"Failed to cleanup branch {branch_name}: {str(e)}")
 
     def create_pull_request_sync(
-        self, branch_name: str, error: GitErrorDetails
+        self, branch_name: str, error: Union[TestError, GitErrorDetails]
     ) -> bool:
         """
         Create a pull request for a fix synchronously.

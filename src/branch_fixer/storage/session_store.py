@@ -5,16 +5,21 @@ from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 from tinydb import TinyDB, Query
-import snoop
+from branch_fixer.core.models import TestError
 from branch_fixer.orchestration.orchestrator import FixSession, FixSessionState
+
 
 class StorageError(Exception):
     """Base exception for storage errors."""
+
     pass
+
 
 class SessionPersistenceError(StorageError):
     """Raised when session persistence operations fail."""
+
     pass
+
 
 class SessionStore:
     """
@@ -47,7 +52,7 @@ class SessionStore:
         db_path = self.storage_dir / "sessions.json"
         self.db = TinyDB(db_path)
         self.sessions = self.db.table("sessions")
-    
+
     def save_session(self, session: FixSession) -> None:
         """
         Persist session state to TinyDB storage.
@@ -68,14 +73,16 @@ class SessionStore:
                 "retry_count": session.retry_count,
                 "git_branch": session.git_branch,
                 "modified_files": [str(p) for p in session.modified_files],
-                "completed_errors": [str(err.id) for err in session.completed_errors],
-                "current_error": str(session.current_error.id) if session.current_error else None,
-                # Store new numeric fields
+                "errors": [err.to_dict() for err in session.errors],
+                "completed_errors": [err.to_dict() for err in session.completed_errors],
+                "current_error": session.current_error.to_dict()
+                if session.current_error
+                else None,
                 "total_tests": session.total_tests,
                 "passed_tests": session.passed_tests,
                 "failed_tests": session.failed_tests,
-                # Store environment info or other metadata
                 "environment_info": session.environment_info,
+                "warnings": session.warnings,
             }
 
             existing = self.sessions.get(Session.id == str(session.id))
@@ -105,10 +112,9 @@ class SessionStore:
         try:
             Session = Query()
             session_data = self.sessions.get(Session.id == str(session_id))
-            if not session_data:
+            if not session_data or not isinstance(session_data, dict):
                 return None
 
-            # Build a FixSession object
             fix_session = FixSession(
                 id=session_id,
                 state=FixSessionState(session_data["state"]),
@@ -116,17 +122,25 @@ class SessionStore:
                 error_count=session_data.get("error_count", 0),
                 retry_count=session_data.get("retry_count", 0),
                 git_branch=session_data.get("git_branch"),
-                modified_files=[Path(p) for p in session_data.get("modified_files", [])],
-
-                # Re-hydrate new numeric fields
+                modified_files=[
+                    Path(p) for p in session_data.get("modified_files", [])
+                ],
+                errors=[TestError.from_dict(e) for e in session_data.get("errors", [])],
+                completed_errors=[
+                    TestError.from_dict(e)
+                    for e in session_data.get("completed_errors", [])
+                ],
+                current_error=(
+                    TestError.from_dict(session_data["current_error"])
+                    if session_data.get("current_error")
+                    else None
+                ),
                 total_tests=session_data.get("total_tests", 0),
                 passed_tests=session_data.get("passed_tests", 0),
                 failed_tests=session_data.get("failed_tests", 0),
-                # Re-hydrate environment info
                 environment_info=session_data.get("environment_info", {}),
+                warnings=session_data.get("warnings", []),
             )
-            # We don't have direct references to errors or completed_errors here,
-            # so re-attach them as needed if your code handles them externally.
             return fix_session
 
         except Exception as e:
@@ -167,12 +181,20 @@ class SessionStore:
                     retry_count=data.get("retry_count", 0),
                     git_branch=data.get("git_branch"),
                     modified_files=[Path(p) for p in data.get("modified_files", [])],
-
-                    # Re-hydrate new numeric fields
+                    errors=[TestError.from_dict(e) for e in data.get("errors", [])],
+                    completed_errors=[
+                        TestError.from_dict(e) for e in data.get("completed_errors", [])
+                    ],
+                    current_error=(
+                        TestError.from_dict(data["current_error"])
+                        if data.get("current_error")
+                        else None
+                    ),
                     total_tests=data.get("total_tests", 0),
                     passed_tests=data.get("passed_tests", 0),
                     failed_tests=data.get("failed_tests", 0),
                     environment_info=data.get("environment_info", {}),
+                    warnings=data.get("warnings", []),
                 )
                 sessions_list.append(fix_session)
 

@@ -6,6 +6,7 @@ from typing import Optional, List, Dict, Any
 from pathlib import Path
 from _pytest.main import ExitCode
 
+
 @dataclass
 class TestResult:
     """Detailed test execution result."""
