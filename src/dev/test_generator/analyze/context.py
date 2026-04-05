@@ -155,11 +155,25 @@ def _gather_dependency_code(source_path: Path, source_code: str) -> str:
 
     # Collect names imported from project-internal modules
     imported: dict[str, str] = {}  # name -> dotted_module
+    # Compute the source file's package for resolving relative imports
+    _source_parts = source_path.resolve().parts
+    if "src" in _source_parts:
+        _src_idx = len(_source_parts) - 1 - _source_parts[::-1].index("src")
+        _pkg_parts = list(_source_parts[_src_idx + 1 : -1])  # dirs after src/, minus filename
+    else:
+        _pkg_parts = []
+
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom) and node.module:
+            if node.level and node.level > 0 and _pkg_parts:
+                # Relative import: walk up `level` dirs from current package
+                base_parts = _pkg_parts[: max(0, len(_pkg_parts) - node.level + 1)]
+                resolved_module = ".".join(base_parts + [node.module])
+            else:
+                resolved_module = node.module
             for alias in node.names:
                 name = alias.asname or alias.name
-                imported[name] = node.module
+                imported[name] = resolved_module
 
     if not imported:
         return ""
