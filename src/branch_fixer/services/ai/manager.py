@@ -83,7 +83,7 @@ class AIManager:
     def __init__(
         self,
         api_key: Optional[str],
-        model: str = "openrouter/openai/gpt-4o-mini",
+        model: str = "openrouter/openai/gpt-5.4-mini",
         base_temperature: float = 0.4,
     ):
         """
