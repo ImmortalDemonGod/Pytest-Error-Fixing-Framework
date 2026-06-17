@@ -416,9 +416,10 @@ const PLAN_SCHEMA = { type: "object", required: ["items", "sequencing_notes"], p
 const PLAN_FALSIFY_SCHEMA = { type: "object", required: ["checks", "ambiguous_items", "verdict"], properties: { checks: { type: "array", items: { type: "object", required: ["name", "passed", "evidence"], properties: { name: { type: "string" }, passed: { type: "boolean" }, evidence: { type: "string" } } } }, ambiguous_items: { type: "array", items: { type: "object", required: ["id", "why"], properties: { id: { type: "string" }, why: { type: "string" } } } }, verdict: { type: "string", enum: ["pass", "needs_work"] } } };
 
 function renderStage5MD(obj) {
-  const rows = [...obj.items].sort((a, b) => a.order - b.order).map(it => `| ${it.order} | ${it.id} | ${it.title.replace(/\n/g, " ")} | \`${it.location}\` | ${it.links_to} | ${it.effort} | ${(it.depends_on || []).join(",") || "—"} |`).join("\n");
-  const detail = [...obj.items].sort((a, b) => a.order - b.order).map(it => L(`### ${it.order}. ${it.title} (\`${it.id}\`)`, "", `- **Location:** \`${it.location}\``, `- **Links to:** ${it.links_to}`, `- **Change:** ${it.change}`, `- **Verification signal:** ${it.verification_signal}`, `- **Depends on:** ${(it.depends_on || []).join(", ") || "none"} · **Effort:** ${it.effort}`)).join("\n\n");
-  return L("# 05 — Execution-Ready Plan", "", `_${obj.count} ordered, dependency-sorted change items. Each links to a Stage-2 finding or Stage-4 goal signal, is localized to a path, and carries a verification signal. Validated by an independent reviewer — no ambiguous items remain._`, "", obj.sequencing_notes ? `**Sequencing:** ${obj.sequencing_notes}\n` : "", "| # | ID | Change | Location | Links | Effort | Depends |", "| --- | --- | --- | --- | --- | --- | --- |", rows, "", "## Item detail", "", detail, "");
+  const rows = [...obj.items].sort((a, b) => a.order - b.order).map(it => `| ${it.order} | ${it.id}${it.needs_clarification ? " ⚠️" : ""} | ${it.title.replace(/\n/g, " ")} | \`${it.location}\` | ${it.links_to} | ${it.effort} | ${(it.depends_on || []).join(",") || "—"} |`).join("\n");
+  const detail = [...obj.items].sort((a, b) => a.order - b.order).map(it => L(`### ${it.order}. ${it.title} (\`${it.id}\`)${it.needs_clarification ? " ⚠️ needs clarification" : ""}`, "", `- **Location:** \`${it.location}\``, `- **Links to:** ${it.links_to}`, `- **Change:** ${it.change}`, `- **Verification signal:** ${it.verification_signal}`, `- **Depends on:** ${(it.depends_on || []).join(", ") || "none"} · **Effort:** ${it.effort}`, it.needs_clarification ? `- **⚠️ Needs clarification:** ${it.needs_clarification}` : "")).join("\n\n");
+  const conv = obj.converged ? "Validated by an independent reviewer — no ambiguous items remain." : `Validated by an independent reviewer; ${obj.residual_ambiguous} item(s) flagged ⚠️ for clarification — all items remain structurally complete (each links to a finding/goal, is localized, and carries a verification signal).`;
+  return L("# 05 — Execution-Ready Plan", "", `_${obj.count} ordered, dependency-sorted change items. Each links to a Stage-2 finding or Stage-4 goal signal, is localized to a path, and carries a verification signal. ${conv}_`, "", obj.sequencing_notes ? `**Sequencing:** ${obj.sequencing_notes}\n` : "", "| # | ID | Change | Location | Links | Effort | Depends |", "| --- | --- | --- | --- | --- | --- | --- |", rows, "", "## Item detail", "", detail, "");
 }
 
 async function stage5(state) {
@@ -426,21 +427,26 @@ async function stage5(state) {
   const inv = safeRead(join(WORK, "01-inventory.json")), f2 = safeRead(join(WORK, "02-findings.json")), f3 = safeRead(join(WORK, "03-execution.json")), f4 = safeRead(join(WORK, "04-goal.json"));
   if (!inv || !f2 || !f4) await halt("stage5", "missing prior artifacts", state);
   const ctx = L(`GOALS: ${f4.goal.candidates.map(c => c.goal).join(" | ")}`, `FINDINGS (${f2.findings.length}): ${f2.findings.map(f => `${f.id}:${f.class}/${f.severity}@${f.location}`).join("; ")}`, f3 ? `EXECUTION: ran=${f3.test_result?.ran}, cov=${f3.test_result?.coverage_pct ?? "?"}%` : "", `RESEARCH IDEAS: ${(f4.research?.synthesis?.key_ideas || []).map(k => k.idea).slice(0, 8).join("; ")}`);
-  let items = null, ambiguous = [], notes = "";
-  for (let round = 1; round <= 2; round++) {
-    const fixHint = round > 1 ? "A prior draft had AMBIGUOUS items a fresh engineer could not map to a diff without questions — fix these: " + JSON.stringify(ambiguous) : "";
+  // Try to drive ambiguity to zero within the ceiling; ACCEPT at ceiling with residual items tagged
+  // (a complete plan with 1-2 items flagged for clarification is a useful deliverable — discarding it is wrong).
+  // Halt only for genuine STRUCTURAL incompleteness (missing link/location/verification/order).
+  let items = null, ambiguous = [], notes = "", converged = false; const ceiling = 3;
+  for (let round = 1; round <= ceiling; round++) {
+    const fixHint = round > 1 && ambiguous.length ? "A prior draft had AMBIGUOUS items a fresh engineer could not map to a diff without questions — REWRITE these to be concrete, self-contained, and directly mappable to a diff target: " + JSON.stringify(ambiguous) : "";
     const syn = await runAgent({ name: `s5-plan-r${round}`, model: "opus", budgetUsd: 12, timeoutMs: 1200000, schema: PLAN_SCHEMA, prompt: L("You are the Stage-5 PLANNER. Produce an ORDERED, dependency-sorted change plan that closes the gap between current state (Stages 1-3) and the goal (Stage 4). EVERY item MUST: link to a specific finding id or goal signal (links_to); be localized to a file/module (location); carry a concrete verification_signal (the test/observation proving it worked); and have a dependency position (depends_on + order).", `REPO ROOT: ${REPO}`, "CONTEXT:", ctx, `Read full findings at ${join(WORK, "02-findings.json")} and goal at ${join(WORK, "04-goal.json")} for detail.`, fixHint, "Output items[]: {id, title, links_to, location, change, verification_signal, depends_on[], order, effort(S|M|L)} + sequencing_notes.") });
     if (!syn.ok) await halt("stage5", `planner produced no schema-valid result in round ${round}`, state);
-    items = syn.data.items;
+    items = syn.data.items; notes = syn.data.sequencing_notes;
     const incomplete = items.filter(it => !it.links_to || !it.location || !it.verification_signal || it.order === undefined);
+    if (incomplete.length > 0) await halt("stage5", `plan has ${incomplete.length} structurally-incomplete items (missing link/location/verification/order)`, state);
     const fal = await runAgent({ name: `s5-falsify-r${round}`, model: "opus", budgetUsd: 8, timeoutMs: 900000, schema: PLAN_FALSIFY_SCHEMA, prompt: L("You are an INDEPENDENT plan reviewer. For EACH item decide: could a fresh engineer map it to a concrete diff target WITHOUT a clarifying question? Does its location path actually exist? Is its finding/goal link real (check the findings/goal files)?", `REPO ROOT: ${REPO}`, `Findings: ${join(WORK, "02-findings.json")}; Goal: ${join(WORK, "04-goal.json")}.`, "PLAN ITEMS (JSON):", JSON.stringify(items).slice(0, 12000), "Return checks[], ambiguous_items[{id, why}], verdict (pass|needs_work).") });
     ambiguous = fal.ok ? (fal.data.ambiguous_items || []) : [];
-    notes = syn.data.sequencing_notes;
-    if (incomplete.length === 0 && ambiguous.length === 0 && fal.ok && fal.data.verdict === "pass") { log(`plan converged round ${round}`); break; }
-    log(`round ${round}: ${incomplete.length} incomplete, ${ambiguous.length} ambiguous`);
-    if (round === 2 && (incomplete.length > 0 || ambiguous.length > 0)) await halt("stage5", `plan did not converge: ${incomplete.length} incomplete, ${ambiguous.length} ambiguous items remain`, state);
+    log(`round ${round}: ${ambiguous.length} ambiguous`);
+    if (fal.ok && fal.data.verdict === "pass" && ambiguous.length === 0) { converged = true; log(`plan converged at round ${round}`); break; }
   }
-  const obj = { items, count: items.length, sequencing_notes: notes, _meta: { cost_usd: Number(TOTAL.toFixed(2)) } };
+  if (!converged) log(`accepting plan at ceiling with ${ambiguous.length} residual ambiguous item(s) flagged for clarification (all items structurally complete)`);
+  const ambigIds = new Set(ambiguous.map(a => a.id));
+  items = items.map(it => ambigIds.has(it.id) ? { ...it, needs_clarification: (ambiguous.find(a => a.id === it.id) || {}).why || "flagged ambiguous by independent reviewer" } : it);
+  const obj = { items, count: items.length, sequencing_notes: notes, converged, residual_ambiguous: ambiguous.length, _meta: { cost_usd: Number(TOTAL.toFixed(2)) } };
   await checkpoint("stage5", "05-plan.md", renderStage5MD(obj), "05-plan.json", obj, state);
   log(`PIPELINE COMPLETE — 5 artifacts in audit/. cumulative API-equiv $${TOTAL.toFixed(2)}`);
 }
