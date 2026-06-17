@@ -428,7 +428,7 @@
     {
       "path": "src/branch_fixer/services/pytest/error_processor.py",
       "role": "source",
-      "note": "process_pytest_results(): converts SessionResult test_results directly to TestError domain objects without string parsing"
+      "note": "process_pytest_results(): converts SessionResult test_results directly to TestError domain objects, avoiding fragile traceback parsing of raw pytest output; still applies a regex (_extract_error_type, line 14) to each test's error_message string to derive the error type"
     },
     {
       "path": "src/branch_fixer/services/pytest/exceptions.py",
@@ -513,7 +513,7 @@
     {
       "path": "src/dev/cli/fix.py",
       "role": "dead",
-      "note": "Empty stub file (1 line); no implementation, placeholder for future dev CLI fix command"
+      "note": "Truly empty file (0 lines / no content); placeholder for a future dev CLI fix command"
     },
     {
       "path": "src/dev/cli/generate.py",
@@ -528,17 +528,17 @@
     {
       "path": "src/dev/shared/git.py",
       "role": "dead",
-      "note": "Empty stub file (1 line); not yet implemented (documented in CLAUDE.md)"
+      "note": "Truly empty file (0 lines / no content); not yet implemented (documented in CLAUDE.md)"
     },
     {
       "path": "src/dev/shared/logging.py",
       "role": "dead",
-      "note": "Empty stub file (1 line); not yet implemented (documented in CLAUDE.md)"
+      "note": "Truly empty file (0 lines / no content); not yet implemented (documented in CLAUDE.md)"
     },
     {
       "path": "src/dev/shared/testing.py",
       "role": "dead",
-      "note": "Empty stub file (1 line); not yet implemented (documented in CLAUDE.md)"
+      "note": "Truly empty file (0 lines / no content); not yet implemented (documented in CLAUDE.md)"
     },
     {
       "path": "src/dev/test_generator/__init__.py",
@@ -608,7 +608,7 @@
     {
       "path": "src/dev/test_generator/generate/strategies/pynguin.py",
       "role": "dead",
-      "note": "Empty stub file (1 line); Pynguin strategy not yet implemented (documented in CLAUDE.md)"
+      "note": "Truly empty file (0 lines / no content); Pynguin strategy not yet implemented (documented in CLAUDE.md)"
     },
     {
       "path": "src/dev/test_generator/generate/templates.py",
@@ -1032,8 +1032,8 @@
     {
       "name": "cli generate",
       "kind": "cli_command",
-      "location": "src/dev/cli/generate.py:22",
-      "description": "'generate' Click subcommand: accepts --source-path, --output-dir, --strategy; runs GenerationOrchestrator to produce property-based tests via hypothesis write"
+      "location": "src/dev/cli/generate.py:21",
+      "description": "'generate' Click subcommand (@click.command('generate') decorator at line 21; generate_command function at line 42): accepts --source-path, --output-dir, --strategy; runs GenerationOrchestrator to produce property-based tests via hypothesis write"
     },
     {
       "name": "cli --version",
@@ -1050,7 +1050,7 @@
     {
       "name": "task test",
       "kind": "task_runner",
-      "location": "Taskfile.yml:57",
+      "location": "Taskfile.yml:56",
       "description": "Runs full pytest suite with branch coverage under src/branch_fixer; outputs to terminal"
     },
     {
@@ -1062,19 +1062,19 @@
     {
       "name": "task run:fix-test",
       "kind": "task_runner",
-      "location": "Taskfile.yml:79",
+      "location": "Taskfile.yml:78",
       "description": "Non-interactive fix run against tests/temp_failing_test.py; canonical e2e smoke test"
     },
     {
       "name": "task lint:py",
       "kind": "task_runner",
-      "location": "Taskfile.yml:47",
+      "location": "Taskfile.yml:46",
       "description": "Runs ruff check on all Python files; supports --fix via CLI_ARGS"
     },
     {
       "name": "task docs:serve",
       "kind": "task_runner",
-      "location": "Taskfile.yml:84",
+      "location": "Taskfile.yml:83",
       "description": "Serves MkDocs documentation locally at localhost:8001 for development"
     },
     {
@@ -1086,8 +1086,8 @@
     {
       "name": "CI: lint",
       "kind": "ci_job",
-      "location": ".github/workflows/ci.yml:8",
-      "description": "GitHub Actions job: runs ruff check and ruff format --check on src/ on push/PR to main"
+      "location": ".github/workflows/ci.yml:10",
+      "description": "GitHub Actions job (lint: key at line 10): runs ruff check and ruff format --check on src/ on push/PR to main"
     },
     {
       "name": "CI: typecheck",
@@ -1126,6 +1126,13 @@
       "description": "GitHub Actions workflow measuring Python docstring coverage on push/PR to main"
     }
   ],
-  "architecture_summary": "The repository contains two main subsystems sharing the src/ package layout.\n\nSubsystem 1 — Branch Fixer (primary, feature-complete):\nPackage: src/branch_fixer/\nLayers: config/ → core/ → services/ → orchestration/ → storage/ → utils/\n\nControl flow: CLI entry (main.py → run_cli.py fix command) → CLI.setup_components() instantiates all services (AIManager, PytestRunner, ChangeApplier, GitRepository, StateManager, SessionStore) → PytestRunner.run_test() runs pytest in-process via PytestPlugin hooks, capturing TestResult objects → process_pytest_results() converts SessionResult to TestError domain aggregates → CLI.process_errors() iterates errors interactively or non-interactively → CLI.run_fix_workflow() per error: (1) creates a git fix branch via BranchManager, (2) delegates to FixOrchestrator.fix_error() which is a temperature-bumping retry loop (max_retries times), (3) each iteration constructs a FixService and calls attempt_fix(): validate workspace → AIManager.generate_fix() (LiteLLM/OpenRouter, persistent conversation thread per error, analyze-before-fix at temperature=0.1) → ChangeApplier.apply_changes_with_backup() strips fences, writes file, syntax-checks, AST assert-guard, restores on failure → PytestRunner.verify_fix() subprocess pytest for clean env → restore backup if failed, retry with higher temperature → on success, optionally PRManager creates pull request and pushes branch.\n\nStorage layer: FixSession (dataclass in orchestrator.py) tracks session state, persisted via SessionStore (TinyDB, sessions.json). StateManager validates FixSessionState transitions (lowercase enum). RecoveryManager provides checkpoint/restore. CoordinationError and WorkflowDispatcher are async stubs not wired into the live path.\n\nParser subsystem (services/pytest/parsers/): CollectionParser and FailureParser parse raw pytest string output; UnifiedErrorParser coordinates them. These are superseded in the live path by process_pytest_results() which works directly on SessionResult objects.\n\nSubsystem 2 — Test Generator (Feature 2, DDD-structured):\nPackage: src/dev/test_generator/\nLayers (DDD): core/models.py (domain) → analyze/ (anti-corruption parse layer) → generate/ (application + infrastructure strategies) → output/ (infrastructure write layer) → verify/ (infrastructure verification layer)\n\nControl flow: CLI entry (dev/cli/generate.py generate command) → GenerationOrchestrator.run() → _ensure_importable() adds src/ to sys.path → ModuleParser (AST NodeVisitor) parses source into ParsedModule of TestableEntity objects → select_variants() (pure function in analyze/extractor.py) maps entity type/name to GenerationVariant list → per entity/variant: HypothesisStrategy.generate() calls 'hypothesis write' subprocess using venv-local binary (Path(sys.executable).parent/'hypothesis'), fix_generated_code() post-processes (removes duplicate self args), write_attempt() persists to output_dir → Optional hybrid mode: ContextGatherer gathers mypy/ruff/coverage context, FabricStrategy.generate_module() calls LLM via LiteLLM for two-phase (analyze → write) consolidated module test. VerificationRunner runs pytest on generated tests as subprocess; GeneratedTestFixer uses AIManager+ChangeApplier to repair failures.\n\nOriginal implementation: scripts/hypot_test_gen.py is a self-contained monolith that was refactored into the DDD structure but remains as a runnable fallback.\n\nCI/CD: ci.yml runs lint→typecheck→security (non-blocking)→test+coverage→integration (non-blocking) on push/PR to main. deploy.yml deploys MkDocs docs to GitHub Pages. docstr-coverage.yml measures docstring coverage.\n\nStubs: coordinator.py (async SessionCoordinator), dispatcher.py (async WorkflowDispatcher), dev/cli/fix.py, dev/shared/{git,logging,testing}.py, and generate/strategies/pynguin.py are all empty or unimplemented placeholders for planned future features.\n\nTest organization: tests/ has unit/ (mocked dependencies, covers all source modules), integration/ (real subprocess/hypothesis), and test_generator/ (covers dev/test_generator/ subsystem). pytest.ini excludes integration marker by default; CI runs integration separately.",
-  "provisional_intent": "PROVISIONAL: This project is an AI-powered automated pytest test fixer. Its purpose is to take a Python repository with failing pytest tests and, without human intervention, generate correct fixes for each failure and submit them as pull requests. The system discovers failures with pytest, formulates LLM prompts (via OpenRouter/LiteLLM) using an analyze-before-fix pipeline, applies code changes with full backup/restore safety, verifies fixes by re-running pytest in a clean subprocess, and creates git branches and pull requests for successful fixes. A secondary feature generates property-based tests using Hypothesis (and optionally LLMs) for untested Python source files. The long-term aspiration visible in the design documents and ai-manager-ideas submodules is to approach SWE-Bench-level autonomous software engineering — automatically finding and fixing real bugs in Python codebases with high accuracy, competing with systems like Aider. Stage 4 refinement should validate whether the SWE-bench framing is still active or if the project has pivoted to a narrower tool-assisted developer-workflow scope."
+  "architecture_summary": "The repository contains two main subsystems sharing the src/ package layout.\n\nSubsystem 1 — Branch Fixer (primary, feature-complete):\nPackage: src/branch_fixer/\nLayers: config/ → core/ → services/ → orchestration/ → storage/ → utils/\n\nControl flow: CLI entry (main.py → run_cli.py fix command) → CLI.setup_components() instantiates all services (AIManager, PytestRunner, ChangeApplier, GitRepository, StateManager, SessionStore) → PytestRunner.run_test() runs pytest in-process via PytestPlugin hooks, capturing TestResult objects → process_pytest_results() converts SessionResult to TestError domain aggregates (working on structured SessionResult objects rather than parsing raw pytest tracebacks, though it still regex-matches each test's error_message string to derive the error type) → CLI.process_errors() iterates errors interactively or non-interactively → CLI.run_fix_workflow() per error: (1) creates a git fix branch via BranchManager, (2) delegates to FixOrchestrator.fix_error() which is a temperature-bumping retry loop (max_retries times), (3) each iteration constructs a FixService and calls attempt_fix(): validate workspace → AIManager.generate_fix() (LiteLLM/OpenRouter, persistent conversation thread per error, analyze-before-fix at temperature=0.1) → ChangeApplier.apply_changes_with_backup() strips fences, writes file, syntax-checks, AST assert-guard, restores on failure → PytestRunner.verify_fix() subprocess pytest for clean env → restore backup if failed, retry with higher temperature → on success, optionally PRManager creates pull request and pushes branch.\n\nStorage layer: FixSession (dataclass in orchestrator.py) tracks session state, persisted via SessionStore (TinyDB, sessions.json). StateManager validates FixSessionState transitions (lowercase enum). RecoveryManager provides checkpoint/restore. CoordinationError and WorkflowDispatcher are async stubs not wired into the live path.\n\nParser subsystem (services/pytest/parsers/): CollectionParser and FailureParser parse raw pytest string output; UnifiedErrorParser coordinates them. These are superseded in the live path by process_pytest_results() which works directly on SessionResult objects.\n\nSubsystem 2 — Test Generator (Feature 2, DDD-structured):\nPackage: src/dev/test_generator/\nLayers (DDD): core/models.py (domain) → analyze/ (anti-corruption parse layer) → generate/ (application + infrastructure strategies) → output/ (infrastructure write layer) → verify/ (infrastructure verification layer)\n\nControl flow: CLI entry (dev/cli/generate.py generate command) → GenerationOrchestrator.run() → _ensure_importable() adds src/ to sys.path → ModuleParser (AST NodeVisitor) parses source into ParsedModule of TestableEntity objects → select_variants() (pure function in analyze/extractor.py) maps entity type/name to GenerationVariant list → per entity/variant: HypothesisStrategy.generate() calls 'hypothesis write' subprocess using venv-local binary (Path(sys.executable).parent/'hypothesis'), fix_generated_code() post-processes (removes duplicate self args), write_attempt() persists to output_dir → Optional hybrid mode: ContextGatherer gathers mypy/ruff/coverage context, FabricStrategy.generate_module() calls LLM via LiteLLM for two-phase (analyze → write) consolidated module test. VerificationRunner runs pytest on generated tests as subprocess; GeneratedTestFixer uses AIManager+ChangeApplier to repair failures.\n\nOriginal implementation: scripts/hypot_test_gen.py is a self-contained monolith that was refactored into the DDD structure but remains as a runnable fallback.\n\nCI/CD: ci.yml runs lint→typecheck→security (non-blocking)→test+coverage→integration (non-blocking) on push/PR to main. deploy.yml deploys MkDocs docs to GitHub Pages. docstr-coverage.yml measures docstring coverage.\n\nStubs: coordinator.py (async SessionCoordinator), dispatcher.py (async WorkflowDispatcher) are placeholder source modules; dev/cli/fix.py, dev/shared/{git,logging,testing}.py, and generate/strategies/pynguin.py are truly empty (0-line) files reserved for planned future features.\n\nTest organization: tests/ has unit/ (mocked dependencies, covers all source modules), integration/ (real subprocess/hypothesis), and test_generator/ (covers dev/test_generator/ subsystem). pytest.ini excludes integration marker by default; CI runs integration separately.",
+  "provisional_intent": "PROVISIONAL: This project is an AI-powered automated pytest test fixer. Its purpose is to take a Python repository with failing pytest tests and, without human intervention, generate correct fixes for each failure and submit them as pull requests. The system discovers failures with pytest, formulates LLM prompts (via OpenRouter/LiteLLM) using an analyze-before-fix pipeline, applies code changes with full backup/restore safety, verifies fixes by re-running pytest in a clean subprocess, and creates git branches and pull requests for successful fixes. A secondary feature generates property-based tests using Hypothesis (and optionally LLMs) for untested Python source files. The long-term aspiration visible in the design documents and ai-manager-ideas submodules is to approach SWE-Bench-level autonomous software engineering — automatically finding and fixing real bugs in Python codebases with high accuracy, competing with systems like Aider. Stage 4 refinement should validate whether the SWE-bench framing is still active or if the project has pivoted to a narrower tool-assisted developer-workflow scope.",
+  "_meta": {
+    "denominator": 203,
+    "classified": 203,
+    "entry_points": 18,
+    "falsifier_verdict": "pass_with_corrections",
+    "cost_usd": 4.24
+  }
 }
