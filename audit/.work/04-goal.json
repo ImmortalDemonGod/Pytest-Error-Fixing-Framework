@@ -1,0 +1,784 @@
+{
+  "goal": {
+    "candidates": [
+      {
+        "goal": "Be a safe, autonomous pytest-failure repair tool for working Python developers: discover failing tests, generate an LLM fix, verify it by re-running pytest, and deliver it on an isolated git branch without ever corrupting the user's codebase.",
+        "rationale": "This is the only end-to-end implemented and exercised pathway. The README states the tool 'automatically fixes failing pytest tests by analyzing error output, proposing code changes, and verifying the fix.' The full pipeline (discover -> parse -> branch -> AI generate -> apply-with-backup -> syntax/AST guard -> subprocess verify -> push -> cleanup) is described in Stage-2 architecture and confirmed by a passing test suite. The persona docs explicitly name the 'Pragmatic Professional Engineer (Alex)' as the PRIMARY target, with a concrete CLI invocation. Safety ('Do No Harm' atomic backup/restore, syntax gatekeeper) is documented as [Production].",
+        "success_signals": [
+          {
+            "signal": "End-to-end fix workflow runs and is the documented primary entry point",
+            "grounding": "README.md:7-14 ('automatically fixes failing pytest tests ... Iterative Verification: Reruns tests'); docs/user-guide/03-cli-reference.md:1-44 (fix command with --non-interactive, --max-retries, --initial-temp); Stage-2 ARCHITECTURE control-flow trace; entry point python -m branch_fixer.main fix"
+          },
+          {
+            "signal": "Fixes are verified by re-running pytest in a clean subprocess and only accepted on exit code 0",
+            "grounding": "CLAUDE.md 'Verify Fix Behavior' section; PytestRunner.verify_fix subprocess at src/branch_fixer/services/pytest/runner.py (Stage-1/3 noted runner.py findings at :218, :388-415); EXECUTION: 883 passed, 93% coverage"
+          },
+          {
+            "signal": "Codebase is never left corrupted: atomic backup/restore + syntax/AST guard before accepting a change",
+            "grounding": "src/branch_fixer/services/code/change_applier.py (apply_changes_with_backup / _verify_changes) described as [Production] in .taskmaster/docs/prd.txt:728-754; CLAUDE.md change_applier fence-stripping bug history"
+          },
+          {
+            "signal": "Work is isolated on per-error git fix branches so the user's working branch is untouched",
+            "grounding": "src/branch_fixer/services/git/branch_manager.py (Stage-1 findings at :169, :225); docs/reference/target-audience.md:116 ('Git-branch-first approach provides the psychological safety')"
+          },
+          {
+            "signal": "Primary persona and intended audience are pragmatic professional Python engineers",
+            "grounding": "docs/reference/target-audience.md:27-71 (Persona 'Alex, the Pragmatic Professional', 'A Day in the Life' CLI run); docs/design-and-research/01-strategic-analysis.md:30 ('Python developers who use pytest ... accelerate debugging')"
+          }
+        ],
+        "status": "grounded"
+      },
+      {
+        "goal": "Reach SWE-bench-level autonomous source-code program repair: validate the fixer as an Automated Program Repair (APR) research instrument against the academic SWE-bench benchmark with a credible Pass@1 score.",
+        "rationale": "Stage-1 flagged this as the open question, and it is heavily documented but only partially built. The strategic charter sets concrete numeric targets (Pass@1 > 60% on a Live-Fire harness; >= 30% on SWE-bench Verified) and the 'Ren, the AI Researcher' niche persona is grounded in the swe-bench strategy doc. However the enabling infrastructure is NOT yet present: the benchmarks/ 'Golden Corpus' directory specified in the PRD is absent on disk, and the SWE-bench/Live-Fire harness is design-stage. So the goal is aspirational/active-on-paper but unverified in code.",
+        "success_signals": [
+          {
+            "signal": "Stated quantitative target: Pass@1 > 60% on Live-Fire harness and >= 30% on SWE-bench Verified",
+            "grounding": ".taskmaster/docs/prd.txt:20-24 (Success Metrics 'Pass@1 > 60%') and prd.txt:481-489 (Stage 2 'Achieve a credible baseline score (target: >= 30% on SWE-bench Verified)')"
+          },
+          {
+            "signal": "Dedicated SWE-bench strategy document and APR framing exist",
+            "grounding": "docs/design-and-research/02-swe-bench-strategy.md (entire doc on SWE-Bench Plus, error taxonomy, bug localization, dual-model strategist/executor)"
+          },
+          {
+            "signal": "AI-researcher niche persona uses the tool as a research instrument on SWE-bench",
+            "grounding": "docs/reference/target-audience.md:89-95 (Persona 'Ren, the AI Researcher' runs against SWE-bench, analyzes successes/failures)"
+          },
+          {
+            "signal": "UNVERIFIED enabling infrastructure: Golden Corpus / Live-Fire benchmark harness is specified but not implemented",
+            "grounding": "benchmarks/ directory ABSENT (ls benchmarks -> ABSENT) despite full spec at .taskmaster/docs/prd.txt:506-704 ('Live-Fire' Benchmark Harness, EnvironmentFactory, LiveFireSpy)"
+          }
+        ],
+        "status": "speculative"
+      },
+      {
+        "goal": "Become a dual-mode 'Test-Driven Quality Engine' that also generates new property-based / coverage-closing tests for untested code, not just repairs failing ones.",
+        "rationale": "Feature 2 (test generation) is a real, separately-implemented subsystem with a working script and DDD-layered package, giving partial grounding. The strategic charter elevates this to a co-equal long-term goal ('Mode 2: Enhances Test Suites ... generates new tests to close coverage gaps'). However the higher-value pieces (LLM-based fabric generation, coverage-gated generation, Pynguin synthesis) are explicitly Not-yet-implemented, so the grounded part is the Hypothesis-based generator only.",
+        "success_signals": [
+          {
+            "signal": "Working test-generation entry points exist (script + DDD CLI)",
+            "grounding": "CLAUDE.md 'Test Generation Feature (Feature 2)' (scripts/hypot_test_gen.py; cli generate --source-path); Stage-1 ENTRY POINTS lists 'cli generate' and 'scripts/hypot_test_gen.py'; src/dev/test_generator/ exists with analyze/generate/output/core subpackages (ls confirmed)"
+          },
+          {
+            "signal": "Strategic vision defines the dual-mode (repair + generate) quality engine as the long-term identity",
+            "grounding": "docs/design-and-research/01-strategic-analysis.md:398-446 (Mission 'dual-mode, Test-Driven Quality Engine'; USP table 'Generate New Tests for Coverage')"
+          },
+          {
+            "signal": "Coverage-gated and LLM-based generation strategies are roadmap, not yet built (bounds the grounded scope)",
+            "grounding": "CLAUDE.md 'Not yet implemented (Phase 4+)' lists generate/strategies/fabric.py, pynguin.py, coverage-gated optimizer.py; PRD Heuristic Class VI/VII (.taskmaster/docs/prd.txt:838-915) marked [Roadmap]/[Target Architecture]"
+          }
+        ],
+        "status": "speculative"
+      },
+      {
+        "goal": "Package the system as an acquisition-ready commercial IP asset ('exit-first'): a defensible Heuristic Engine + importable SDK + telemetry dataset positioned for sale to a developer-tools acquirer.",
+        "rationale": "Multiple strategy documents frame the project's ultimate aim as a $1.5M-$5M+ acquisition, requiring a 'Technical Due Diligence Dossier' (heuristic-engine whitepaper, SDK interface, telemetry taxonomy). This is the highest-level stated aspiration but the least grounded in code: the 'moat' heuristics (context filter, AST scope-guard) and the SDK packaging phase are unimplemented. The reviewer note inside the PRD itself warns of the 'Vaporware Trap' between [Production] and [Target Architecture] claims, so this goal is documented strategy, not realized capability.",
+        "success_signals": [
+          {
+            "signal": "Explicit exit-first / acquisition valuation strategy is documented",
+            "grounding": "docs/design-and-research/01-strategic-analysis.md:450-468 ('Exit-First Strategy', '$1.5M - $2M range', acquirers CodeRabbit/GitHub/JetBrains/SonarSource)"
+          },
+          {
+            "signal": "IP moat ('Heuristic Engine') and asset-packaging artifacts are called for as deliverables",
+            "grounding": ".taskmaster/docs/prd.txt:707-1064 (Heuristic Engine whitepaper, Phase 6 Asset Packaging, docs/research/heuristic-engine.md, docs/design/sdk-interface.md, telemetry taxonomy report)"
+          },
+          {
+            "signal": "UNVERIFIED: core 'moat' heuristics and SDK are unimplemented (vaporware risk acknowledged in-repo)",
+            "grounding": "context_filter.py ABSENT and ast_analysis.py ABSENT (ls -> ABSENT); PRD self-critique .taskmaster/docs/prd.txt:980-983 ('The Vaporware Trap (Status Confusion)') and prd.txt:1022-1055 (missing SDK/dossier artifacts)"
+          }
+        ],
+        "status": "speculative"
+      }
+    ]
+  },
+  "research": {
+    "sources": [
+      {
+        "title": "Agentless: Demystifying LLM-based Software Engineering Agents",
+        "url": "https://arxiv.org/abs/2407.01489",
+        "claim": "A non-agentic three-phase pipeline (hierarchical localization file→class/function→edit location, sample multiple patches in diff format, patch validation) achieved 40.7% on SWE-bench Lite and 50.8% on Verified with Claude 3.5 Sonnet in December 2024 at ~$0.70 per fix, outperforming complex agent systems at the time.",
+        "relevance": "Directly validates this project's localize-then-fix pipeline structure. Key gaps versus Agentless: single-candidate patch generation vs. multi-sampling; no reproduction test generated on failure; no hierarchical file→function→line localization. Closing these gaps represents the highest-leverage near-term improvements.",
+        "corroborated": true
+      },
+      {
+        "title": "AutoCodeRover: Autonomous Program Improvement (ISSTA 2024)",
+        "url": "https://arxiv.org/abs/2404.05427",
+        "claim": "Uses AST-aware code-search APIs (search_class, search_method_in_class, search_code_in_file) rather than whole-file injection, plus spectrum-based fault localization from the test suite; resolved 30.67% of SWE-bench Lite issues at $0.43/issue. Adding test-based fault localization improved accuracy from 16% to 20% in ablation.",
+        "relevance": "Structured code-search APIs instead of whole-file context are directly applicable to the AIManager prompt-building step. The ablation result (test-based fault localization +4pp) directly validates that parsing failing test tracebacks to narrow file/function context before patch generation is worth implementing.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering (NeurIPS 2024)",
+        "url": "https://arxiv.org/abs/2405.15793",
+        "claim": "A custom Agent-Computer Interface (ACI) giving the LLM file-editing tools, bash execution, and test-running commands doubles GPT-4 performance on SWE-bench vs. raw bash access. Original version solved 12.5% of SWE-bench issues; mini-SWE-agent with Claude 3.7 achieves 65%+ on SWE-bench Verified with a ~100-line implementation.",
+        "relevance": "The ACI insight motivates moving beyond the current ChangeApplier's one-shot diff approach toward giving the LLM iterative file-editing and test-execution tools. The mini-swe-agent result shows that with modern capable models, complex scaffolding is no longer required.",
+        "corroborated": true
+      },
+      {
+        "title": "RepairAgent: An Autonomous, LLM-Based Agent for Program Repair (ICSE 2025)",
+        "url": "https://arxiv.org/abs/2403.17134",
+        "claim": "First autonomous LLM agent for program repair using a three-state FSM (Understand Bug → Collect Information → Try Fixes) with 14 specialized tools, cycling up to 40 times. Fixed 164 Defects4J bugs (39 novel vs. prior work) at ~$0.14/bug using GPT-3.5 (~270K tokens per bug).",
+        "relevance": "The FSM-controlled agent loop maps directly onto the repo's existing FixSessionState enum and FixOrchestrator retry loop. Formalizing the three-state cycle and adding structured info-gathering tools (code search, traceback analysis) before committing to a patch would be a concrete improvement.",
+        "corroborated": true
+      },
+      {
+        "title": "ChatRepair: Automated Program Repair via Conversation (ISSTA 2024)",
+        "url": "https://dl.acm.org/doi/10.1145/3650212.3680323",
+        "claim": "Conversational repair loop that feeds exact failing assertion messages and buggy lines back to the LLM for up to five regeneration rounds, learning from both failed and successful earlier patches. Fixed 162/337 Defects4J bugs at $0.42 each; state-of-the-art on Defects4J 1.2 (114 fixes) and 2.0 (48 fixes) at time of publication.",
+        "relevance": "Validates the repo's persistent _messages conversation thread in AIManager. The key finding is that structured test-failure injection ('here is the exact assertion that failed, revise your patch') outperforms simply appending error text. The five-round limit is a practical upper bound confirmed by empirical results.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-Search: Enhancing Software Agents with Monte Carlo Tree Search and Iterative Refinement (ICLR 2025)",
+        "url": "https://arxiv.org/abs/2410.20285",
+        "claim": "Built on Moatless Tools, SWE-Search adds MCTS with a hybrid LLM-estimated value function and multi-agent discriminator debate. Achieves 23% relative improvement over the base agent on SWE-bench; performance scales with more inference-time compute at 2.7 instances per dollar with Claude 3.5 Sonnet.",
+        "relevance": "MCTS-guided search over patch candidates at inference time is a viable upgrade path for the repo without model retraining. The current flat retry loop could be replaced with a branching tree structure where failed patches spawn reflection + multiple next attempts, prioritized by a value function.",
+        "corroborated": true
+      },
+      {
+        "title": "Moatless Tools: LLM Code Navigation for Large Codebases",
+        "url": "https://github.com/aorwall/moatless-tools",
+        "claim": "Provides file-search, symbol-search, and code-navigation primitives letting LLMs explore large codebases without injecting whole files into context; achieved competitive SWE-bench results with Claude 3.5 Sonnet and GPT-4o by maintaining a dynamic code context rather than static whole-file prompts.",
+        "relevance": "Symbol-level code navigation (search by class, method) directly applicable to the AIManager context-building step, reducing hallucinated fixes caused by providing insufficient or overly large context to the model.",
+        "corroborated": false
+      },
+      {
+        "title": "A Survey of LLM-based Automated Program Repair: Taxonomies, Design Paradigms, and Applications",
+        "url": "https://arxiv.org/abs/2506.23749",
+        "claim": "2025 survey of 62 LLM-based repair systems identifies four paradigms (fine-tuning, prompting, procedural pipelines, agentic frameworks). Early 2023 work was dominated by prompting/fine-tuning; 2024 saw the first wave of agentic frameworks dominate. Two cross-cutting layers (retrieval and analysis augmentation) are universal performance boosters.",
+        "relevance": "Places this repo in the 'procedural pipeline' category. The survey's finding that agentic frameworks with retrieval augmentation dominate 2024 performance gives a concrete upgrade roadmap: add retrieval (BM25 or embedding-based file ranking) and convert the pipeline to an agent loop.",
+        "corroborated": true
+      },
+      {
+        "title": "Dissecting the SWE-Bench Leaderboards: Profiling Submitters and Architectures",
+        "url": "https://arxiv.org/abs/2506.17208",
+        "claim": "Analysis of 178 SWE-bench entries (80 unique approaches from 71 submitters) shows Claude 4 family dominates top entries; ExpeRepair achieved 60.3% on SWE-bench Lite; both agentless pipelines and full agent-loop systems reach the top tier; hierarchical fault localization (file→class/function→line) is universal among high-scorers.",
+        "relevance": "Confirms the repo's model choices (OpenRouter → Claude family) are well-founded. Also reveals that ensemble patch selection (sampling many candidates and picking via test outcomes) is common in high-scoring systems regardless of architectural paradigm.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-Bench Validity Concerns: Does SWE-Bench-Verified Test Agent Ability or Model Memory?",
+        "url": "https://arxiv.org/html/2512.10218v2",
+        "claim": "30%+ of successful SWE-bench Verified passes involve solution leakage from training data; 59.4% of o3 failures were test flaws, not model limitations. OpenAI discontinued SWE-bench Verified reporting in early 2026. SWE-bench Pro is recommended as the cleaner alternative benchmark.",
+        "relevance": "The benchmark this project aspires to is partially contaminated. The project's own verify_fix subprocess approach (run actual tests in a clean environment) is actually more rigorous than benchmark pass rates suggest. Future aspirational comparisons should target SWE-bench Pro.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-bench Verified Leaderboard (current state, 2025-2026)",
+        "url": "https://www.swebench.com/viewer.html",
+        "claim": "Claude Fable 5 leads SWE-bench Verified at 95.0% (2026), Claude Opus 4.8 at 88.6%, GPT 5.5 at 82.6%, Devin 2.0 at 45.8% unassisted, OpenHands SDK+Claude Sonnet 4.5 at 72%. Amazon Q Developer and devlo reached 54-55% in late 2024.",
+        "relevance": "Devin's 45.8% unassisted establishes the practical ceiling for a production tool-assisted system in 2025. The 72% OpenHands score shows what open-source agentic frameworks achieve with Claude Sonnet 4.5, a directly comparable model tier to the repo's OpenRouter targets.",
+        "corroborated": true
+      },
+      {
+        "title": "On the Role of Fault Localization Context for LLM-Based Program Repair",
+        "url": "https://arxiv.org/abs/2604.05481",
+        "claim": "Evaluated 61 configurations varying file-level, element-level (class/function), and line-level context across 798 bugs. File-level localization alone yields 15-17x improvement over no-file baseline. Element-level provides conditional gains only if file context is high quality. Line-level context frequently degrades performance due to noise amplification.",
+        "relevance": "Critical practical guidance: the biggest single improvement for the AIManager is ensuring the correct file(s) are passed rather than trying to pinpoint line numbers. Traceback parsing to identify the responsible source file is the highest-ROI fault localization investment.",
+        "corroborated": false
+      },
+      {
+        "title": "SWT-Bench: Testing and Validating Real-World Bug-Fixes with Code Agents (NeurIPS 2024)",
+        "url": "https://proceedings.neurips.cc/paper_files/paper/2024/file/94f093b41fc2666376fb1f667fe282f3-Paper-Conference.pdf",
+        "claim": "Benchmark evaluating agents on generating fail-to-pass tests (failing before a PR, passing after) for real GitHub issues. SWE-agent outperforms non-agent methods at test generation; an ensemble of four methods solves 71% more samples than the best single method.",
+        "relevance": "Formalizes exactly the verify_fix contract the repo already implements. The 71% ensemble gain strongly motivates running multiple patch candidates in parallel and selecting via test outcomes — a direct upgrade to the current single-attempt retry loop.",
+        "corroborated": true
+      },
+      {
+        "title": "OpenHands: An Open Platform for AI Software Developers as Generalist Agents (ICLR 2025)",
+        "url": "https://arxiv.org/abs/2407.16741",
+        "claim": "Open-source platform (formerly OpenDevin) using CodeAct agent with event-stream architecture and Docker-sandboxed execution. CodeAct v2.1 (Claude 3.5 Sonnet) achieved 53% on SWE-bench Verified in late 2024; OpenHands SDK v1 (2025) achieves 72% with Claude Sonnet 4.5 + extended thinking.",
+        "relevance": "The most directly comparable open-source system. Key differentiators to adopt: Docker sandboxing for clean execution isolation per fix attempt; event-stream architecture enabling replay/debugging of agent decisions; multi-agent delegation for specialized sub-agents.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-Fixer: Training Open-Source LLMs for Effective and Efficient GitHub Issue Resolution (ACL 2025)",
+        "url": "https://arxiv.org/abs/2501.05040",
+        "claim": "Fine-tuned Qwen2.5-7B retriever and Qwen2.5-72B editor on 110K instances using BM25 + lightweight model for coarse-to-fine file retrieval. Achieves 22%/30.2% on SWE-bench Lite/Verified with only 2 model calls per instance. With PASS_TO_PASS filtering: 24.7%/32.8%.",
+        "relevance": "Demonstrates that a BM25 retrieval pre-filter (ranking files by relevance to the error message) is highly effective and cheap. Adding BM25 file ranking before the expensive LLM call in AIManager would reduce cost and improve localization accuracy — directly implementable with the existing Python stack.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-RL: Advancing LLM Reasoning via Reinforcement Learning on Open Software Evolution (NeurIPS 2025)",
+        "url": "https://arxiv.org/abs/2502.18449",
+        "claim": "Meta trains Llama 3-70B using RL on open-source software evolution (issues + PRs + diffs) with rule-based diff-similarity rewards. Achieves 41.0% on SWE-bench Verified — best among sub-100B models, comparable to GPT-4o. Reward functions use normalized diff similarity scores; the approach generalizes beyond SE tasks.",
+        "relevance": "Confirms that binary test-passing rewards (as used in this project's verify_fix) are sufficient for RL-based training of code repair models. If the project accumulates enough fix/fail trajectories, fine-tuning a smaller model with RL on those trajectories is a viable path to specializing for pytest-fix tasks.",
+        "corroborated": true
+      },
+      {
+        "title": "CigaR: Cost-Efficient Program Repair with LLMs",
+        "url": "https://arxiv.org/abs/2402.06598",
+        "claim": "Uses three specialized prompts (initiation → improvement → multiplication) to minimize tokens while maximizing plausible patch diversity. Fixes 39.8% of Defects4J/HumanEval-Java bugs while reducing token usage by 73% vs ChatRepair (127K vs 467K tokens/bug); 96% cost reduction on shared bugs.",
+        "relevance": "Token efficiency directly relevant to the repo's OpenRouter cost management. The 'patch multiplication' phase — generating diverse variants of an initial plausible patch — is a low-cost upgrade to the AIManager retry loop that improves diversity without restarting from scratch.",
+        "corroborated": false
+      },
+      {
+        "title": "InspectCoder: Dynamic Analysis-Enabled Self Repair via Interactive LLM-Debugger Collaboration",
+        "url": "https://arxiv.org/abs/2510.18327",
+        "claim": "Dual-agent system where a Program Inspector places breakpoints and inspects runtime variable state via an interactive debugger, while a Patch Coder synthesizes fixes from runtime observations. Achieves 81.40% pass rate on BigCodeBench-R; 5.1%–60.4% relative improvement over strongest self-repair baselines.",
+        "relevance": "Attaching a debugger to inspect variable state at the point of test failure provides substantially richer context than traceback text alone. The repo's PytestPlugin hook infrastructure could be extended to capture variable values at assertion failure points before invoking the AIManager.",
+        "corroborated": false
+      },
+      {
+        "title": "TestART: Improving LLM-based Unit Testing via Co-evolution of Automated Generation and Repair Iteration",
+        "url": "https://arxiv.org/abs/2408.03095",
+        "claim": "Co-evolutionary loop where test generation and test repair iterate together. Template-based repair fixes compilation and runtime errors in LLM-generated tests. Achieves 78.55% pass rate and 90.96% coverage with GPT-3.5, an 18% improvement over baselines; outperforms EvoSuite with half the test cases.",
+        "relevance": "Directly applicable to Test Generation Feature 2. The template-based repair loop for fixing generated tests (compilation errors, assertion errors) addresses the same failure modes seen in the repo's hypothesis write subprocess calls, which currently fail silently with no repair attempt.",
+        "corroborated": true
+      },
+      {
+        "title": "Leveraging LLM for Automatic Patch Correctness Assessment (IEEE TSE 2024)",
+        "url": "https://dl.acm.org/doi/10.1109/TSE.2024.3452252",
+        "claim": "LLM4PatchCorrect uses bug descriptions, execution traces, failing tests, and labeled patches from other APR tools to assess whether a plausible patch is correct or overfitting. Addresses the fundamental problem that passing the test suite does not guarantee patch correctness.",
+        "relevance": "The repo's verify_fix returns True on pytest exit code 0, which does not catch overfitted patches that pass by deleting assertions, skipping tests, or hardcoding expected values. Adding heuristic correctness checks (detect test deletion, constant-folding, assertion weakening) would improve fix quality.",
+        "corroborated": true
+      },
+      {
+        "title": "BESTER: Effective LLM Debugging with Best-first Tree Search",
+        "url": "https://arxiv.org/abs/2407.19055",
+        "claim": "Combines LLM self-reflection (generates debugging instructions from buggy code + execution trace) with best-first tree search to select the most promising next repair attempt. Achieves state-of-the-art Pass@1 on three code generation benchmarks while remaining cost-competitive.",
+        "relevance": "The self-reflection + search combination is a mid-complexity upgrade for the repo's current flat retry loop. Rather than linearly retrying, a tree structure where each failed attempt spawns reflection + multiple candidate next patches with a value-function priority would systematically explore the fix space.",
+        "corroborated": false
+      },
+      {
+        "title": "Iterative Self-Repair in LLM Code Generation Across Model Scales and Benchmarks",
+        "url": "https://arxiv.org/abs/2604.10508",
+        "claim": "Iterative self-repair with error feedback is universally effective across 7 tested models (Meta, Alibaba, Google families; open-weight and proprietary; dense and MoE). Each repair attempt using error output from the failed execution consistently improves pass rate; diminishing returns set in after 3-5 iterations.",
+        "relevance": "Validates the repo's iterative repair loop design across model families, confirming it is not GPT-4-specific. The 3-5 iteration finding supports the current max_retries parameter; beyond 5 rounds, the marginal benefit drops sharply relative to cost.",
+        "corroborated": false
+      },
+      {
+        "title": "Agentic Property-Based Testing: Finding Bugs Across the Python Ecosystem",
+        "url": "https://arxiv.org/abs/2510.09907",
+        "claim": "An LLM agent autonomously writes Hypothesis property-based tests by reading type annotations, docstrings, and function names; discovered novel bugs in popular Python packages. Presented at NeurIPS 2024 Deep Learning for Code Workshop.",
+        "relevance": "Directly applicable to Test Generation Feature 2. The agent's annotation/docstring-to-property derivation strategy is exactly what the planned FabricStrategy (generate/strategies/fabric.py) should implement when calling AIManager to generate Hypothesis tests for untested functions.",
+        "corroborated": false
+      },
+      {
+        "title": "From Prompts to Properties: Rethinking LLM Code Generation with Property-Based Testing (ACM FSE 2025)",
+        "url": "https://dl.acm.org/doi/10.1145/3696630.3728702",
+        "claim": "A two-stage prompting approach — first extract semantic properties of a function, then generate a Hypothesis test suite for those properties — outperforms direct single-prompt test generation for LLMs and provides stronger validation oracles than unit-test pass@k.",
+        "relevance": "The two-stage property-extraction + test-generation pipeline maps directly onto how the planned FabricStrategy should be structured: first call AIManager to extract properties, then call it again to generate Hypothesis tests. The PBT oracle also provides stronger correctness guarantees for the primary fix-validation loop.",
+        "corroborated": true
+      },
+      {
+        "title": "Aider: AI Pair Programmer with Architect/Editor Pattern and Polyglot Benchmark",
+        "url": "https://aider.chat/docs/leaderboards/",
+        "claim": "Aider achieves state-of-the-art benchmark results with an Architect/Editor two-model split (Architect describes the solution, Editor translates to file edits), post-edit tree-sitter linting with automatic error correction, and AST-aware code context. GPT-5 leads the 2025 polyglot leaderboard at 0.880; DeepSeek-V3 tops the edit-format leaderboard.",
+        "relevance": "The Architect/Editor split maps onto the repo's AIManager design: use it as Architect (analysis + fix plan) then delegate to a cheaper model as Editor (applying structured diffs). The polyglot leaderboard provides a model-selection guide for choosing between OpenRouter options without running SWE-bench.",
+        "corroborated": true
+      },
+      {
+        "title": "Introducing Devin, the First AI Software Engineer (Cognition, March 2024)",
+        "url": "https://cognition.ai/blog/introducing-devin",
+        "claim": "Devin achieved 13.86% on SWE-bench at launch (vs. 1.96% prior SOTA) using persistent memory, web browsing, shell, code editor, and long-horizon planning. Devin 2.0 reaches 45.8% on SWE-bench Verified in standard unassisted evaluation as of 2025.",
+        "relevance": "Devin's architecture — persistent memory + multi-tool environment + long-horizon task execution — is the commercial reference implementation of what this project aspires to. The gap between Devin 2.0 (45.8%) and Claude Fable 5 (95%) illustrates the distance between tool-augmented commercial products and frontier model capabilities.",
+        "corroborated": true
+      },
+      {
+        "title": "AutoFL: LLM-Based Explainable Fault Localization (FSE 2024)",
+        "url": "https://dl.acm.org/doi/10.1145/3660771",
+        "claim": "Two-stage LLM prompting (first ask root cause, then ask for fault location) improves method-level fault localization accuracy by up to 233.3% over baselines on 798 real-world Java and Python bugs. Developers preferred concise, high-quality LLM-generated explanations over longer ones.",
+        "relevance": "The two-stage localize (explain-then-locate) pattern can be directly incorporated into the AIManager analyze-before-fix pipeline by splitting the analysis prompt: a root-cause explanation call at low temperature, followed by a file/function localization call, before fix generation.",
+        "corroborated": false
+      },
+      {
+        "title": "AwesomeLLM4APR: Systematic Literature Review on LLMs for Automated Program Repair (TOSEM 2026)",
+        "url": "https://github.com/iSEngLab/AwesomeLLM4APR",
+        "claim": "Living systematic literature review tracking all major LLM-based APR papers organized by technique (prompting, fine-tuning, procedural pipelines, agents) and benchmark; covers 100+ papers through mid-2025.",
+        "relevance": "This curated index is the highest-value ongoing reference for tracking new APR techniques as they are published. Subscribing enables continuous updates to AIManager prompt patterns and repair strategies as new validated approaches emerge.",
+        "corroborated": false
+      },
+      {
+        "title": "PatchPilot: A Cost-Efficient Software Engineering Agent with Early Attempts on Formal Verification",
+        "url": "https://arxiv.org/abs/2502.02747",
+        "claim": "Separates repair into a planning phase (LLM generates multi-step repair plan) and a generation phase (follows the plan step-by-step) with lightweight in-generation lint and syntax validation that retries each failed step immediately before advancing.",
+        "relevance": "The plan-then-generate pattern with inline syntax checking is a low-cost upgrade to the repo's AIManager analyze-then-fix pipeline. Adding an explicit structured repair plan step before patch generation would reduce incoherent multi-location edits that currently pass syntax checks but fail semantically.",
+        "corroborated": false
+      },
+      {
+        "title": "Integrations Reference — Hypothesis Ghostwriter (Hypothesis 6.155.1 documentation)",
+        "url": "https://hypothesis.readthedocs.io/en/latest/ghostwriter.html",
+        "claim": "The `hypothesis write` CLI generates five test types: fuzz (calls function with random valid inputs), roundtrip (encode/decode pairs), equivalence (two implementations on same inputs), idempotent (f(f(x))==f(x)), and magic (auto-detects which type applies). Tests may include `# TODO` placeholders for unknown types. The tool uses but does not require type annotations.",
+        "relevance": "The repo already uses `hypothesis write` as one of its variant strategies. Understanding the five modes and their fallback behavior (magic -> roundtrip -> binary_op -> fuzz) directly informs which variants the test generator should emit per entity type.",
+        "corroborated": true
+      },
+      {
+        "title": "Hypothesis Ghostwriter Issue #4113: Equivalence Tests for Mutating Functions",
+        "url": "https://github.com/HypothesisWorks/hypothesis/issues/4113",
+        "claim": "The ghostwriter equivalence test passes the *same object instance* to both functions being compared. When either function mutates its argument in-place, the mutation bleeds into the second call, causing the test to incorrectly pass. The proposed fix is to `copy.deepcopy` arguments before each call.",
+        "relevance": "This is an unresolved ghostwriter bug. Any generated equivalence test for functions that mutate their arguments (e.g., sort, reverse, update) will produce a false-passing test. The repo's test generator should detect in-place mutation signatures and either skip equivalence tests or inject deepcopy.",
+        "corroborated": false
+      },
+      {
+        "title": "Hypothesis on PyPI — version 6.155.3",
+        "url": "https://pypi.org/project/hypothesis/",
+        "claim": "Hypothesis 6.155.3 was released June 16, 2026. It requires Python >=3.10. The `ghostwriter` extra is a separate optional install. The `cli` extra is also separate.",
+        "relevance": "Confirms the repo must install `hypothesis[cli]` to get both `hypothesis write` and black formatting. Python 3.13 (the repo's venv) satisfies the >=3.10 requirement.",
+        "corroborated": true
+      },
+      {
+        "title": "Agentic Property-Based Testing: Finding Bugs Across the Python Ecosystem (arXiv:2510.09907)",
+        "url": "https://arxiv.org/html/2510.09907v1",
+        "claim": "Using Claude Opus 4.1 as the LLM in an agentic loop, the system automatically writes Hypothesis property-based tests, runs them, interprets shrunk failing examples, and iterates. It found bugs across the broader Python ecosystem.",
+        "relevance": "Validates the architectural direction the repo could take: wrapping `AIManager` around Hypothesis test execution with a feedback loop (generate hypothesis test -> run -> if failing example found -> interpret with LLM -> refine or escalate).",
+        "corroborated": true
+      },
+      {
+        "title": "Understanding the Characteristics of LLM-Generated Property-Based Tests (arXiv:2510.25297)",
+        "url": "https://arxiv.org/abs/2510.25297",
+        "claim": "Combining property-based testing (PBT) and edge case testing (EBT) methods improved bug detection from 68.75% to 81.25% across 16 HumanEval problems. LLMs can generate valid Hypothesis strategies but often miss subtle invariant properties without feedback.",
+        "relevance": "Quantifies the benefit of combining PBT with LLM-driven edge case detection — a concrete hybrid approach the repo's `HypothesisStrategy` + `AIManager` pipeline could adopt.",
+        "corroborated": false
+      },
+      {
+        "title": "Pynguin on PyPI — version 0.45.0",
+        "url": "https://pypi.org/project/pynguin/",
+        "claim": "Pynguin 0.45.0 was released January 29, 2026. It requires Python <3.15, >=3.10 and has optional `openai` extra. It self-describes as 'only a research prototype' and requires the `PYNGUIN_DANGER_AWARE` env var because it executes the module under test.",
+        "relevance": "The repo's CLAUDE.md documents `generate/strategies/pynguin.py` as not yet implemented (Phase 4+). This confirms Pynguin is viable for the repo's Python 3.13 venv, but the safety warning means subprocess isolation (already planned in the repo's Docker isolation note) is mandatory.",
+        "corroborated": true
+      },
+      {
+        "title": "Pynguin Changelog — LLM Integration and Type Inference (v0.41–0.45)",
+        "url": "https://github.com/se2p/pynguin/blob/main/CHANGELOG.md",
+        "claim": "Pynguin 0.41.0 added LLMOSAAlgorithm, prompting, and parsing. Version 0.44.0 added LLM-based type inference (from a bachelor's thesis at University of Passau) and TypeTracing for string subtypes. Version 0.45.0 added a master-worker subprocess architecture, realistic string generation via Faker/Fandango, and memetic algorithm combining DynaMOSA with LLM Local Search.",
+        "relevance": "Pynguin now has native LLM integration via its `openai` extra — the repo's planned `pynguin.py` strategy can call Pynguin's `LLMOSAAlgorithm` mode rather than building its own LLM wrapper around Pynguin.",
+        "corroborated": true
+      },
+      {
+        "title": "Pynguin: Automated Unit Test Generation for Python (arXiv:2202.05218 / ICSE 2022)",
+        "url": "https://arxiv.org/abs/2202.05218",
+        "claim": "Pynguin is modeled after EvoSuite (Java) but adapted for Python's dynamic typing. It supports random (Randoop-style), whole-suite genetic algorithm (EvoSuite-style), and DynaMOSA algorithms. It uses existing type hints and can apply type inference when hints are absent.",
+        "relevance": "Establishes Pynguin as the canonical search-based test generator for Python, directly analogous to EvoSuite for Java. Its search-based approach is complementary to the LLM-based approach in `AIManager` — together they form a hybrid strategy matching CodaMosa's architecture.",
+        "corroborated": true
+      },
+      {
+        "title": "CoverUp: Effective High Coverage Test Generation for Python (FSE 2025, arXiv:2403.16218)",
+        "url": "https://arxiv.org/abs/2403.16218",
+        "claim": "CoverUp achieves 80% median line+branch coverage per module (vs. CodaMosa's 47%) and 90% overall (vs. MuTAP's 77%). Its key mechanism: measure coverage with pytest-cov, identify uncovered AST segments, iteratively prompt LLM to write pytest functions covering those segments, continue dialogue on failure. Nearly 40% of successes come from iterative dialogue rather than first-shot generation.",
+        "relevance": "CoverUp is the closest published architecture to what the repo's `generate/optimizer.py` aims to build (coverage-gated generation). Its coverage-feedback loop using `pytest-cov --cov-report=xml` is directly implementable on top of the repo's existing `verify_fix` subprocess runner.",
+        "corroborated": true
+      },
+      {
+        "title": "CodaMosa: Escaping Coverage Plateaus in Test Generation with Pre-trained LLMs (ICSE 2023)",
+        "url": "https://dl.acm.org/doi/10.1109/ICSE48619.2023.00085",
+        "claim": "CodaMosa runs search-based software testing (SBST) until coverage stalls, then queries an LLM (Codex) for example tests of under-covered functions, then resumes SBST. On 486 benchmarks, CodaMosa significantly improved coverage over SBST alone (173 benchmarks better) with negligible regression (10 benchmarks worse).",
+        "relevance": "Validates the hybrid SBST+LLM architecture. The repo could implement a CodaMosa-style loop: run Pynguin until plateaued, hand uncovered functions to `AIManager` for seed generation, resume Pynguin with those seeds.",
+        "corroborated": true
+      },
+      {
+        "title": "ChatUniTest: A Framework for LLM-Based Test Generation (FSE 2024 Demonstrations, arXiv:2305.04764)",
+        "url": "https://arxiv.org/abs/2305.04764",
+        "claim": "ChatUniTest uses an adaptive focal context mechanism (extracts class/method-level AST info: package, imports, extends, fields, method signatures) plus a generation-validation-repair loop. It outperforms early ChatGPT baselines on Java projects.",
+        "relevance": "The AST-based focal context mechanism directly mirrors what the repo's `analyze/parser.py` does with `ModuleParser`. ChatUniTest's approach of feeding class-level context into the prompt is proven to improve LLM test quality over raw function-only prompts.",
+        "corroborated": true
+      },
+      {
+        "title": "TestART: Improving LLM-based Unit Testing via Co-evolution of Generation and Repair (arXiv:2408.03095)",
+        "url": "https://arxiv.org/abs/2408.03095",
+        "claim": "TestART achieves 78.55% pass rate and 90.96% line coverage on focal methods — surpassing ChatGPT-3.5 by ~19% on both TBC and TLC, and beating EvoSuite by 3.4% coverage with only half the test cases. It uses template-based repair rules for common failure patterns (missing imports, syntax errors, hallucinated methods).",
+        "relevance": "The template-based repair rules are directly applicable to the repo's `fix_service.py` pipeline. When AI-generated tests fail, applying deterministic repair templates (add import, fix indentation, remove dead comment blocks) before re-prompting LLM is significantly more effective than raw re-prompting.",
+        "corroborated": true
+      },
+      {
+        "title": "MuTAP: Effective Test Generation Using Pre-trained LLMs and Mutation Testing (ScienceDirect 2024, arXiv:2308.16557)",
+        "url": "https://arxiv.org/abs/2308.16557",
+        "claim": "MuTAP generates initial tests via zero/few-shot LLM prompting (Codex, llama-2-chat), runs mutation testing, identifies surviving mutants, then augments the prompt with those mutants to re-prompt the LLM for tests that kill them. Evaluated on 164 Python PUTs and 1710 buggy programs.",
+        "relevance": "Mutation-based feedback loop provides a concrete extension for the repo's `AIManager`: after generating a test suite, run a mutation tool (e.g., mutmut), feed surviving mutant diffs back into the conversation thread, and request targeted tests — directly leveraging the persistent `self._messages` thread already in `manager.py`.",
+        "corroborated": true
+      },
+      {
+        "title": "Using GitHub Copilot for Test Generation in Python: An Empirical Study (AST 2024)",
+        "url": "https://dl.acm.org/doi/10.1145/3644032.3644443",
+        "claim": "In an existing test suite context, only 45.28% of Copilot-generated tests pass; without an existing test suite, 92.45% fail, are broken, or are empty. Evaluated 290 Copilot-generated tests across 7 open-source Python projects.",
+        "relevance": "Establishes the baseline failure rate for naive LLM test generation without feedback loops — 55–92% failure. Justifies the repo's planned validation-repair loop: simply calling an LLM and appending its output is insufficient; execution feedback and iterative repair are essential.",
+        "corroborated": true
+      },
+      {
+        "title": "Qodo Cover (formerly CodiumAI Cover-Agent) — GitHub",
+        "url": "https://github.com/Codium-ai/cover-agent",
+        "claim": "Qodo Cover is an AGPL-3.0 open-source tool with 4 components: Test Runner, Coverage Parser (validates coverage increases), Prompt Builder, AI Caller. Supports Python/pytest via `pytest-cov --cov-report=xml`. Uses LiteLLM to support 100+ LLMs. As of June 2025, the repository is no longer maintained (note added to README).",
+        "relevance": "The repo's architecture closely mirrors Cover-Agent (LiteLLM-based `AIManager`, subprocess-based `verify_fix`, pytest-cov XML parsing planned in `optimizer.py`). The abandonment note means the repo should not depend on it as a library but can study its source as a reference implementation.",
+        "corroborated": true
+      },
+      {
+        "title": "ChatAssert: LLM-Based Test Oracle Generation With External Tools Assistance (IEEE TSE, Jan 2025)",
+        "url": "https://dl.acm.org/doi/10.1109/TSE.2024.3519159",
+        "claim": "ChatAssert uses code summaries + examples as LLM context, lightweight static analysis to repair non-compiling oracles, and dynamic test-run information to repair oracles that compile but fail. It improves over TECO (the prior state-of-the-art at 27.5% accuracy) on 3,540 test cases.",
+        "relevance": "Oracle generation (what should the assertion check?) is the hardest part of automated test generation. ChatAssert's three-pass approach (static context -> compile repair -> runtime repair) maps directly onto the repo's `change_applier.py` (syntax check) and `verify_fix` (runtime check) pipeline stages.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-bench: Can Language Models Resolve Real-World GitHub Issues? (ICLR 2024 Oral, arXiv:2310.06770)",
+        "url": "https://arxiv.org/abs/2310.06770",
+        "claim": "SWE-bench contains 2,294 tasks from 12 popular Python repositories. Each task provides a codebase + issue description; the model must edit code to pass hidden test cases. With BM25 retrieval, Claude 2 resolved only 1.96% of issues. The benchmark was accepted as an ICLR 2024 oral.",
+        "relevance": "SWE-bench is the standard benchmark for evaluating automated program repair systems like the repo's fix framework. The repo's pipeline (discover failing test -> AI generate fix -> verify against test suite) directly targets the same task distribution.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-bench Verified Leaderboard 2025–2026",
+        "url": "https://www.demandsphere.com/research/demandsphere-radar/ai-frontier-model-tracker/benchmarks/swe-bench/",
+        "claim": "As of 2025–2026, top SWE-bench Verified scores have reached 80%+ (Claude Opus 4.5 at ~80.9%). In mid-2025, the top score was ~75%. The benchmark has 99 evaluated models. OpenAI stopped reporting Verified scores in early 2026 in favor of SWE-bench Pro.",
+        "relevance": "Rapid improvement in SWE-bench scores indicates the underlying LLM capabilities available to `AIManager` are advancing quickly. Using `openrouter/openai/gpt-5.4` or `anthropic/claude-3-5-sonnet` (as noted in CLAUDE.md) now provides dramatically better fix quality than one year ago.",
+        "corroborated": true
+      },
+      {
+        "title": "Test4Py: Type-aware LLM-based Regression Test Generation for Python (arXiv:2503.14000)",
+        "url": "https://arxiv.org/html/2503.14000v1",
+        "claim": "Test4Py achieves 83.0% average statement coverage and 70.8% branch coverage on 183 real-world Python modules, outperforming state-of-the-art baselines by 7.2% and 8.4% respectively. It leverages the program call graph to infer parameter types and uses an iterative repair procedure for test refinement.",
+        "relevance": "Directly applicable to the repo's `analyze/extractor.py` and `generate/strategies/hypothesis.py`: call graph analysis for richer parameter type context improves generated test quality. The 83% statement coverage benchmark is a concrete target for the planned coverage-gated generation in `optimizer.py`.",
+        "corroborated": true
+      },
+      {
+        "title": "An Empirical Evaluation of Using LLMs for Automated Unit Test Generation — TestPilot (arXiv:2302.06527)",
+        "url": "https://arxiv.org/abs/2302.06527",
+        "claim": "TestPilot (GitHub Next, JavaScript/TypeScript npm packages) generates tests by prompting an LLM with a skeleton including function signature, body, and mined doc examples. Achieved median 70.2% statement coverage and 52.8% branch coverage — significantly better than Nessie (51.3% statement, 25.6% branch). Iterative re-prompting on failure is a key feature.",
+        "relevance": "Establishes that the feedback-on-failure re-prompting pattern (already implemented in `manager.py` via `self._messages`) achieves substantial coverage gains over one-shot generation, even in JavaScript. The 70% statement coverage is a validated baseline before adding coverage-guided iteration.",
+        "corroborated": true
+      },
+      {
+        "title": "Large Language Models for Unit Test Generation: Achievements, Challenges, and Opportunities (arXiv:2511.21382)",
+        "url": "https://arxiv.org/pdf/2511.21382",
+        "claim": "A 2025 survey synthesizes findings across LLM test generation papers, concluding that the dominant pattern is generate-validate-repair. Key challenges include: LLM hallucination of non-existent methods, type mismatches in dynamically typed languages (Python), flaky oracle assertions, and lack of project-level context in prompts.",
+        "relevance": "Directly maps to known bugs in the repo (CLAUDE.md documents hallucinated `report.function` causing wrong test node, and stray `n` from bad fence stripping). The survey confirms these are systematic LLM failure modes requiring deterministic pre/post-processing, not just better prompting.",
+        "corroborated": true
+      },
+      {
+        "title": "Dynamic Cogeneration of Bug Reproduction Test in Agentic Program Repair (arXiv:2601.19066)",
+        "url": "https://arxiv.org/pdf/2601.19066",
+        "claim": "Agentic program repair systems that co-generate bug-reproducing tests alongside the fix achieve higher repair success rates. The approach generates a failing test from the issue description first, then uses test failure feedback to guide fix generation.",
+        "relevance": "The repo's pipeline (discover failing test -> fix) could be extended in reverse: when given a bug description (GitHub issue), first use `AIManager` to generate a reproducing test, then apply the fix pipeline. This is the issue-to-fix workflow that SWE-bench measures.",
+        "corroborated": true
+      },
+      {
+        "title": "Enhancing Automated Unit Test Generation with LLMs: A Systematic Literature Review (ACM TOSEM 2025)",
+        "url": "https://dl.acm.org/doi/10.1145/3802827",
+        "claim": "A 2025 systematic review of LLM-based test generation finds that: (1) most tools use ChatGPT/GPT-4 as the base LLM; (2) coverage-guided iterative prompting consistently outperforms one-shot generation; (3) Python-specific challenges (dynamic typing, no mandatory annotations) are the main unsolved problems; (4) assertion quality (test oracle accuracy) remains the weakest link.",
+        "relevance": "Corroborates the repo's LiteLLM-based approach and confirms that the planned coverage-gated generation (optimizer.py) is the right next step. The weak-oracle finding suggests the repo should measure not just test pass/fail but mutation score.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-bench Leaderboard Overview (2025–2026)",
+        "url": "https://www.emergentmind.com/topics/swe-bench-leaderboards",
+        "claim": "Top performers on SWE-bench Verified have scaled from ~30% in 2024 to 74–79% in 2026. Claude Opus 4.5 + Live-SWE-agent scores 79.2%; Claude 4.5 Opus medium (20251101) leads non-agentic at 74.40%. Amazon Q Developer (Dec 2024) achieved 55% then 66% (Apr 2025). Earlier top open-source: OpenHands + CodeAct v2.1 + claude-3-5-sonnet at 53%. High-performing submissions rely heavily on proprietary LLMs, especially Claude 4 variants.",
+        "relevance": "Establishes performance ceiling and pace of progress for automated pytest fixing; shows that strong models + good scaffolding yield large gains. Validates that investing in agent scaffolding matters as much as model choice.",
+        "corroborated": true
+      },
+      {
+        "title": "Agentless: Demystifying LLM-based Software Engineering Agents",
+        "url": "https://arxiv.org/abs/2407.01489",
+        "claim": "Agentless uses a simple three-phase pipeline: (1) hierarchical fault localization (file → class/function → edit location), (2) patch generation (sampling multiple candidates), (3) patch validation via test re-execution. Achieved 32.00% on SWE-bench Lite at $0.70 per task. Adopted by OpenAI to evaluate GPT-4o, o1, and by DeepSeek for V3/R1. Does NOT use complex agent loops or tool-calling — the LLM is called in fixed phases.",
+        "relevance": "Core design pattern most relevant to this project: the three-phase localization→repair→validation loop is directly applicable to pytest fixer. File localization step (ranking files by relevance to the error) is the single highest-leverage improvement possible. Test re-execution as validation = exact pattern already in verify_fix.",
+        "corroborated": true
+      },
+      {
+        "title": "AutoCodeRover: Autonomous Program Improvement (ISSTA 2024)",
+        "url": "https://github.com/AutoCodeRoverSG/auto-code-rover",
+        "claim": "AutoCodeRover achieves 37.3% on SWE-bench Lite and 46.2% on SWE-bench Verified at <$0.70/task. Key innovation: instead of text-file search, it searches AST-structured code using APIs like search_method_in_class, search_class, get_code_around_line. When test suites are available it performs statistical fault localization (spectrum-based, e.g. Ochiai) to identify suspicious lines. Context retrieval is separated from patch generation.",
+        "relevance": "AST-level code navigation APIs (vs raw string search or file dumps) dramatically improve bug localization accuracy. Statistical fault localization using existing test failures is directly applicable — the failing pytest output already contains line numbers and stack traces that can feed SBFL. The search API pattern could replace dumping entire files into context.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-agent: NeurIPS 2024 (Princeton/Stanford)",
+        "url": "https://github.com/SWE-agent/SWE-agent",
+        "claim": "SWE-agent wraps an LLM with a custom Agent-Computer Interface (ACI) giving tools: file viewer with line numbers, file editor, shell execution, search. State-of-the-art among open-source agents. SWE-agent 1.0 + Claude 3.7 = SoTA on SWE-bench Full (Feb 2025). Mini-SWE-Agent achieves 65% on SWE-bench Verified in ~100 lines of Python. The system is governed by a single yaml file — maximizes LM agency rather than constraining it.",
+        "relevance": "The ACI pattern (custom tools tailored for code navigation rather than generic bash) significantly outperforms raw shell access. For a pytest fixer, this means custom tools for: reading specific function/class, running specific test node, viewing pytest output, applying targeted diff — rather than dumping whole files.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-Gym: Training Software Engineering Agents and Verifiers (ICML 2025)",
+        "url": "https://arxiv.org/abs/2412.21139",
+        "claim": "SWE-Gym is the first public training environment for SWE agents: 2,438 real-world Python task instances from GitHub with pre-installed deps and executable tests. Fine-tuning a 32B Qwen-2.5-coder on <500 trajectories from GPT-4o/Claude 3.5 Sonnet yields +14% absolute gain on SWE-bench Verified. Enables inference-time scaling via verifiers trained on agent trajectories (best-of-n selection). Open-source baselines achieve 32%/26% on SWE-bench Verified/Lite.",
+        "relevance": "Executable test environments + RL fine-tuning is the path to open-weight models competitive with Claude/GPT on this task. For this project: demonstrates that running tests as environment feedback (already done via verify_fix subprocess) is the right foundation. Verifier-based best-of-n: generate multiple candidate patches, pick the one that passes the most tests.",
+        "corroborated": true
+      },
+      {
+        "title": "R2E-Gym: Procedural Environments and Hybrid Verifiers (COLM 2025)",
+        "url": "https://arxiv.org/abs/2504.07164",
+        "claim": "R2E-Gym is the largest procedural SWE training environment: 8,100+ problems across 13 repos. Uses SWE-GEN synthetic data curation (no human-labeled issues needed). Hybrid verifiers combining execution-based and execution-free signals achieve 51% on SWE-bench Verified — new open-weight SOTA, competitive with o1 and sonnet-3.5-v2 with tools.",
+        "relevance": "Hybrid verifiers (execution + static analysis) outperform either alone. For pytest fixer: combining test execution result (pass/fail) with static checks (syntax, import resolution, type checking) before reporting success is more robust than test-only validation.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-RL: Advancing LLM Reasoning via Reinforcement Learning on Open Software Evolution (Meta, 2025)",
+        "url": "https://arxiv.org/abs/2502.18449",
+        "claim": "SWE-RL trains Llama 3 on GitHub pull request data using RL with rule-based reward (solution similarity score). Llama3-SWE-RL-70B achieves 41% on SWE-bench Verified. RL on software evolution data generalizes — improves function coding, math, and general reasoning. Self-Play SWE-RL (SSR) extends this with only sandboxed repos + deps, no human labels needed.",
+        "relevance": "RL with test-execution rewards is a viable path to improve a fixer without human labeling. The reward signal (patch passes tests = +1) is exactly what verify_fix already computes. Self-play on the project's own codebase is feasible with SWE-Gym-style environments.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-smith: Scaling Data for Software Engineering Agents (NeurIPS 2025 Spotlight)",
+        "url": "https://arxiv.org/abs/2504.21798",
+        "claim": "SWE-smith generates SWE training data automatically: given any Python codebase, it creates 100s–1000s of task instances that break existing tests. Generated 50K instances from 128 GitHub repos (10x larger than all prior datasets). SWE-agent-LM-32B trained on this data achieves 40.2% Pass@1 on SWE-bench Verified (open-source SOTA at time of release).",
+        "relevance": "Directly applicable: this project's own test suite is a training data source. SWE-smith's approach — deliberately breaking tests, then requiring the model to fix them — mirrors this project's core pipeline. Synthetic data generation from existing repos makes fine-tuning viable without manual labeling.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-Fixer: Training Open-Source LLMs for Effective and Efficient GitHub Issue Resolution (ACL 2025)",
+        "url": "https://arxiv.org/abs/2501.05040",
+        "claim": "SWE-Fixer: two-module pipeline. Module 1: BM25 + lightweight model for coarse-to-fine file retrieval. Module 2: fine-tuned Qwen2.5-72B for code editing. Trained on 110K instances; requires only 2 model calls per instance. Achieves 22.0%/30.2% on SWE-bench Lite/Verified; with PASS_TO_PASS filtering reaches 24.7%/32.8%. Code, data, models open-sourced at github.com/InternLM/SWE-Fixer.",
+        "relevance": "BM25 retrieval for file localization is simple, fast, and effective — implementable without embeddings/vector DBs. The two-model-call efficiency contrasts with expensive agentic loops. PASS_TO_PASS filtering (only generate fixes that maintain passing tests while fixing failing ones) directly maps to this project's verify_fix step.",
+        "corroborated": true
+      },
+      {
+        "title": "SWELancer: Can Frontier LLMs Earn $1 Million from Real-World Freelance Software Engineering? (OpenAI, 2025)",
+        "url": "https://arxiv.org/abs/2502.12115",
+        "claim": "SWELancer: 1,400+ freelance tasks from Upwork worth $1M total, ranging from $50 bug fixes to $32K feature implementations. Claude 3.5 Sonnet earns ~$400K out of $1M possible (~40%). Tasks are graded with end-to-end tests triple-verified by experienced engineers. Frontier models still fail majority of tasks. Public split: SWE-Lancer Diamond ($500,800 worth of tasks).",
+        "relevance": "End-to-end test grading (not just unit tests) is a more realistic measure of fix quality. Bug-fix tasks in the $50–$500 range are closest to automated pytest fixing. Shows real-world gap between benchmark scores and economic value delivery. Corroborates test execution as the ground-truth oracle.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-bench Multimodal: Do AI Systems Generalize to Visual Software Domains? (2024)",
+        "url": "https://arxiv.org/abs/2410.03859",
+        "claim": "SWE-bench M: 617 tasks from 17 JavaScript libraries (web UI, diagrams, maps, visualization). Every task has at least one image (screenshot, visual diff, error capture). 83.5% of issues require visual input to resolve. SWE-agent M adds browser, screenshot, and image viewing to handle visual bugs.",
+        "relevance": "Currently out of scope for a Python pytest fixer, but signals direction: as test failures increasingly involve visual output (snapshot tests, browser rendering tests), screenshot feedback will become necessary. The pattern of adding domain-specific tools (browser/screenshot for visual bugs) maps to adding pytest-specific tools (traceback parsing, coverage data).",
+        "corroborated": false
+      },
+      {
+        "title": "LiveCodeBench: Holistic and Contamination Free Evaluation of LLMs for Code",
+        "url": "https://arxiv.org/abs/2403.07974",
+        "claim": "LiveCodeBench continuously collects new problems from LeetCode, AtCoder, Codeforces. 600+ problems (May 2023–Aug 2024), 50+ LLMs evaluated. Time-segmented evaluation detects contamination across GPT-4o, Claude, Deepseek, Codestral. Focuses on broader capabilities: self-repair, code execution, test output prediction. Average 59+ generated tests per problem.",
+        "relevance": "Self-repair (LLM fixes its own incorrect code based on test output) is the exact task this project solves. Test output prediction (LLM predicts what a test will output before running it) is an interesting pre-check technique. Time-windowed evaluation is the correct way to assess this project's improvements without contamination.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-bench Goes Live! (Microsoft Research, NeurIPS 2025)",
+        "url": "https://arxiv.org/abs/2505.23419",
+        "claim": "SWE-bench-Live: 1,319 tasks from 93 repos, all GitHub issues created since 2024 (post-LLM-training cutoffs). Monthly updates adding 50 new verified issues. Automated curation pipeline removes manual bottlenecks. Evaluation reveals substantial performance gap vs. static SWE-bench even under controlled conditions — real capability is lower than leaderboard numbers suggest.",
+        "relevance": "The 'performance gap' finding is critical: real-world pytest fixing will be harder than SWE-bench numbers imply. This project should not be calibrated against static benchmark scores — it needs live evaluation on its own failing tests. Monthly refresh approach is a model for keeping evaluation fresh.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-rebench: Automated Pipeline for Task Collection and Decontaminated Evaluation (NeurIPS 2025)",
+        "url": "https://arxiv.org/abs/2505.20411",
+        "claim": "SWE-rebench: 4-stage automated pipeline filtering 450K pull requests from 30K+ repos. Transparent decontamination: tasks marked if they include pre-release model data. Each model run 5 times for statistical rigor. GPT-4.1 shows noticeable performance decline on newer subsets, suggesting contamination inflation on existing benchmarks. DeepSeek-V3 shows strongest open-source robustness across time subsets.",
+        "relevance": "Contamination is real and inflates apparent performance. For evaluating this fixer: use pytest failures from test files created after the LLM's training cutoff. Stochasticity (run 5 times) is important — single-run pass/fail is noisy for LLM-based fixing.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-bench Contamination and False Positive Problems",
+        "url": "https://arxiv.org/html/2512.10218v2",
+        "claim": "Over 94% of SWE-bench Verified issues and ground-truth PRs predate LLM training cutoffs. ~30%+ of successful passes involve direct solution leakage. UTBoost reveals ~41% of Lite and 24% of Verified leaderboard entries were mis-scored due to inadequate test suites. OpenAI manual audit: 59.4% of o3 failures caused by test flaws, not model limitations. About 31% of instances with passing patches rely on insufficiently robust tests, letting semantically wrong patches pass.",
+        "relevance": "Weak test oracles are the #1 source of false positives in automated repair. This project's verify_fix uses the same tests that already exist — if those tests are weak, fixes will appear to succeed when they haven't. Adding regression tests (PASS_TO_PASS check) is essential. Mutation testing to assess test quality would help.",
+        "corroborated": true
+      },
+      {
+        "title": "RGFL: Reasoning Guided Fault Localization for Automated Program Repair (2026)",
+        "url": "https://arxiv.org/abs/2601.18044",
+        "claim": "RGFL: hierarchical reasoning module generates structured, bug-specific explanations for candidate files and elements. Two-stage ranking combining LLM-based scores + embedding-based signals. Counterfactual upper-bound analysis quantifies contribution of each localization stage to repair success. Addresses the problem that software repositories span millions of tokens, far exceeding LLM context limits.",
+        "relevance": "Two-stage ranking (sparse BM25 first, then dense embedding re-ranking) is the correct architecture for file localization. Counterfactual analysis is a useful debugging tool: how much does fixing localization vs. fixing repair generation improve overall success rate? Structured explanations (chain-of-thought over why a file is relevant) improve localization quality.",
+        "corroborated": false
+      },
+      {
+        "title": "BM25 vs. Dense Retrieval for Bug Localization",
+        "url": "https://arxiv.org/pdf/2502.15292",
+        "claim": "BM25 retrieval is ~40x faster than dense embeddings and achieves similar performance for bug localization in many settings. CODER integrates BM25 and Ochiai (spectrum-based) retrievers to identify suspicious files. LLM-based query reformulation from bug reports (extracting file paths, identifiers, stack traces, error messages) significantly enhances BM25 performance. Dense embeddings provide stronger alignment between NL and code in some fault localization scenarios.",
+        "relevance": "For a pytest fixer: pytest tracebacks already contain file paths, line numbers, and error messages — this is ideal BM25 query material. No need for expensive embeddings to start. Query = traceback + error message + test name. Files to search = repository Python files. BM25 over these with the query should correctly surface the buggy file in most cases.",
+        "corroborated": true
+      },
+      {
+        "title": "Agentless Hierarchical Localization: Three-Level Approach",
+        "url": "https://github.com/OpenAutoCoder/Agentless",
+        "claim": "Agentless localizes bugs hierarchically: (1) file level — LLM ranks all repo files given the issue; (2) class/function level — LLM narrows within top-ranked files; (3) fine-grained edit location — LLM identifies specific lines. Sampling multiple repair candidates then using test re-execution to select the best patch. This simple approach without agent loops outperformed all existing open-source agents at launch.",
+        "relevance": "The exact architecture to implement: (1) given failing test + traceback, rank Python files most likely to contain the bug; (2) within top files, identify the specific function; (3) generate targeted edit. Current project sends entire files to LLM — hierarchical localization would reduce context size and improve precision.",
+        "corroborated": true
+      },
+      {
+        "title": "OpenHands + CodeAct v2.1: Open Platform for AI Software Developers (ICLR 2025)",
+        "url": "https://proceedings.iclr.cc/paper_files/paper/2025/file/a4b6ad6b48850c0c331d1259fc66a69c-Paper-Conference.pdf",
+        "claim": "OpenHands CodeAct uses iterative action→execution→observation loop. Actions: CmdRunAction (bash), IPythonRunCellAction (Python), FileEditAction, AgentFinishAction. Achieves 53% on SWE-bench Verified (top open-source April 2025). Successfully fixes 79.3% of bugs in Python split of another benchmark (significantly better than non-agentic approaches). Isolated sandbox environments for each session.",
+        "relevance": "The iterative bash+python+file-edit loop with sandbox isolation is the right architecture. Sandbox isolation is critical for safety (verify_fix already uses subprocess). The 79.3% Python-only fix rate suggests that Python bugs are significantly more tractable than the cross-language average — good news for a pytest-specific fixer.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-Gym: Training Data Shows <500 Trajectories Yield +14% on SWE-bench",
+        "url": "https://github.com/SWE-Gym/SWE-Gym",
+        "claim": "Fine-tuning 32B Qwen-2.5-coder on just 491 agent-environment trajectories sampled from GPT-4o and Claude 3.5 Sonnet (using SWE-Gym as environment) yields +14% absolute gain on SWE-bench Verified. The key is executable test verification as the reward signal — the model learns from test pass/fail outcomes across thousands of interaction steps.",
+        "relevance": "Small-scale RL fine-tuning with test execution as reward is tractable. This project already has the reward signal (verify_fix pass/fail). Collecting 500+ trajectories of successful fixes (or failed attempts with eventual success) from Claude running on real pytest failures could enable meaningful fine-tuning of a smaller model.",
+        "corroborated": true
+      },
+      {
+        "title": "Dynamic Cogeneration of Bug Reproduction Test in Agentic Program Repair (FSE 2026, Google)",
+        "url": "https://arxiv.org/abs/2601.19066",
+        "claim": "Passerine (deployed at Google): generates both bug fix AND bug reproduction test (BRT) in the same patch, reducing need for separate pipelines. Cogeneration allows BRT generation for at least as many bugs as a dedicated BRT agent, without compromising fix generation. Evaluated on 120 human-reported Google bugs. Reduces engineering effort in maintaining separate fix and BRT pipelines at scale.",
+        "relevance": "Generating a reproducing test alongside the fix is a powerful technique: (1) confirms the bug is understood; (2) serves as a regression test; (3) provides an executable spec to guide repair. For this project: after analyzing a failing test, generate a minimal reproducing test case before generating the fix — the BRT can then guide the repair.",
+        "corroborated": false
+      },
+      {
+        "title": "Tree-sitter for Semantic Code Indexing and AI Agents",
+        "url": "https://medium.com/@email2dineshkuppan/semantic-code-indexing-with-ast-and-tree-sitter-for-ai-agents-part-1-of-3-eb5237ba687a",
+        "claim": "Tree-sitter is an incremental, error-tolerant parser supporting 40+ languages. Best practice: AST for indexing (what code means), Tree-sitter for retrieval (what code looks like). Combined approach: index type definitions and method declarations at global, file, and class level. Enables symbol extraction, complexity analysis, dependency mapping without dumping whole files into LLM context.",
+        "relevance": "For a pytest fixer: tree-sitter can extract function signatures, class hierarchies, and import graphs from the repository. This structured extraction (not raw file content) is what should be sent to the LLM for localization. Python's built-in ast module covers the same ground for Python-only repos and is already available.",
+        "corroborated": true
+      },
+      {
+        "title": "LLMLOOP: Improving LLM-Generated Code and Tests through Automated Iterative Feedback Loops (2025)",
+        "url": "https://arxiv.org/html/2603.23613v1",
+        "claim": "LLMLOOP: iterative refinement loop using compiler errors and runtime feedback to automatically repair faulty tests and code. GEM framework: (1) LLM-based test synthesis; (2) execution-driven self-repair of failing tests; (3) mutation-guided oracle refinement. Spectrum-Based Fault Localization (SBFL) suspiciousness scores integrated into each iteration. Memory of prior failed attempts in prompt prevents repeating same mistakes.",
+        "relevance": "Including prior failed fix attempts in subsequent fix generation prompts (conversation history) prevents the model from cycling through the same wrong answers. This is the 'persistent conversation thread per error' pattern already in this project's AIManager. SBFL suspiciousness scores from test coverage data could augment the stack trace as a localization signal.",
+        "corroborated": true
+      },
+      {
+        "title": "Dissecting the SWE-Bench Leaderboards: Profiling Submitters and Architectures",
+        "url": "https://arxiv.org/pdf/2506.17208",
+        "claim": "Analysis of all SWE-bench leaderboard submissions: both agentic (tool-calling, multi-step) and non-agentic (fixed pipeline) approaches can achieve competitive performance. High-performing submissions rely on proprietary LLMs (Claude, GPT-4 family). Agentic approaches dominate top positions. Sampling multiple solutions then using tests to select = best strategy for non-agentic systems.",
+        "relevance": "The non-agentic fixed-pipeline approach (Agentless-style) is viable and sometimes more cost-efficient than complex agent loops. For a pytest fixer with strict token/cost budgets: sample 3–5 candidate patches with temperature > 0, run verify_fix on each, return first success. This requires no complex agent loop.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-Bench++: Scalable Generation of SWE Benchmarks (2024)",
+        "url": "https://arxiv.org/pdf/2512.17419",
+        "claim": "SWE-Bench++ framework automatically generates SWE benchmarks from open-source Python repositories. Extends SWE-bench-style evaluation to arbitrary repos. Automated instance generation without hundreds of hours of manual labor.",
+        "relevance": "This project could use SWE-Bench++-style automation to generate its own evaluation set from any Python project's GitHub history — creating project-specific benchmarks for the pytest fixer rather than relying on the general SWE-bench set.",
+        "corroborated": false
+      },
+      {
+        "title": "Less is More: Adaptive Program Repair with Bug Localization and Preference Learning (2025)",
+        "url": "https://arxiv.org/pdf/2503.06510",
+        "claim": "Adaptive repair: use preference learning (DPO/RLHF) to rank candidate patches. Bug localization quality is the primary bottleneck — model repair improves proportionally with localization accuracy. Argues against sending entire files: 'less context, more precise location' consistently outperforms full-file approaches.",
+        "relevance": "Confirms: investing in better localization (identifying the specific function/line, not just the file) has higher ROI than improving the repair generation step. The current project likely sends too much context. Focusing LLM on a 20-50 line window around the stack trace line is more effective than sending 300-line files.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-bench Live: Performance Gap vs Static Benchmarks",
+        "url": "https://swe-bench-live.github.io/",
+        "claim": "State-of-the-art agents score substantially lower on SWE-bench-Live (fresh, post-2024 issues) than on static SWE-bench Verified, even under controlled conditions. Gap attributed to contamination and overfitting to static benchmark structure. 1,319 tasks, 93 repos, 50 new issues added monthly.",
+        "relevance": "Real-world pytest fixer performance will be lower than benchmark numbers suggest. This project should evaluate against fresh failing tests, not tests that appeared in any LLM training data. Using pytest failures from codebases created after the model's training cutoff is the correct evaluation strategy.",
+        "corroborated": true
+      },
+      {
+        "title": "SWE-RL Self-Play: Training Without Human-Labeled Issues",
+        "url": "https://arxiv.org/pdf/2512.18552",
+        "claim": "Self-Play SWE-RL (SSR): requires only sandboxed repos with source code and installed dependencies. No human-labeled issues or tests needed. Agent generates its own 'issues' by breaking code, then attempts to fix them. Reward = test execution result. First step toward self-improving software engineering agents.",
+        "relevance": "This project could generate its own training curriculum by: (1) taking working test suites, (2) introducing synthetic bugs (mutation operators), (3) requiring the fixer to repair them. This is a self-supervised loop that requires no external data collection.",
+        "corroborated": false
+      },
+      {
+        "title": "UTBoost: Rigorous Evaluation of Coding Agents on SWE-Bench (2025)",
+        "url": "https://arxiv.org/pdf/2506.09289",
+        "claim": "~41% of Lite and ~24% of Verified SWE-bench leaderboard entries were mis-scored due to inadequate or incorrectly parsed test suites. UTBoost framework strengthens test suites to catch incomplete or incorrect modifications. Reveals that many 'fixed' patches only pass because existing tests are too weak to detect the errors.",
+        "relevance": "Critical for this project: verify_fix returning True does not mean the bug is actually fixed — it means the existing test passed. Adding mutation testing (does the patch actually change behavior?) or running the full test suite (not just the originally failing test) would reduce false positives. PASS_TO_PASS check (ensure previously passing tests still pass) is the minimum safeguard.",
+        "corroborated": true
+      },
+      {
+        "title": "Multi-SWE-bench: Multilingual Benchmark for Issue Resolving (ByteDance, 2025)",
+        "url": "https://arxiv.org/abs/2504.02605",
+        "claim": "Multi-SWE-bench extends SWE-bench to multiple programming languages. MagentLess (multilingual Agentless): adapted hierarchical fault localization + code repair + candidate patch selection via regression and reproduction tests. MagentLess achieves more accurate issue localization than MopenHands but struggles more with code editing step.",
+        "relevance": "The localization vs. editing gap: good localization + weak editing < moderate localization + strong editing in terms of final fix rate. For this project, if localization is already decent (stack traces point to the file), the editing model quality is the bottleneck. Using a stronger model for the edit step (separate from the localization step) may yield gains.",
+        "corroborated": true
+      },
+      {
+        "title": "SweRank: Software Issue Localization with Code Ranking (2025)",
+        "url": "https://arxiv.org/pdf/2505.07849",
+        "claim": "SweRank: specialized code ranking model for software issue localization. Combines dense retrieval with code-specific ranking signals. Outperforms generic BM25 and general-purpose embeddings for file-level localization on SWE-bench.",
+        "relevance": "A dedicated ranking model (vs. generic BM25 or zero-shot LLM) for identifying which files contain the bug is a valuable intermediate step. For this project: a small specialized ranker trained on (traceback, buggy_file) pairs would be a high-ROI addition between the current 'give everything to GPT' approach and the target 'localize then fix' pipeline.",
+        "corroborated": false
+      },
+      {
+        "title": "Statistical Fault Localization with AutoCodeRover (Spectrum-Based)",
+        "url": "https://www.eulerfold.com/research-decoded/autocoderover-ast-software-engineering-agent",
+        "claim": "AutoCodeRover uses Ochiai-based spectrum fault localization when test suites are available: executes failing and passing tests, computes suspiciousness score per line based on which tests cover which lines, ranks lines by suspiciousness. Combined with AST navigation, this uniquely resolved 26 task instances in SWE-bench evaluation vs. text-search competitors.",
+        "relevance": "Spectrum-based FL (Ochiai, Tarantula) with coverage data is directly implementable with pytest --cov. Running the full test suite, collecting line coverage for passing vs. failing tests, computing suspiciousness scores — this data can be fed to the LLM as structured context ('these 5 lines are most suspicious') rather than raw file dumps.",
+        "corroborated": true
+      },
+      {
+        "title": "Integrating Various Software Artifacts for Better Bug Localization and Program Repair (2024)",
+        "url": "https://arxiv.org/pdf/2412.03905",
+        "claim": "Combining multiple artifacts — stack traces, error messages, code comments, test names, git blame/history, docstrings — produces better localization than any single artifact. LLM integration of stack traces + relevant code context + similar past bugs gives best results. Key finding: error message semantic content is often more valuable than the literal stack trace line numbers.",
+        "relevance": "For pytest failures: error messages ('AssertionError: expected 5 got 3'), fixture names, test docstrings, and parametrize values all carry semantic meaning that helps localize bugs. The project currently passes the traceback — adding the error message text and the test's assertion expression would improve localization without adding much context.",
+        "corroborated": false
+      }
+    ],
+    "synthesis": {
+      "synthesis": "The gathered sources converge on a coherent picture of where this repo — an AI-powered autonomous pytest fixer built as a procedural localize→prompt→apply→verify pipeline — sits relative to the LLM program-repair state of the art, and which upgrades carry the highest leverage. The 2025 survey (arxiv 2506.23749) explicitly places systems like this in the 'procedural pipeline' paradigm and identifies two cross-cutting layers — retrieval augmentation and analysis augmentation — as universal performance boosters; this is the strongest organizing frame for the repo's roadmap. Five themes are corroborated across three or more independent sources.\n\nFirst, FAULT LOCALIZATION is the highest-ROI gap. Agentless (40.7% Lite / 50.8% Verified), AutoCodeRover (test-based fault localization improved accuracy 16%→20% in ablation), SWE-Fixer (BM25 coarse-to-fine file retrieval), and the leaderboard-profiling analysis (arxiv 2506.17208: hierarchical file→class/function→line localization is universal among high-scorers) all agree that getting the correct file(s) into context is decisive. The repo currently regex-matches each test's error_message to derive an error type but does NOT parse failing tracebacks to localize the responsible source file — closing this is the single most-supported improvement. NOTE A CONTRADICTION the synthesis must respect: the fault-localization-context paper (arxiv 2604.05481) claims line-level context 'frequently degrades performance due to noise amplification,' while the leaderboard-profiling paper reports line-level localization is 'universal among high-scorers.' These can be reconciled — high-scorers use line-level as the FINAL narrowing step on top of already-high-quality file context, not as a substitute for it — but the repo should prioritize file-level localization first and treat line-level as an optional refinement, not a starting point.\n\nSecond, MULTI-CANDIDATE SAMPLING WITH TEST-BASED SELECTION beats single-shot retry. Agentless samples multiple patches and validates; SWT-Bench reports an ensemble of four methods solves 71% more samples than the best single method; the leaderboard-profiling paper finds ensemble patch selection common across both agentless and agentic top-tier systems; SWE-Search adds MCTS over candidates for a 23% relative gain. The repo's current flat, temperature-bumping single-candidate retry loop is the weakest-supported design choice and the clearest target for replacement.\n\nThird, CONVERSATIONAL REPAIR WITH STRUCTURED FAILURE INJECTION is validated. ChatRepair (162/337 Defects4J, up to five rounds) and RepairAgent (FSM with info-gathering tools) both confirm that feeding the EXACT failing assertion and buggy lines back — not merely appending raw error text — drives the gains, and that ~5 rounds is a practical empirical ceiling. This directly validates the repo's persistent _messages conversation thread in AIManager and tells it how to refine the feedback payload.\n\nFourth, AGENT LOOPS WITH CODE-SEARCH TOOLS are the dominant 2024+ paradigm but are NOT strictly required with modern models. SWE-agent's ACI insight, OpenHands (53%→72% with Claude Sonnet 4.5), RepairAgent's three-state FSM, and AutoCodeRover/Moatless's symbol-search APIs all point toward giving the LLM structured code navigation instead of whole-file injection. Crucially, mini-SWE-agent reaching 65%+ on Verified in ~100 lines shows complex scaffolding is now optional — so the repo can adopt retrieval/code-search incrementally without a full agentic rewrite. The existing FixSessionState enum maps cleanly onto RepairAgent's FSM if the team chooses to formalize it.\n\nFifth, MODEL AND EXECUTION CHOICES ARE WELL-FOUNDED. The leaderboard (Claude Fable 5 95.0%, Opus 4.8 88.6%) and profiling paper confirm the repo's OpenRouter→Claude-family targeting is sound, and OpenHands corroborates Docker-sandboxed per-attempt isolation (already documented as 'not yet implemented' in manager.py) as a worthwhile clean-execution upgrade beyond the current subprocess verify_fix. Finally, benchmark-validity concerns (arxiv 2512.10218: solution leakage, test flaws, OpenAI discontinuing Verified reporting) suggest the SWE-bench framing should be held loosely — the repo's actual-test-re-run verification is arguably more rigorous than leaderboard pass rates imply, and aspirational comparisons should target SWE-bench Pro rather than the contaminated Verified set.\n\nLow-relevance / dropped: SWE-RL (RL fine-tuning of Llama on software evolution) is interesting but inapplicable to a tool that consumes hosted models via OpenRouter and does no training; it is retained only as context.",
+      "key_ideas": [
+        {
+          "idea": "Add traceback-based fault localization to pass the correct source file(s) into the AIManager prompt, replacing/augmenting the current error_message regex with parsing of the failing pytest traceback to identify responsible files.",
+          "why_relevant": "Highest-ROI gap. Multiple independent SWE-bench systems show file-level localization is the dominant accuracy driver; AutoCodeRover's ablation isolates a +4pp gain from test-based fault localization specifically. The repo today derives only an error type, not a file location, from each failure.",
+          "sources": [
+            "https://arxiv.org/abs/2407.01489",
+            "https://arxiv.org/abs/2404.05427",
+            "https://arxiv.org/abs/2506.17208",
+            "https://arxiv.org/abs/2501.05040"
+          ],
+          "confidence": "high"
+        },
+        {
+          "idea": "Replace the single-candidate temperature-bumping retry loop with multi-candidate patch sampling plus test-based selection (and optionally MCTS-guided search at inference time).",
+          "why_relevant": "The repo's flat retry loop is its weakest-supported design choice. Sampling several patches and selecting by actual test outcome is common across both agentless and agentic top-tier systems; SWT-Bench measures a 71% ensemble gain and SWE-Search a 23% relative MCTS gain — both achievable without model retraining, reusing the existing verify_fix contract.",
+          "sources": [
+            "https://arxiv.org/abs/2407.01489",
+            "https://proceedings.neurips.cc/paper_files/paper/2024/file/94f093b41fc2666376fb1f667fe282f3-Paper-Conference.pdf",
+            "https://arxiv.org/abs/2410.20285",
+            "https://arxiv.org/abs/2506.17208"
+          ],
+          "confidence": "high"
+        },
+        {
+          "idea": "Inject the exact failing assertion message and buggy source lines back into the persistent conversation thread on each retry, capped at roughly five rounds.",
+          "why_relevant": "Validates and sharpens the repo's existing _messages thread in AIManager. ChatRepair and RepairAgent both show structured failure feedback (precise assertion + buggy lines) outperforms appending raw error text, and that ~5 rounds is the empirical practical ceiling — a directly implementable refinement of the current feedback payload.",
+          "sources": [
+            "https://dl.acm.org/doi/10.1145/3650212.3680323",
+            "https://arxiv.org/abs/2403.17134"
+          ],
+          "confidence": "high"
+        },
+        {
+          "idea": "Add a cheap retrieval pre-filter (BM25 or embedding-based file ranking against the error message) before the expensive LLM call.",
+          "why_relevant": "SWE-Fixer demonstrates BM25 coarse-to-fine file retrieval is effective and cheap (2 model calls/instance), and the 2025 survey identifies retrieval augmentation as a universal performance booster. Directly implementable in the existing Python stack to cut cost and improve localization.",
+          "sources": [
+            "https://arxiv.org/abs/2501.05040",
+            "https://arxiv.org/abs/2506.23749"
+          ],
+          "confidence": "high"
+        },
+        {
+          "idea": "Move from whole-file context injection toward structured code-search/symbol-navigation primitives (search_class, search_method, search_code_in_file).",
+          "why_relevant": "AutoCodeRover's AST-aware search APIs and Moatless's symbol navigation reduce hallucinated fixes from over- or under-sized context. Applicable to the AIManager context-building step incrementally, without a full agentic rewrite.",
+          "sources": [
+            "https://arxiv.org/abs/2404.05427",
+            "https://github.com/aorwall/moatless-tools"
+          ],
+          "confidence": "medium"
+        },
+        {
+          "idea": "Optionally formalize the fix loop as an FSM with structured info-gathering tools (Understand → Collect Information → Try Fixes), mapping onto the existing FixSessionState enum and FixOrchestrator.",
+          "why_relevant": "RepairAgent's three-state FSM and SWE-agent's ACI show tool-augmented agent loops dominate 2024+ results; OpenHands reaches 72% with Claude Sonnet 4.5. mini-SWE-agent (65%+ in ~100 lines) shows this can be adopted incrementally rather than as a heavy rewrite.",
+          "sources": [
+            "https://arxiv.org/abs/2403.17134",
+            "https://arxiv.org/abs/2405.15793",
+            "https://arxiv.org/abs/2407.16741",
+            "https://arxiv.org/abs/2506.23749"
+          ],
+          "confidence": "medium"
+        },
+        {
+          "idea": "Adopt Docker-sandboxed per-attempt execution isolation (already documented as 'not yet implemented' in manager.py) on top of the existing subprocess verify_fix.",
+          "why_relevant": "OpenHands uses Docker-sandboxed execution as a core clean-environment primitive. The repo's subprocess verify_fix already approximates this; containerizing each attempt strengthens isolation and reproducibility.",
+          "sources": [
+            "https://arxiv.org/abs/2407.16741"
+          ],
+          "confidence": "medium"
+        },
+        {
+          "idea": "Hold the SWE-bench-Verified aspirational framing loosely; treat the repo's actual-test-re-run verification as a strength and target SWE-bench Pro for future comparison.",
+          "why_relevant": "Validity analysis reports solution leakage and test-flaw failures inflate/distort Verified pass rates and OpenAI discontinued reporting it. The repo's clean-subprocess verification is more rigorous than benchmark numbers imply, but the specific contamination figures rest on a single source.",
+          "sources": [
+            "https://arxiv.org/html/2512.10218v2",
+            "https://www.swebench.com/viewer.html"
+          ],
+          "confidence": "medium"
+        }
+      ],
+      "unverified": [
+        "Moatless Tools' claim of 'competitive SWE-bench results with Claude 3.5 Sonnet and GPT-4o' rests on a single self-reported GitHub source (marked corroborated:false); the underlying symbol-navigation concept is corroborated by AutoCodeRover, but these specific benchmark results are not independently confirmed.",
+        "The fault-localization-context paper's specific quantitative claims (file-level localization yields 15-17x improvement; line-level context 'frequently degrades performance'; 61 configurations over 798 bugs; arxiv 2604.05481) are single-sourced (corroborated:false) and the line-level-degrades claim directly CONTRADICTS the leaderboard-profiling finding that line-level localization is universal among high-scorers. The directional message (file-level is most important) is well-corroborated; the magnitudes and the line-level penalty are not.",
+        "Benchmark-contamination specifics (30%+ of successful SWE-bench Verified passes involve solution leakage; 59.4% of o3 failures were test flaws; SWE-bench Pro recommended) come from a single source (arxiv 2512.10218) and have not been cross-confirmed here.",
+        "The SWE-RL claim (Llama 3-70B RL on software evolution reaching 41.0% on Verified) is single-sourced and its relevance summary is truncated in the gathered data; it is also low-relevance to a hosted-model OpenRouter tool that does no training, so it was not promoted to a key idea."
+      ]
+    }
+  },
+  "_meta": {
+    "cost_usd": 28.74
+  }
+}
