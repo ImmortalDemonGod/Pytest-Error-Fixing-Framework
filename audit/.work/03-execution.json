@@ -44,7 +44,7 @@
     "skipped": 0,
     "errors": 25,
     "coverage_pct": 93,
-    "summary": "883 passed, 1 failed, 11 deselected (integration marker excluded by pytest.ini addopts), 25 errors. 25 errors are ALL in tests/unit/git/test_repository.py — the shared git_repo fixture calls 'git commit -m init' which fails with exit code 128 because the sandbox enforces GPG commit signing via /tmp/code-sign, and the signing server returns HTTP 400. This is a sandbox environment constraint, not a code bug. 1 failure: tests/unit/utils/test_workspace_validator.py::test_validate_workspace_dir_not_accessible — chmod 0o000 on a tmp dir does not restrict access when running as root; test expects PermissionError that is never raised. Overall coverage 93% across 2184 statements with 478 branches."
+    "summary": "883 passed, 1 failed, 11 deselected (integration marker excluded by pytest.ini addopts), 25 errors. 25 errors are ALL in tests/unit/git/test_repository.py \u2014 the shared git_repo fixture calls 'git commit -m init' which fails with exit code 128 because the sandbox enforces GPG commit signing via /tmp/code-sign, and the signing server returns HTTP 400. This is a sandbox environment constraint, not a code bug. 1 failure: tests/unit/utils/test_workspace_validator.py::test_validate_workspace_dir_not_accessible \u2014 chmod 0o000 on a tmp dir does not restrict access when running as root; test expects PermissionError that is never raised. Overall coverage 93% across 2184 statements with 478 branches."
   },
   "entrypoint_runs": [
     {
@@ -97,7 +97,7 @@
     {
       "finding_id": "F5",
       "status": "confirmed",
-      "evidence": "grep -rn 'from branch_fixer.core.exceptions import' src/ returns no results. core/exceptions.py defines FixError, CoordinationError, WorkflowError, ComponentError, InteractionError — none imported anywhere in production src/."
+      "evidence": "grep -rn 'from branch_fixer.core.exceptions import' src/ returns no results. core/exceptions.py defines FixError, CoordinationError, WorkflowError, ComponentError, InteractionError \u2014 none imported anywhere in production src/."
     },
     {
       "finding_id": "F6",
@@ -182,7 +182,7 @@
     {
       "finding_id": "F22",
       "status": "confirmed",
-      "evidence": "ci.yml:19 uses python-version: '3.13'. PRD claim that CI specifies 3.10 is wrong — the PRD is outdated. Finding as stated (PRD doc drift) is valid."
+      "evidence": "ci.yml:19 uses python-version: '3.13'. PRD claim that CI specifies 3.10 is wrong \u2014 the PRD is outdated. Finding as stated (PRD doc drift) is valid."
     },
     {
       "finding_id": "F23",
@@ -252,7 +252,7 @@
     {
       "finding_id": "F36",
       "status": "confirmed",
-      "evidence": "hypot_test_gen.py:25: snoop.install(out=Path('snoop_debug.log')) executes at module import time. Verified by running the script — snoop_debug.log was created in cwd on import."
+      "evidence": "hypot_test_gen.py:25: snoop.install(out=Path('snoop_debug.log')) executes at module import time. Verified by running the script \u2014 snoop_debug.log was created in cwd on import."
     },
     {
       "finding_id": "F37",
@@ -332,7 +332,7 @@
     {
       "finding_id": "F52",
       "status": "confirmed",
-      "evidence": "failure_parser.py:9: PATTERNS = [r'([\\w\\/\\._-]+):(\\d+):\\s+([\\w\\.]+Error)']. The third capture group requires the exception class name to contain 'Error'. AssertionError, KeyboardInterrupt, StopIteration, NotImplementedError (ends in Error), etc. would match, but pure exception names like 'Exception', 'RuntimeError' (ok), 'TypeError' (ok) vs 'KeyboardInterrupt' (no match — no 'Error' suffix). Finding is confirmed: the pattern only matches type names ending in 'Error'."
+      "evidence": "failure_parser.py:9: PATTERNS = [r'([\\w\\/\\._-]+):(\\d+):\\s+([\\w\\.]+Error)']. The third capture group requires the exception class name to contain 'Error'. AssertionError, KeyboardInterrupt, StopIteration, NotImplementedError (ends in Error), etc. would match, but pure exception names like 'Exception', 'RuntimeError' (ok), 'TypeError' (ok) vs 'KeyboardInterrupt' (no match \u2014 no 'Error' suffix). Finding is confirmed: the pattern only matches type names ending in 'Error'."
     },
     {
       "finding_id": "F53",
@@ -407,7 +407,7 @@
     {
       "finding_id": "F67",
       "status": "refined",
-      "evidence": "repository.py:323: run_command(['push', 'origin', push_branch]) raises GitError on non-zero exit (via _check_command_error at line 150). The except Exception at line 333 catches it and returns False. Therefore lines 328-330 (the else-branch with logger.error) are unreachable dead code. The push() function itself is not dead — it handles push correctly via exception path. Only the explicit else-branch is dead."
+      "evidence": "repository.py:323: run_command(['push', 'origin', push_branch]) raises GitError on non-zero exit (via _check_command_error at line 150). The except Exception at line 333 catches it and returns False. Therefore lines 328-330 (the else-branch with logger.error) are unreachable dead code. The push() function itself is not dead \u2014 it handles push correctly via exception path. Only the explicit else-branch is dead."
     },
     {
       "finding_id": "F68",
@@ -417,7 +417,7 @@
     {
       "finding_id": "F69",
       "status": "refined",
-      "evidence": "repository.py:612: 'return result.returncode == 0' is executed only when run_command() does NOT raise (i.e., returncode==0), so this always returns True when reached. No try-except in merge_branch, so GitError propagates on failure. The return statement is effectively always True — dead code for the False-case, not just unreachable on success."
+      "evidence": "repository.py:612: 'return result.returncode == 0' is executed only when run_command() does NOT raise (i.e., returncode==0), so this always returns True when reached. No try-except in merge_branch, so GitError propagates on failure. The return statement is effectively always True \u2014 dead code for the False-case, not just unreachable on success."
     },
     {
       "finding_id": "F70",
@@ -432,7 +432,7 @@
     {
       "finding_id": "F72",
       "status": "confirmed",
-      "evidence": "test_runner.py:470: 'assert \"Duration: 1.23s\" or \"Duration: 1.2\"' — Python evaluates right-hand side as the string \"Duration: 1.23s\" (truthy), so assert always passes. The assertion never actually checks the report output. Confirmed by test suite: this test is in the 883 passed."
+      "evidence": "test_runner.py:470: 'assert \"Duration: 1.23s\" or \"Duration: 1.2\"' \u2014 Python evaluates right-hand side as the string \"Duration: 1.23s\" (truthy), so assert always passes. The assertion never actually checks the report output. Confirmed by test suite: this test is in the 883 passed."
     },
     {
       "finding_id": "F73",
@@ -487,12 +487,12 @@
     {
       "finding_id": "F83",
       "status": "confirmed",
-      "evidence": "recovery.py:135,174,225: create_checkpoint, restore_checkpoint, handle_failure are all 'async def'. orchestrator.py:393 calls 'self.recovery_manager.handle_failure(error, self._session, context)' without await — returns a coroutine object, not bool. 'if recovered:' is always True (coroutines are truthy). orchestrator.py:516 calls 'self.recovery_manager.create_checkpoint(session, metadata)' without await — also returns a coroutine, never executes the async body."
+      "evidence": "recovery.py:135,174,225: create_checkpoint, restore_checkpoint, handle_failure are all 'async def'. orchestrator.py:393 calls 'self.recovery_manager.handle_failure(error, self._session, context)' without await \u2014 returns a coroutine object, not bool. 'if recovered:' is always True (coroutines are truthy). orchestrator.py:516 calls 'self.recovery_manager.create_checkpoint(session, metadata)' without await \u2014 also returns a coroutine, never executes the async body."
     },
     {
       "finding_id": "F84",
       "status": "confirmed",
-      "evidence": "pr_manager.py:41-48: create_pr() is annotated '-> PRDetails' and returns a PRDetails instance. repository.py:544-571: create_pull_request_sync() is annotated '-> bool' but calls self.pr_manager.create_pr() and returns that PRDetails object. cli.py:220 checks the result in a boolean context — PRDetails objects are truthy by default, so the logic accidentally works but the type is wrong."
+      "evidence": "pr_manager.py:41-48: create_pr() is annotated '-> PRDetails' and returns a PRDetails instance. repository.py:544-571: create_pull_request_sync() is annotated '-> bool' but calls self.pr_manager.create_pr() and returns that PRDetails object. cli.py:220 checks the result in a boolean context \u2014 PRDetails objects are truthy by default, so the logic accidentally works but the type is wrong."
     },
     {
       "finding_id": "F85",
@@ -517,74 +517,51 @@
   ],
   "unexecuted": [
     {
-      "region": "src/branch_fixer/services/ai/manager.py: generate_fix(), _analyze_error(), _call_ai() — all AI API call paths",
-      "reason": "requires-credentials"
+      "region": "scripts/analyze_code.sh: CodeScene CLI install (curl|sh) + full analysis",
+      "reason": "external-service",
+      "proof_of_attempt": "curl -sSf https://downloads.codescene.io/enterprise/cli/install-codescene-cli.sh | sh -> 'curl: (22) The requested URL returned error: 403'. Enterprise install endpoint is access-controlled; cs cannot be installed without enterprise credentials; analysis also requires a license token."
     },
     {
-      "region": "src/branch_fixer/main.py + run_cli.py: task run:fix and run:fix-test full execution (fix command with real OPENROUTER_API_KEY)",
-      "reason": "requires-credentials"
-    },
-    {
-      "region": "scripts/analyze_code.sh:95-99 CodeScene CLI install via curl | sh",
-      "reason": "destructive-skip"
-    },
-    {
-      "region": "scripts/analyze_code.sh: full CodeScene analysis (requires CodeScene API token and license)",
-      "reason": "external-service"
-    },
-    {
-      "region": "task docs:deploy — mkdocs gh-deploy",
-      "reason": "external-service"
-    },
-    {
-      "region": "CI jobs: lint, typecheck, security, test, integration, build-and-deploy",
-      "reason": "external-service"
-    },
-    {
-      "region": "tests/integration/test_generator_e2e.py (11 deselected by pytest.ini '-m not integration')",
-      "reason": "other"
-    },
-    {
-      "region": "tests/unit/git/test_repository.py (25 errors — git_repo fixture requires git commit which fails due to sandbox GPG signing enforcement)",
-      "reason": "other"
-    },
-    {
-      "region": "src/branch_fixer/services/git/repository.py: sync_with_remote, pull, commit — NotImplementedError stubs",
-      "reason": "dead"
-    },
-    {
-      "region": "src/branch_fixer/orchestration/coordinator.py: coordinate_fix_attempt, handle_failure — pass/return False stubs",
-      "reason": "dead"
-    },
-    {
-      "region": "src/branch_fixer/orchestration/dispatcher.py: dispatch_fix_workflow, handle_component_error — pass stubs",
-      "reason": "dead"
-    },
-    {
-      "region": "src/branch_fixer/services/git/branch_manager.py: get_branch_metadata, is_branch_merged — NotImplementedError stubs",
-      "reason": "dead"
-    },
-    {
-      "region": "src/branch_fixer/services/git/pr_manager.py: get_pr_history, close_pr — NotImplementedError stubs",
-      "reason": "dead"
-    },
-    {
-      "region": "scripts/runner_debug.py — hardcoded absolute macOS path /Volumes/Totallynotaharddrive/...; not runnable in this Linux environment",
-      "reason": "other"
+      "region": "Real outward git push / mkdocs gh-deploy (cli.py:226 _create_and_push_pr; task docs:deploy)",
+      "reason": "destructive-skip",
+      "proof_of_attempt": "All local logic executed (PR-build via stubbed gh, branch create/cleanup in temp repo, mkdocs build rc=0). The literal git push / gh-pages push targets the REAL origin remote and was intentionally not performed (outward side effect outside audit mandate)."
     }
   ],
   "summary": "Environment set up with Python 3.13.12 venv; all deps installed via uv. Test suite ran: 883 passed, 1 failed, 25 errors, 11 deselected. 25 errors in tests/unit/git/test_repository.py are sandbox-environment artifacts (git commit signing enforced globally via /tmp/code-sign; signing server returns HTTP 400). 1 failure in test_workspace_validator.py is also environment-caused (chmod 0o000 does not restrict root). Integration tests deselected by pytest.ini. Branch coverage 93% across 2184 statements. All 4 CLI entrypoints launched cleanly (exit 0). Key Stage-2 findings confirmed by direct code inspection: async/sync mismatch (F83) means recovery checkpointing silently no-ops; PR creation before push (F86) would cause gh pr create to fail on unborn remote branches; success_count never incremented (F15) means fix-rate reporting is always 0; double FixServiceError wrapping (F38/F88); multiple NotImplementedError stubs (F7, F8, F59, F68) block production use of their features. 35 of 88 findings confirmed by reading source; 6 refined with more precise evidence; remainder untested due to scope or credentials.",
   "verification": {
     "coverage_confirmed": true,
-    "observed": "Re-read the saved artifacts under audit/.work/ and reproduced key claims independently. (a) test_run.log and test_run2.log both end with the identical pytest summary line: '1 failed, 883 passed, 11 deselected, 25 errors' — exactly matching the report's test_result (passed=883, failed=1, skipped=0, errors=25). Both logs' TOTAL coverage line reads '2184 statements, 478 branches, 93%', matching coverage_pct=93. The saved coverage.xml independently corroborates: lines-valid=2184, branches-valid=478, line-rate=0.94, branch-rate=0.8975 — the pytest-cov combined statement+branch TOTAL of 93% is consistent with these (the 0.94 XML line-rate is pure line coverage; pytest-cov's 93% folds in branch coverage). (b) Un-executed reasons verified as legitimate: counted exactly 25 'ERROR tests/unit/git/test_repository.py' lines in the log; their root cause in the traceback is 'subprocess.CalledProcessError: Command [git commit -m init] returned non-zero exit status 128'. I reproduced this directly in a throwaway repo — git commit fails because commit.gpgsign=true and the sandbox signing server (/tmp/code-sign -> /opt/env-runner/environment-manager) returns HTTP status 400. This is a genuine environment constraint, not an avoidable test gap or a code bug, exactly as the report claims. Credential-gated AI paths, external-service CI/CodeScene/mkdocs, integration-marker deselection (11), and NotImplementedError/pass dead stubs are all legitimate, non-avoidable un-executed reasons. (c) Spot-checked 3 entry points myself: '.venv/bin/python -m branch_fixer.main --version' -> 'pytest-fixer, version 0.1.0' rc=0; '--help' rc=0; 'generate --help' rc=0 — all matching the reported exit_code 0 observations. No material discrepancies between the report's self-reported numbers and the real artifacts.",
+    "observed": "Re-read the saved artifacts under audit/.work/ and reproduced key claims independently. (a) test_run.log and test_run2.log both end with the identical pytest summary line: '1 failed, 883 passed, 11 deselected, 25 errors' \u2014 exactly matching the report's test_result (passed=883, failed=1, skipped=0, errors=25). Both logs' TOTAL coverage line reads '2184 statements, 478 branches, 93%', matching coverage_pct=93. The saved coverage.xml independently corroborates: lines-valid=2184, branches-valid=478, line-rate=0.94, branch-rate=0.8975 \u2014 the pytest-cov combined statement+branch TOTAL of 93% is consistent with these (the 0.94 XML line-rate is pure line coverage; pytest-cov's 93% folds in branch coverage). (b) Un-executed reasons verified as legitimate: counted exactly 25 'ERROR tests/unit/git/test_repository.py' lines in the log; their root cause in the traceback is 'subprocess.CalledProcessError: Command [git commit -m init] returned non-zero exit status 128'. I reproduced this directly in a throwaway repo \u2014 git commit fails because commit.gpgsign=true and the sandbox signing server (/tmp/code-sign -> /opt/env-runner/environment-manager) returns HTTP status 400. This is a genuine environment constraint, not an avoidable test gap or a code bug, exactly as the report claims. Credential-gated AI paths, external-service CI/CodeScene/mkdocs, integration-marker deselection (11), and NotImplementedError/pass dead stubs are all legitimate, non-avoidable un-executed reasons. (c) Spot-checked 3 entry points myself: '.venv/bin/python -m branch_fixer.main --version' -> 'pytest-fixer, version 0.1.0' rc=0; '--help' rc=0; 'generate --help' rc=0 \u2014 all matching the reported exit_code 0 observations. No material discrepancies between the report's self-reported numbers and the real artifacts.",
     "discrepancies": [
       {
-        "description": "Minor (non-material): coverage.xml records a pure line-rate of 0.94 (94%) while the report and pytest-cov TOTAL state 93%. This is not a contradiction — the 93% is pytest-cov's combined statement+branch metric (branch-rate 0.8975 drags the combined figure below the pure 94% line rate). Worth noting only because a reader comparing the XML line-rate alone to the headline number could perceive a 1-point mismatch.",
+        "description": "Minor (non-material): coverage.xml records a pure line-rate of 0.94 (94%) while the report and pytest-cov TOTAL state 93%. This is not a contradiction \u2014 the 93% is pytest-cov's combined statement+branch metric (branch-rate 0.8975 drags the combined figure below the pure 94% line rate). Worth noting only because a reader comparing the XML line-rate alone to the headline number could perceive a 1-point mismatch.",
         "location": "audit/.work/coverage.xml:line line-rate=\"0.94\" vs audit/.work/test_run2.log TOTAL '93%' and 03-exec-raw.json:46"
       }
     ]
   },
   "_meta": {
     "cost_usd": 20.03
+  },
+  "reexecution_addendum": {
+    "standard": "proof-of-attempt: install deps, stub only the boundary (network/auth/SDK), drive real logic, capture I/O",
+    "unexecuted_code_regions_before": 14,
+    "unexecuted_code_regions_after": 2,
+    "flipped": [
+      "AI manager generate_fix/_analyze_error/_parse_response/_clean_stack_trace (dummy key, stubbed completion)",
+      "end-to-end fix: ChangeApplier+verify_fix flipped a real test False->True; assert-guard rejected assertion-deletion",
+      "pr_manager.create_pr (gh stubbed) -> PRDetails; confirms F86/F61",
+      "branch_manager create_fix_branch/cleanup (real git temp repo)",
+      "tests/unit/git/test_repository.py: 25 errors -> 26 passed (commit.gpgsign=false)",
+      "integration tests test_generator_e2e: 11 passed (pytest -m integration)",
+      "CI ruff check / ruff format / mypy: rc=0 locally",
+      "CI pip-audit: rc=0",
+      "CI docstr-coverage: 82.1% >= 80",
+      "CI mkdocs build: rc=0",
+      "Feature 2: generate CLI produced test_ErrorInfo_default.py; hypot_test_gen.py rc=0",
+      "repository/branch_manager/pr_manager NotImplementedError stubs: executed (reachable, raise)",
+      "coordinator/dispatcher: executed (None/False no-ops)",
+      "scripts/runner_debug.py: rc=0 (ran, returned SessionResult)"
+    ],
+    "artifact": "audit/03-execution-addendum.md",
+    "note": "Stage-2 'untested' deltas that are documentation-drift claims are static (verified by reading), not executable regions."
   }
 }
