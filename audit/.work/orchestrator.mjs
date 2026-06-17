@@ -444,7 +444,7 @@ async function stage5(state) {
 async function main() {
   if (FRESH && existsSync(AUDIT)) { rmSync(AUDIT, { recursive: true, force: true }); }
   mkdirSync(WORK, { recursive: true });
-  writeFileSync(join(WORK, ".gitignore"), "a_*.json\n*.log\n");   // keep raw agent dumps & logs out of git; artifacts+state+script stay
+  writeFileSync(join(WORK, ".gitignore"), "a_*.json\n*.log\nauditable.json\n03-exec-raw.json\n");   // keep raw agent dumps, logs & stage intermediates out of git; artifacts+state+script stay
   BRANCH = (await sh("git", ["rev-parse", "--abbrev-ref", "HEAD"])).out.trim();
   const state = loadState();
   log(`repo=${REPO} branch=${BRANCH} stage=${ONLY_STAGE || "all-incomplete"} fresh=${FRESH}`);

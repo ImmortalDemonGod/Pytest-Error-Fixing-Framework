@@ -1,2 +1,4 @@
 a_*.json
 *.log
+auditable.json
+03-exec-raw.json
