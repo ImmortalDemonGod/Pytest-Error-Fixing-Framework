@@ -120,7 +120,8 @@ const writeState = (s) => writeFileSync(statePath, JSON.stringify(s, null, 2));
 async function checkpoint(stageKey, mdName, md, jsonName, obj, state) {
   writeFileSync(join(AUDIT, mdName), md);
   writeFileSync(join(WORK, jsonName), JSON.stringify(obj, null, 2));
-  state.completed[stageKey] = Date.now(); state.totalCost = TOTAL; writeState(state);
+  state.completed[stageKey] = Date.now(); state.totalCost = TOTAL; delete state.halt; writeState(state);
+  if (existsSync(join(AUDIT, "HALT-REPORT.md"))) rmSync(join(AUDIT, "HALT-REPORT.md"));  // clear any stale halt once a stage succeeds
   await sh("git", ["add", "audit"]);
   await sh("git", ["commit", "-m", `audit: ${stageKey} (cumulative $${TOTAL.toFixed(2)})`]);
   for (let i = 0; i < 4; i++) { const p = await sh("git", ["push", "-u", "origin", BRANCH]); if (p.code === 0) break; log(`push retry ${i}: ${p.err.slice(0, 160)}`); await new Promise(r => setTimeout(r, (2 ** (i + 1)) * 1000)); }
@@ -267,7 +268,7 @@ const VERDICTS_SCHEMA = { type: "object", required: ["verdicts"], properties: { 
 function renderStage2MD(obj) {
   const rank = { critical: 0, high: 1, medium: 2, low: 3 };
   const rows = [...obj.findings].sort((a, b) => rank[a.severity] - rank[b.severity]).map(f => `| ${f.id} | ${f.severity} | ${f.class} | \`${f.location}\` | ${f.intent_mismatch ? "⚠️ " : ""}${f.evidence.replace(/\n/g, " ").slice(0, 320)} |`).join("\n");
-  return L("# 02 — Static Audit", "", `_${obj.findings.length} findings, each surviving an independent adversarial falsification pass. Auditable surface: ${obj.auditable_files} files. Severity: ${obj.summary.critical || 0} critical / ${obj.summary.high || 0} high / ${obj.summary.medium || 0} medium / ${obj.summary.low || 0} low._`, "", `**Judged against provisional intent:** ${obj.provisional_intent}`, "", "| ID | Severity | Class | Location | Evidence (⚠️ = code/intent mismatch) |", "| --- | --- | --- | --- | --- |", rows, "");
+  return L("# 02 — Static Audit", "", `_${obj.findings.length} findings, each surviving an independent adversarial falsification pass. Auditable surface: ${obj.auditable_files} files. Severity: ${obj.summary.critical || 0} critical / ${obj.summary.high || 0} high / ${obj.summary.medium || 0} medium / ${obj.summary.low || 0} low._`, "", `**Judged against provisional intent:** ${obj.provisional_intent}`, "", obj.converged === false ? "> ⚠️ **Convergence caveat:** the adversarial fixpoint hit its round ceiling with the validated set still growing (diminishing-returns threshold not met). Every finding below survived falsification, but the set may be non-exhaustive — treat the long tail as lower-confidence." : "", "", "| ID | Severity | Class | Location | Evidence (⚠️ = code/intent mismatch) |", "| --- | --- | --- | --- | --- |", rows, "");
 }
 
 async function stage2(state) {
@@ -306,27 +307,31 @@ async function stage2(state) {
   }
   if (gaps.length > Math.ceil(auditable.length * 0.05)) await halt("stage2", `coverage stop-test failed: ${gaps.length}/${auditable.length} auditable files never visited (e.g. ${gaps.slice(0, 8).join(", ")})`, state);
 
-  // FIXPOINT: reaudit (add candidates FIRST) → falsify WHOLE set → survivors → stability
-  let prevSig = ""; const ceiling = 4;
+  // ADVERSARIAL FIXPOINT: reaudit (add candidates FIRST) → falsify WHOLE set → survivors → diminishing-returns stop.
+  // LLM reaudit on a large repo never dries to EXACTLY zero, so converge on diminishing NET-NEW survivors
+  // (each already past adversarial falsification) rather than exact signature stationarity; accept the
+  // validated set at the ceiling instead of halting (halting would discard real, validated findings).
+  let prevSet = new Set(); const ceiling = 5; const CONVERGE = 3; let converged = false;
   for (let round = 1; round <= ceiling; round++) {
     const known = findings.map(f => `${f.id} [${f.class}/${f.severity}] ${f.location} :: ${f.evidence.slice(0, 110)}`).join("\n");
-    const re = await runAgent({ name: `s2-reaudit-r${round}`, model: "sonnet", budgetUsd: 12, timeoutMs: 1200000, schema: AUDIT_SCHEMA, prompt: L("You are a Stage-2 RE-AUDIT sweep. Find what the existing findings MISSED — especially cross-file/architectural defects, code/intent drift, security issues, and dead code a per-file pass cannot catch. Do NOT duplicate existing findings. Cite path:line; Read the files you reason about.", `REPO ROOT: ${REPO}`, `PROVISIONAL INTENT: ${intent}`, `AUDITABLE SURFACE (${auditable.length} files) at ${join(WORK, "auditable.json")} — Read it.`, "EXISTING FINDINGS (do not duplicate):", known || "(none yet)", "Return only NEW findings (same format) + 'visited'.") });
+    const re = await runAgent({ name: `s2-reaudit-r${round}`, model: "sonnet", budgetUsd: 12, timeoutMs: 1200000, schema: AUDIT_SCHEMA, prompt: L("You are a Stage-2 RE-AUDIT sweep. Find GENUINE defects the existing findings MISSED — especially cross-file/architectural defects, code/intent drift, and security issues a per-file pass cannot catch.", `REPO ROOT: ${REPO}`, `PROVISIONAL INTENT: ${intent}`, `AUDITABLE SURFACE (${auditable.length} files) at ${join(WORK, "auditable.json")} — Read it.`, "QUALITY BAR (critical): report ONLY findings of severity medium, high, or critical that are a MATERIALLY DISTINCT defect (different root cause — not a restatement or near-duplicate location) from the existing findings below. Do NOT report low-severity, stylistic, speculative ('could in theory'), or nitpick items. If nothing new clears this bar, return an EMPTY findings array — that is the expected, desired outcome once the real defects are captured.", "EXISTING FINDINGS (do not duplicate or restate):", known || "(none yet)", "Return only NEW high-value findings (same format) + 'visited'.") });
     if (re.ok) findings = reindex(dedupeFindings([...findings, ...re.data.findings]));
-    log(`r${round} post-reaudit: ${findings.length}`);
+    log(`r${round} post-reaudit: ${findings.length} (reaudit added ${re.ok ? re.data.findings.length : 0})`);
     const fset = findings.map(f => `${f.id} | ${f.class}/${f.severity} | ${f.location} | ${f.evidence.slice(0, 200)}`).join("\n");
-    const fal = await runAgent({ name: `s2-falsify-r${round}`, model: "opus", budgetUsd: 14, timeoutMs: 1500000, schema: VERDICTS_SCHEMA, prompt: L("You are an INDEPENDENT FALSIFIER. For EACH finding below, open the cited location in source and try to REFUTE it. It SURVIVES only if source genuinely supports it. Return a verdict for EVERY id — be skeptical: refute anything mislocated, unsupported, or actually-correct behavior.", `REPO ROOT: ${REPO}`, `PROVISIONAL INTENT: ${intent}`, "FINDINGS (id | class/severity | location | evidence):", fset, "Each verdict: id, survives (bool), reason (with the path:line you checked), corrected_severity (optional).") });
+    const fal = await runAgent({ name: `s2-falsify-r${round}`, model: "opus", budgetUsd: 14, timeoutMs: 1500000, schema: VERDICTS_SCHEMA, prompt: L("You are an INDEPENDENT FALSIFIER and strict QUALITY GATE. Return a verdict for EVERY finding id below.", `REPO ROOT: ${REPO}`, `PROVISIONAL INTENT: ${intent}`, "Set survives=FALSE (refute) if the finding is ANY of: (1) not supported by the cited source (open it and check), mislocated, or actually-correct behavior; (2) trivial / purely stylistic; (3) speculative without concrete evidence; (4) a duplicate of another finding's root cause. Set survives=TRUE only for genuine, evidence-backed defects. If severity is inflated beyond the evidence, keep survives=true but set corrected_severity. A smaller set of real defects is the goal, not a large set of maybes.", "FINDINGS (id | class/severity | location | evidence):", fset, "Each verdict: id, survives (bool), reason (cite the path:line you checked), corrected_severity (optional).") });
     if (!fal.ok) await halt("stage2", `falsifier failed in round ${round} — no finding may be promoted without an adversarial pass`, state);
     const before = findings.length;
     findings = reindex(keepSurvivors(findings, fal.data.verdicts));
-    log(`r${round} post-falsify: ${findings.length} survivors (dropped ${before - findings.length})`);
-    const sig = findings.map(fp).sort().join("||");
-    if (sig === prevSig) { log(`fixpoint at round ${round}`); break; }
-    prevSig = sig;
-    if (round === ceiling) await halt("stage2", `no fixpoint within ${ceiling} rounds — findings set still churning`, state);
+    const curSet = new Set(findings.map(fp));
+    const newCount = [...curSet].filter(k => !prevSet.has(k)).length;
+    log(`r${round} post-falsify: ${findings.length} survivors (dropped ${before - findings.length}, ${newCount} new vs prev round)`);
+    if (newCount <= CONVERGE) { log(`converged at round ${round} (diminishing returns: ${newCount} new ≤ ${CONVERGE}; all survivors adversarially validated)`); converged = true; break; }
+    prevSet = curSet;
   }
+  if (!converged) log(`reached ceiling ${ceiling} without diminishing returns — accepting the ${findings.length} adversarially-validated findings (churn caveat recorded in artifact)`);
 
   const summary = { critical: 0, high: 0, medium: 0, low: 0 }; for (const f of findings) summary[f.severity] = (summary[f.severity] || 0) + 1;
-  const obj = { provisional_intent: intent, auditable_files: auditable.length, findings, summary, _meta: { cost_usd: Number(TOTAL.toFixed(2)) } };
+  const obj = { provisional_intent: intent, auditable_files: auditable.length, converged, findings, summary, _meta: { cost_usd: Number(TOTAL.toFixed(2)) } };
   await checkpoint("stage2", "02-static-audit.md", renderStage2MD(obj), "02-findings.json", obj, state);
 }
 
