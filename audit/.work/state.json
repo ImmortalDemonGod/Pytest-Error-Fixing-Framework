@@ -3,13 +3,9 @@
     "stage1": 1781665133814,
     "stage2": 1781686219638,
     "stage3": 1781686944534,
-    "stage4": 1781687963565
+    "stage4": 1781687963565,
+    "stage5": 1781689608341
   },
   "started": 1781664331962,
-  "totalCost": 28.741926650000003,
-  "halt": {
-    "stageKey": "stage5",
-    "why": "plan did not converge: 0 incomplete, 1 ambiguous items remain",
-    "at": 1781688628529
-  }
+  "totalCost": 5.2710905
 }
