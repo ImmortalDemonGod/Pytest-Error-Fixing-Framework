@@ -5,7 +5,7 @@
       "title": "Remove hardcoded CodeScene API token",
       "links_to": "F13",
       "location": "scripts/analyze_code.sh:119",
-      "change": "Delete the `export CS_ACCESS_TOKEN=\"Njk0NjM-...\"` unconditional fallback. Require CS_ACCESS_TOKEN to come from the environment; if unset, print an explicit error and exit non-zero rather than embedding a credential. Rotate/revoke the leaked token out-of-band.",
+      "change": "Delete the `export CS_ACCESS_TOKEN=\"<REDACTED-CodeScene-token>\"` unconditional fallback. Require CS_ACCESS_TOKEN to come from the environment; if unset, print an explicit error and exit non-zero rather than embedding a credential. Rotate/revoke the leaked token out-of-band.",
       "verification_signal": "Grep for the literal token string across the repo returns zero hits; running analyze_code.sh with CS_ACCESS_TOKEN unset exits non-zero with a clear message instead of using a baked-in token.",
       "depends_on": [],
       "order": 1,

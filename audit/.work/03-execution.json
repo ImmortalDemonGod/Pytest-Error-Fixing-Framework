@@ -137,7 +137,7 @@
     {
       "finding_id": "F13",
       "status": "confirmed",
-      "evidence": "scripts/analyze_code.sh:119 contains literal: export CS_ACCESS_TOKEN=\"Njk0NjM-MjAyNi0wMS0xN1QxOTo1Mzo1Mw-I3sicmVmYWN0b3IuYWNjZXNzIiAiY2xpLmFjY2VzcyJ9.30-SmgU-Ybio83czYew_WCtu_QvyPWyWlSQQD63_gZA\". Read directly from file."
+      "evidence": "scripts/analyze_code.sh:119 contains literal: export CS_ACCESS_TOKEN=\"<REDACTED-CodeScene-token-see-scripts/analyze_code.sh:119>\". Read directly from file."
     },
     {
       "finding_id": "F14",

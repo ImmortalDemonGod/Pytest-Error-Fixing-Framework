@@ -45,7 +45,7 @@ Environment set up with Python 3.13.12 venv; all deps installed via uv. Test sui
 | F10 | untested | Did not verify the two test files for UnifiedErrorParser; not required for execution audit. |
 | F11 | untested | Did not read test_pr_manager.py:139-148 in detail. |
 | F12 | untested | Did not read test_logging_config.py:166-182 in detail. |
-| F13 | confirmed | scripts/analyze_code.sh:119 contains literal: export CS_ACCESS_TOKEN="Njk0NjM-MjAyNi0wMS0xN1QxOTo1Mzo1Mw-I3sicmVmYWN0b3IuYWNjZXNzIiAiY2xpLmFjY2VzcyJ9.30-SmgU-Ybio83czYew_WCtu_QvyPWyWlSQQD63_gZA". Read directly from file. |
+| F13 | confirmed | scripts/analyze_code.sh:119 contains literal: export CS_ACCESS_TOKEN="<REDACTED-CodeScene-token-see-scripts/analyze_code.sh:119>". Read directly from file. |
 | F14 | confirmed | scripts/analyze_code.sh installs CodeScene CLI via curl pipe to sh. Pattern confirmed by reading the script; not executed (destructive-skip). |
 | F15 | confirmed | cli.py:519 initializes success_count=0. Lines 521-539 loop over errors but never increment success_count. Comment at line 538 says 'you can increment success_count here' but it is not done. Returns (total_processed, 0) a |
 | F16 | confirmed | cli.py:210-211: _generate_and_apply_fix calls self.orchestrator.start_session([error]) then self.orchestrator.fix_error(error) on each call. Called from _process_non_interactive_error for every error individually, so a n |

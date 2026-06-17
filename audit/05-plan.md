@@ -57,7 +57,7 @@ _44 ordered, dependency-sorted change items. Each links to a Stage-2 finding or 
 
 - **Location:** `scripts/analyze_code.sh:119`
 - **Links to:** F13
-- **Change:** Delete the `export CS_ACCESS_TOKEN="Njk0NjM-..."` unconditional fallback. Require CS_ACCESS_TOKEN to come from the environment; if unset, print an explicit error and exit non-zero rather than embedding a credential. Rotate/revoke the leaked token out-of-band.
+- **Change:** Delete the `export CS_ACCESS_TOKEN="<REDACTED-CodeScene-token>"` unconditional fallback. Require CS_ACCESS_TOKEN to come from the environment; if unset, print an explicit error and exit non-zero rather than embedding a credential. Rotate/revoke the leaked token out-of-band.
 - **Verification signal:** Grep for the literal token string across the repo returns zero hits; running analyze_code.sh with CS_ACCESS_TOKEN unset exits non-zero with a clear message instead of using a baked-in token.
 - **Depends on:** none · **Effort:** S
 

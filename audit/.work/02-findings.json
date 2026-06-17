@@ -104,7 +104,7 @@
       "location": "scripts/analyze_code.sh:119",
       "class": "security",
       "severity": "high",
-      "evidence": "A CodeScene API access token is hardcoded in the shell script: `export CS_ACCESS_TOKEN=\"Njk0NjM-...\"`. Any developer who checks out the repository, or any CI log, will expose this credential. The token is set as an unconditional fallback when the environment variable is not already defined, so it is always present in script execution even when the user intends to use their own token.",
+      "evidence": "A CodeScene API access token is hardcoded in the shell script: `export CS_ACCESS_TOKEN=\"<REDACTED-CodeScene-token>\"`. Any developer who checks out the repository, or any CI log, will expose this credential. The token is set as an unconditional fallback when the environment variable is not already defined, so it is always present in script execution even when the user intends to use their own token.",
       "intent_mismatch": false
     },
     {
