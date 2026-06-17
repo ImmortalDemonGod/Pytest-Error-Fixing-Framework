@@ -1,0 +1,720 @@
+{
+  "provisional_intent": "PROVISIONAL: This project is an AI-powered automated pytest test fixer. Its purpose is to take a Python repository with failing pytest tests and, without human intervention, generate correct fixes for each failure and submit them as pull requests. The system discovers failures with pytest, formulates LLM prompts (via OpenRouter/LiteLLM) using an analyze-before-fix pipeline, applies code changes with full backup/restore safety, verifies fixes by re-running pytest in a clean subprocess, and creates git branches and pull requests for successful fixes. A secondary feature generates property-based tests using Hypothesis (and optionally LLMs) for untested Python source files. The long-term aspiration visible in the design documents and ai-manager-ideas submodules is to approach SWE-Bench-level autonomous software engineering — automatically finding and fixing real bugs in Python codebases with high accuracy, competing with systems like Aider. Stage 4 refinement should validate whether the SWE-bench framing is still active or if the project has pivoted to a narrower tool-assisted developer-workflow scope.",
+  "auditable_files": 183,
+  "converged": true,
+  "findings": [
+    {
+      "id": "F1",
+      "location": "src/branch_fixer/services/pytest/runner.py:218",
+      "class": "bug",
+      "severity": "low",
+      "evidence": "format_test_failures() does `file_path, test_name = test_id.split('::', 1)`. When test_id contains no '::' separator, split returns a 1-element list and unpacking into 2 variables raises ValueError. Any test whose nodeid lacks '::' (e.g., a top-level test file without function-level node) will crash this method.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F2",
+      "location": "src/branch_fixer/services/pytest/runner.py:388-415",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "_handle_outcome_logic never sets result.skipped = True. TestResult.skipped defaults to False. For tests skipped via @pytest.mark.skip, call_outcome is 'skipped', so result.passed evaluates True (line 389-394 condition includes `call_outcome == 'skipped'`), and the test is miscounted as passed. _count_individual_result (lines 173-183) checks `result.skipped` which is always False, so session.skipped is never incremented. Skipped tests that skip in setup phase (call_outcome stays None) are counted in neither passed nor skipped.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F3",
+      "location": "src/branch_fixer/services/pytest/runner.py:61",
+      "class": "bug",
+      "severity": "low",
+      "evidence": "pytest_collection_modifyitems hook unconditionally calls `print(f'  - {item.nodeid}')` for every collected test item. This is production code emitting unbounded stdout output, polluting CLI output and potentially interfering with downstream output parsing. The surrounding commented-out prints (lines 59, 66, 72, 80) suggest this too is leftover debug instrumentation.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F4",
+      "location": "audits/QUALITY_AUDIT.md:46",
+      "class": "doc_drift",
+      "severity": "low",
+      "evidence": "Row for `pytest/runner.py | Environment` states: 'verify_fix() shells out to the pytest executable, which may not match the active interpreter/venv.' However, runner.py:449-450 shows `verify_fix` now correctly uses `sys.executable, '-m', 'pytest'`, resolving the issue. This audit finding is stale and may mislead future readers into applying an already-applied fix.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F5",
+      "location": "src/branch_fixer/core/exceptions.py:2-29",
+      "class": "design_defect",
+      "severity": "low",
+      "evidence": "Defines FixError, CoordinationError, WorkflowError, ComponentError, InteractionError. QUALITY_AUDIT.md row 21 confirms these are 'not imported by runtime code.' dispatcher.py redefines WorkflowError independently (line 5), creating a conflicting duplicate. None of these types appear in the assigned runtime files (orchestration, services, utils). Dead exception taxonomy adds naming confusion without providing any contract.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F6",
+      "location": "src/branch_fixer/orchestration/dispatcher.py:5-41",
+      "class": "design_defect",
+      "severity": "medium",
+      "evidence": "WorkflowError is redefined at line 5, duplicating core/exceptions.py:WorkflowError with no inheritance relationship. WorkflowDispatcher.dispatch_fix_workflow (line 14) and handle_component_error (line 27) both contain only `pass` — pure stubs with no logic, no integration into any orchestration path. Dead code that adds a competing WorkflowError type to the exception namespace.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F7",
+      "location": "src/branch_fixer/services/git/branch_manager.py:169",
+      "class": "design_defect",
+      "severity": "medium",
+      "evidence": "`get_branch_metadata` raises `NotImplementedError()` unconditionally. It is a public method with a documented signature and return type (BranchMetadata). Any caller that depends on branch metadata (e.g., status-checking, PR enrichment) will receive an unhandled exception at runtime. No `# Not yet implemented` comment or abstract marking indicates intentional deferral.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F8",
+      "location": "src/branch_fixer/services/git/branch_manager.py:225",
+      "class": "design_defect",
+      "severity": "medium",
+      "evidence": "`is_branch_merged` raises `NotImplementedError()` unconditionally. Same issue as F016 — public documented API that will crash any caller.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F9",
+      "location": "src/branch_fixer/services/pytest/models.py:7",
+      "class": "design_defect",
+      "severity": "low",
+      "evidence": "`from _pytest.main import ExitCode` imports from pytest's private internal module (prefixed `_pytest`). Private APIs are not covered by pytest's public stability contract and may change or be removed without notice across minor version bumps, breaking SessionResult at import time.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F10",
+      "location": "tests/unit/pytest/parsers/test_unified_error_parser.py:1",
+      "class": "design_defect",
+      "severity": "low",
+      "evidence": "Two separate test files cover the same production module (UnifiedErrorParser): `tests/unit/pytest/parsers/test_unified_error_parser.py` and `tests/unit/services/pytest/test_unified_error_parser.py`. The latter (138 tests across 5 classes) is a more comprehensive superset. Having duplicate test coverage for the same class in different directories creates maintenance burden and risks divergence.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F11",
+      "location": "tests/unit/git/test_pr_manager.py:139-148",
+      "class": "test_gap",
+      "severity": "low",
+      "evidence": "test_create_pr_accepts_modified_files_and_metadata_without_using_them (line 139) deliberately passes modified_files and metadata to create_pr and then only asserts `details.id == 1` and that the PR is stored — it does NOT assert that modified_files appear in PRDetails. The test name explicitly says 'without_using_them', codifying a known data-loss bug (QUALITY_AUDIT.md row 39: 'does not propagate them into PRDetails.modified_files') as correct expected behavior rather than a failing assertion.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F12",
+      "location": "tests/unit/config/test_logging_config.py:166-182",
+      "class": "test_gap",
+      "severity": "low",
+      "evidence": "test_repeated_calls_add_snoop_handler_but_basicconfig_is_noop_for_root (line 166) explicitly asserts `len(snoop_handlers_after) == len(snoop_handlers_before) + 1` (line 182), documenting that each call to setup_logging() adds a duplicate FileHandler to the snoop logger. This codifies the non-idempotency bug (QUALITY_AUDIT.md row 57: 'setup_logging() adds handlers each time it is called — potential duplicate logs') as the expected behavior rather than requiring the fix.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F13",
+      "location": "scripts/analyze_code.sh:119",
+      "class": "security",
+      "severity": "high",
+      "evidence": "A CodeScene API access token is hardcoded in the shell script: `export CS_ACCESS_TOKEN=\"Njk0NjM-...\"`. Any developer who checks out the repository, or any CI log, will expose this credential. The token is set as an unconditional fallback when the environment variable is not already defined, so it is always present in script execution even when the user intends to use their own token.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F14",
+      "location": "scripts/analyze_code.sh:95-99",
+      "class": "security",
+      "severity": "medium",
+      "evidence": "The script installs the CodeScene CLI by piping curl output directly to sh: `curl -sSf https://downloads.codescene.io/enterprise/cli/install-codescene-cli.sh | sh`. There is no checksum or signature verification. A compromised or MITM-ed URL silently executes arbitrary code in the CI/developer environment.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F15",
+      "location": "src/branch_fixer/utils/cli.py:519,538",
+      "class": "bug",
+      "severity": "critical",
+      "evidence": "`success_count` is initialised to 0 at line 519 inside `_process_all_errors` and is never incremented — the comment at line 539 explicitly acknowledges this ('If you track actual success/fail logic, you can increment success_count here.'). `process_errors` at line 509 then returns `0 if success_count == total_processed else 1`. Because `success_count` is always 0 and `total_processed` grows with each error handled, the method returns exit code 1 for every run that processes at least one error, regardless of whether fixes succeeded. The summary printed at line 552 always shows 'Successfully fixed: 0'.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F16",
+      "location": "src/branch_fixer/utils/cli.py:210-211",
+      "class": "bug",
+      "severity": "low",
+      "evidence": "`_generate_and_apply_fix` calls `self.orchestrator.start_session([error])` with a single-element list on every invocation. Because `_process_all_errors` (line 521) calls `_generate_and_apply_fix` for each error in the loop, a new orchestrator session is created per error. This destroys multi-error session semantics (state tracking, resume capability) that the orchestrator was designed to provide.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F17",
+      "location": "src/branch_fixer/services/ai/manager.py:217",
+      "class": "bug",
+      "severity": "low",
+      "evidence": "`import re` appears inside `_clean_stack_trace` at line 217, but `re` is already imported at module level at line 3. The redundant import executes on every call to `_clean_stack_trace`, adding unnecessary overhead and obscuring the module's actual dependencies.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F18",
+      "location": "src/dev/test_generator/analyze/parser.py:53",
+      "class": "design_defect",
+      "severity": "low",
+      "evidence": "`_SKIP_METHODS = frozenset({\"__init__\", \"__str__\", \"__repr__\", \"property\"})` includes the string `\"property\"`. The skip check at line 152 compares `node.name` (the method's actual name) against this set. No user-defined method would normally be named `\"property\"`. The apparent intent was to skip `@property`-decorated methods, but that requires inspecting `node.decorator_list`, not `node.name`. The entry is therefore inert dead code in the frozenset.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F19",
+      "location": "docs/developer-guide/02-contribution-guide.md:54",
+      "class": "doc_drift",
+      "severity": "medium",
+      "evidence": "The contribution guide instructs contributors to run tests with bare `pytest`. CLAUDE.md mandates `.venv/bin/python -m pytest` and explicitly prohibits bare `pytest`. A contributor following the guide will run tests under whichever Python is in PATH, potentially a mismatched system Python, rather than the project's Python 3.13 venv.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F20",
+      "location": "README.md:52",
+      "class": "doc_drift",
+      "severity": "medium",
+      "evidence": "README.md instructs users to set `OPENAI_API_KEY` in their `.env` file (`echo \"OPENAI_API_KEY='your-api-key-here'\" > .env`). The actual implementation in `src/branch_fixer/services/ai/manager.py` uses `api_key` passed per-call via LiteLLM. CLAUDE.md specifies `OPENROUTER_API_KEY` as the required environment variable. Setting `OPENAI_API_KEY` as documented will not authenticate against OpenRouter.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F21",
+      "location": "tests/unit/core/test_verify_fix_workflow.py:1",
+      "class": "doc_drift",
+      "severity": "low",
+      "evidence": "The module-level comment reads `# src/branch_fixer/services/pytest/test_verify_fix_workflow.py` but the file is located at `tests/unit/core/test_verify_fix_workflow.py`. This stale path will mislead a developer trying to locate the file.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F22",
+      "location": ".taskmaster/docs/prd.txt:348-350",
+      "class": "doc_drift",
+      "severity": "low",
+      "evidence": "PRD Critical Finding #1 states `CI specifies python-version: '3.10'` as a critical bug. The actual `.github/workflows/ci.yml` already uses `python-version: '3.13'` on every job (lines 19, 43, 66, 87, 121). The PRD was not updated after the fix was applied, so it documents a non-existent problem.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F23",
+      "location": "src/branch_fixer/utils/cli.py:325",
+      "class": "design_defect",
+      "severity": "medium",
+      "evidence": "`dev_force_success=config.dev_force_success` is still passed to `FixService` at line 325. PRD Phase 2 (`.taskmaster/docs/prd.txt` lines 179-184) explicitly mandates removal of this flag ('REMOVE dev_force_success check. It must always call the AI service.'). When this flag is True the entire fix pipeline is bypassed, silently reporting success without any AI generation, code application, or verification.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F24",
+      "location": "tests/integration/test_generator_e2e.py:171-182",
+      "class": "test_gap",
+      "severity": "low",
+      "evidence": "`test_pytest_runs_generated_tests_without_import_error` (lines 171-182) only asserts the absence of `ImportError` and `ModuleNotFoundError` strings in subprocess output. It does not assert that `result.returncode == 0` or that any tests actually passed. Generated tests that fail with AssertionError or any non-import error would not be detected by this test.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F25",
+      "location": "tests/unit/utils/test_run_cli.py:179",
+      "class": "test_gap",
+      "severity": "medium",
+      "evidence": "At line 179, the test injects a fake module into `sys.modules[\"branch_fixer.orchestration.orchestrator\"]` using a locally constructed `types.ModuleType`. There is no cleanup via `monkeypatch` or `finally` block to restore the original module. This pollutes `sys.modules` for subsequently executed tests in the same pytest session, potentially causing import failures or incorrect behaviour in other tests that import from that module.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F26",
+      "location": "src/branch_fixer/core/models.py:112-115",
+      "class": "design_defect",
+      "severity": "low",
+      "evidence": "`CodeChanges` declares both `original_code: str` and `modified_code: str`, implying it carries a diff. However, `AIManager._parse_response` at `src/branch_fixer/services/ai/manager.py:317` always constructs it as `CodeChanges(original_code=\"\", modified_code=modified_code)`. The `original_code` field is permanently empty, making the class a misleading wrapper around a single string.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F27",
+      "location": "scripts/analyze_code.sh:290",
+      "class": "performance",
+      "severity": "low",
+      "evidence": "At line 290, `coverage run -m pytest \"$TEST_FILE\"` and subsequent `coverage report` / `coverage xml` calls (lines 294-295) invoke the bare `coverage` binary rather than `uv run coverage`. The rest of the script uses `uv run` for every other tool invocation (ruff, mypy, cs). Without `uv run`, coverage may resolve to the system Python installation rather than the project venv, producing inaccurate coverage data or a command-not-found error.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F28",
+      "location": ".github/workflows/ci.yml:56-57",
+      "class": "design_defect",
+      "severity": "medium",
+      "evidence": "The `security` job at lines 56-57 sets `continue-on-error: true`. This renders the pip-audit security scan entirely non-blocking: discovered CVEs in dependencies will not block any merge. The inline comment acknowledges this is intentional ('Non-blocking — informational until vulnerable deps are upgraded'), but no tracking issue or timeline is referenced, meaning vulnerabilities can remain indefinitely without CI enforcement.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F29",
+      "location": "src/branch_fixer/utils/cli.py:344-348",
+      "class": "design_defect",
+      "severity": "low",
+      "evidence": "`FixOrchestrator` is instantiated with `interactive=not config.dev_force_success` (line 347). This repurposes the `dev_force_success` boolean as the inverse of an `interactive` flag, coupling two orthogonal concerns. If `dev_force_success=False` (the normal production case), `interactive=True` is passed to the orchestrator, which may cause unexpected interactive prompts inside the orchestrator when running in `--non-interactive` CLI mode.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F30",
+      "location": "docs/aiv-packet-pr9.yaml:35-36,356-358",
+      "class": "other",
+      "severity": "medium",
+      "evidence": "The AIV packet lists both `classified_by: \"Claude Sonnet 4.6 (AI assistant)\"` (line 36) and `verifier_id: \"Claude Sonnet 4.6 (AI assistant)\"` (line 357) — the same AI entity served as both author and verifier. The packet acknowledges this (`sod_mode: S0`, `signature_method: unsigned`), but CLAUDE.md requires every PR body to end with an AIV-Lite Verification Summary. Using a single non-independent AI as both author and verifier violates the spirit of separation-of-duties and provides no assurance beyond self-review.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F31",
+      "location": ".windsurfrules:524",
+      "class": "design_defect",
+      "severity": "low",
+      "evidence": "The DEV_WORKFLOW section (lines 1-373) is duplicated verbatim at lines 524-899 and again at lines 1052-1425. The WINDSURF_RULES and SELF_IMPROVE sections are similarly triplicated. The file grew by appending instead of updating, making it ~1600 lines of ~500 lines of unique content.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F32",
+      "location": ".github/workflows/deploy.yml:1",
+      "class": "test_gap",
+      "severity": "medium",
+      "evidence": "The only CI workflow in the assigned file set (deploy.yml) builds and deploys docs but never runs pytest. There is no step that executes the test suite before deployment, so regressions can ship silently to the docs site.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F33",
+      "location": "scripts/hypot_test_gen.py:239",
+      "class": "security",
+      "severity": "low",
+      "evidence": "run_hypothesis_write builds full_cmd = f'hypothesis write {command}' (line 239) and passes it to subprocess.run with shell=True (line 247). The 'command' string contains entity.module_path, which is derived from user-supplied file-system paths via construct_module_path (line 405-415). A file path component containing shell metacharacters (e.g. spaces, $(), backticks) is injected verbatim into a shell command string, enabling command injection.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F34",
+      "location": "scripts/hypot_test_gen.py:239",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "run_hypothesis_write invokes the bare 'hypothesis' binary name (full_cmd = f'hypothesis write {command}'). CLAUDE.md explicitly documents: 'Always use venv-local hypothesis binary: Path(sys.executable).parent / \"hypothesis\" — bare hypothesis resolves to system Python and crashes with pth file conflicts.' The DDD formatter.py (src/dev/test_generator/output/formatter.py) is the refactored version; this original script still has the defect.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F35",
+      "location": "scripts/hypot_test_gen.py:381",
+      "class": "bug",
+      "severity": "low",
+      "evidence": "handle_failed_attempt checks 'if attempt < 3' (line 381) to decide whether to retry, hardcoding the retry bound to 3. But the enclosing try_generate_test method receives max_retries as a parameter (line 313) and loops for range(1, max_retries+1). If max_retries != 3 (e.g. max_retries=5), the retry wait logic fires only on attempts 1 and 2, and the 'All attempts failed' error fires prematurely on attempt 3 even though more retries remain.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F36",
+      "location": "scripts/hypot_test_gen.py:25",
+      "class": "design_defect",
+      "severity": "medium",
+      "evidence": "snoop.install(out=Path('snoop_debug.log')) executes at module import time (line 25), installing snoop globally into the interpreter and writing to a log file in the process's current working directory. Any process that imports this script inherits global snoop instrumentation and side-effect log file creation, regardless of whether snoop was requested.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F37",
+      "location": "src/branch_fixer/config/logging_config.py:30",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "setup_logging() adds a new FileHandler to the 'snoop' logger (lines 31-37) without checking whether handlers already exist. The root logger's handlers are replaced by basicConfig(force=True), but the snoop-specific logger is not cleared. Every subsequent call to setup_logging() appends another duplicate FileHandler to the snoop logger, leading to duplicated log entries. setup_logging() is called twice in the normal run path: once in main.py:11 and again inside fix() at run_cli.py:94.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F38",
+      "location": "src/branch_fixer/orchestration/fix_service.py:164",
+      "class": "bug",
+      "severity": "low",
+      "evidence": "The outer except at line 164 wraps any exception (including the FixServiceError raised at line 143) in a second FixServiceError: root_cause = getattr(e, '__cause__', e) retrieves the original exception, and raise FixServiceError(str(root_cause)) from e discards the FixServiceError message text set in the inner except, replacing it with str(original_exception). This double-wrapping loses diagnostic information.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F39",
+      "location": "src/branch_fixer/storage/recovery.py:200",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "restore_checkpoint iterates rp.modified_files (lines 210-212) with a loop body consisting solely of 'pass' (line 213). The docstring and method name promise file restoration; the comment at lines 206-208 acknowledges the placeholder with 'we assume they've already been partially undone.' In practice no files are ever restored from any backup, making the recovery feature non-functional.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F40",
+      "location": "src/branch_fixer/storage/recovery.py:241",
+      "class": "design_defect",
+      "severity": "low",
+      "evidence": "handle_failure uses print() (lines 241-244, 252, 256, 260, 263) for all diagnostic output instead of the standard logging module used everywhere else in the codebase. In production deployments print output may be suppressed or lost, silently dropping recovery diagnostics.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F41",
+      "location": "src/branch_fixer/storage/recovery.py:11",
+      "class": "doc_drift",
+      "severity": "low",
+      "evidence": "TYPE_CHECKING imports (lines 11-14) use 'src.branch_fixer.storage.session_store', 'src.branch_fixer.services.git.repository', and 'src.branch_fixer.orchestration.orchestrator'. The installed package path is 'branch_fixer.*' (not 'src.branch_fixer.*'), so these paths will be unresolvable to mypy/pyright. All other production imports in the package correctly omit the 'src.' prefix.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F42",
+      "location": "src/branch_fixer/services/git/models.py:87",
+      "class": "bug",
+      "severity": "low",
+      "evidence": "PRDetails.created_at and updated_at (lines 87-88) default via field(default_factory=datetime.now), producing naive datetime objects without timezone info. Any comparison with timezone-aware datetimes (e.g. from GitHub API responses or TinyDB with UTC storage) will raise TypeError. Python docs recommend datetime.now(timezone.utc) for timestamps.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F43",
+      "location": "src/branch_fixer/utils/run_cli.py:94",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "setup_logging() is called at run_cli.py:94 inside the fix() Click command. The entrypoint main() in main.py:11 also calls setup_logging() before invoking cli(). When the tool is run via the normal entrypoint, setup_logging() executes twice. Combined with the handler-accumulation bug in logging_config.py (F007), a duplicate snoop FileHandler is added on the second call.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F44",
+      "location": "docs/design-and-research/01-strategic-analysis.md:49",
+      "class": "doc_drift",
+      "severity": "low",
+      "evidence": "Section IV.B mentions 'services/ai/ — A manager_design_draft.py shows forward-thinking exploration'. CLAUDE.md explicitly states 'manager_design_draft.py was deleted'. The reference to a deleted file is a stale doc drift.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F45",
+      "location": "docs/design-and-research/01-strategic-analysis.md:131",
+      "class": "doc_drift",
+      "severity": "low",
+      "evidence": "Multiple subsections of the strategic analysis document use '[Current Date]' as a placeholder (lines 131, 276, 388) that was never filled in. These appear in Document Version headers of merged analysis sub-documents, suggesting copy-paste artifacts left in committed documentation.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F46",
+      "location": "Taskfile.yml:29",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "The setup task creates the venv with 'python3 -m venv {{.PYTHON_VENV}}' (line 29) without specifying Python 3.13. On systems with multiple Python versions (e.g. python3 -> 3.11 on Ubuntu 22.04), this creates a 3.11 venv, contradicting CLAUDE.md's requirement of Python 3.13 and the pyproject.toml constraint 'requires-python >= \"3.13\"'. The resulting venv would silently use the wrong Python.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F47",
+      "location": "docs/reference/hypothesis-guide.md:162",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "Test example asserts `reversed(reversed(xs)) == xs` where xs is a list. `reversed(list)` returns a `list_reverseiterator`; calling `reversed()` on that iterator raises `TypeError: argument to reversed() must be a sequence`. The assertion can never pass. Confirmed as a known issue in docs/doc-issues.md:123.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F48",
+      "location": "scripts/runner_debug.py:23",
+      "class": "bug",
+      "severity": "low",
+      "evidence": "Hardcoded absolute path `/Volumes/Totallynotaharddrive/Pytest-Error-Fixing-Framework/src/branch_fixer/services/pytest` is a developer-local macOS volume path. The script fails immediately on any other system because the path does not exist. The file is committed to the repo as a utility script.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F49",
+      "location": "src/branch_fixer/services/git/pr_manager.py:136-138",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "`update_pr` is documented as 'Update PR with change tracking' and accepts `status`, `metadata`, and `reason` parameters, but its body only checks that the PR exists and returns it unchanged. All update parameters are silently ignored. No state is mutated.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F50",
+      "location": "src/branch_fixer/orchestration/orchestrator.py:428-430",
+      "class": "bug",
+      "severity": "low",
+      "evidence": "`get_progress()` computes `current_temperature` as `self.initial_temp + self.temp_increment * self._session.retry_count`. `retry_count` is a global session counter incremented across all errors, not a per-error counter. Reported temperature does not reflect the actual temperature in use for the current error's retry loop.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F51",
+      "location": "src/branch_fixer/orchestration/orchestrator.py:248-273",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "In `run_session`, when `_handle_error_fix` returns False (line 254), the method immediately saves the session and returns False. The `failed_tests` and `passed_tests` count computations at lines 257-260 are never reached. The persisted session record shows 0 for both counts even when errors remain unfixed, producing misleading session data.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F52",
+      "location": "src/branch_fixer/services/pytest/parsers/failure_parser.py:9",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "The sole regex pattern `([\\/\\._-]+):(\\d+):\\s+([\\w\\.]+Error)` matches only exception type names that contain the substring \"Error\" (e.g. `ValueError`, `RuntimeError`). Exception classes ending in \"Exception\" (e.g. `KeyboardInterrupt`, `StopIteration`, `CustomException`, `BaseException`) are never matched. Failures from these exception types are silently dropped by the parser.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F53",
+      "location": "src/branch_fixer/config/settings.py:6",
+      "class": "security",
+      "severity": "low",
+      "evidence": "`SECRET_KEY = os.environ.get(\"BRANCH_FIXER_SECRET_KEY\", \"\")` defaults to an empty string when the environment variable is absent. An empty-string secret key is cryptographically useless and cannot provide any HMAC or token security guarantees. Any code relying on this key silently degrades to zero security with no error raised.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F54",
+      "location": "docs/developer-guide/04-execution-flow.md:18",
+      "class": "doc_drift",
+      "severity": "medium",
+      "evidence": "Code snippet shows `@click.option('--api-key', envvar='OPENAI_API_KEY', required=True)`. Per CLAUDE.md, the correct env var is `OPENROUTER_API_KEY`, not `OPENAI_API_KEY`. Using the documented name would cause the real CLI to fail to find the API key. Confirmed as a known drift in docs/doc-issues.md:111.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F55",
+      "location": "docs/developer-guide/04-execution-flow.md:118",
+      "class": "doc_drift",
+      "severity": "low",
+      "evidence": "Section 3.2 states `Generate code changes via an LLM call (litellm or marvin or whichever backend)`. Per CLAUDE.md and docs/doc-issues.md:111, `marvin` was deleted from the project. The doc still lists it as an active backend option.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F56",
+      "location": "docs/developer-guide/04-execution-flow.md:148-156",
+      "class": "doc_drift",
+      "severity": "medium",
+      "evidence": "Section 4.2 shows `run_command` as `async def run_command(self, cmd: List[str]) -> CommandResult` using `asyncio.create_subprocess_exec`. Per docs/doc-issues.md:111, the actual implementation is synchronous. Callers written to await this method would fail.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F57",
+      "location": "scripts/runner_debug.py:1",
+      "class": "doc_drift",
+      "severity": "low",
+      "evidence": "Module header comment reads `# src/branch_fixer/services/pytest/runner_debug.py` but the file is checked in at `scripts/runner_debug.py`. The path comment is wrong and will mislead anyone navigating by the header.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F58",
+      "location": "src/branch_fixer/services/git/pr_manager.py:114-186",
+      "class": "design_defect",
+      "severity": "medium",
+      "evidence": "`create_pr` (line 41) is a synchronous method. `update_pr` (line 114), `validate_pr` (line 140), `get_pr_history` (line 155), and `close_pr` (line 169) are all declared `async`. A caller using the class cannot uniformly await or call its methods; mixing sync and async on the same class forces callers to know which mode each method uses.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F59",
+      "location": "src/branch_fixer/services/git/pr_manager.py:167,186",
+      "class": "design_defect",
+      "severity": "medium",
+      "evidence": "`get_pr_history` (line 167) and `close_pr` (line 186) both unconditionally raise `NotImplementedError`. These are production-class methods in `PRManager`; any code path that reaches them will crash. The class presents a complete interface in its docstrings and type signatures but cannot actually close or retrieve history for any PR.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F60",
+      "location": "src/branch_fixer/services/git/pr_manager.py:66",
+      "class": "design_defect",
+      "severity": "low",
+      "evidence": "`pr_id = len(self.prs) + 1` derives the next ID from the current dict size. If any PR is deleted from `self.prs`, the next creation reuses a previously assigned ID, causing silent data collisions (two different PRDetails objects occupying the same numeric key at different times).",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F61",
+      "location": "src/branch_fixer/services/git/pr_manager.py:43-44",
+      "class": "design_defect",
+      "severity": "low",
+      "evidence": "`create_pr` declares `modified_files: List[Path]` as a required parameter (no default), but the parameter is never read or used anywhere in the method body. The argument is silently dropped; callers are required to supply it for no effect.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F62",
+      "location": "src/branch_fixer/orchestration/orchestrator.py:344-356",
+      "class": "design_defect",
+      "severity": "low",
+      "evidence": "Inside `fix_error()`, a new `FixService` instance is constructed on every retry attempt (up to `max_retries` times per error). Construction involves multiple dependency injections. There is no reason to recreate the service per retry; it should be instantiated once per error or per session.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F63",
+      "location": "src/branch_fixer/utils/workspace.py:20",
+      "class": "design_defect",
+      "severity": "medium",
+      "evidence": "`REQUIRED_DEPENDENCIES` includes `\"snoop\"`. `check_dependencies()` raises `ImportError` if snoop is not importable, blocking the entire tool. Per CLAUDE.md, snoop is a debugging aid, not a runtime requirement. Requiring a debug-only library as a hard runtime dependency causes production installations without debug tools to fail at startup.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F64",
+      "location": "docs/design-and-research/02-swe-bench-strategy.md:1-185",
+      "class": "other",
+      "severity": "low",
+      "evidence": "The entire document is a raw AI assistant conversation transcript (two consecutive AI responses, no user turns shown, no editorial framing, no verification). It is listed in mkdocs.yml under 'Design & Research > SWE-bench Strategy' alongside peer-reviewed design documents. It is confirmed as 'raw AI conversation' in docs/doc-issues.md:93 but remains in the published site navigation with no disclaimer.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F65",
+      "location": "tests/test_math_operations.py:3-8",
+      "class": "test_gap",
+      "severity": "low",
+      "evidence": "The file defines its own `add(a, b)` function locally at line 3 and then tests it at line 7. It imports nothing from the production codebase. It exercises no code from `src/`. This file contributes no coverage of the project under test.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F66",
+      "location": "src/branch_fixer/services/git/repository.py:87",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "_find_git_root checks `(root / '.git').exists()` and raises NotAGitRepositoryError before ever calling `Repo(root, search_parent_directories=True)` at line 91. If the caller passes any subdirectory of a git repo (e.g., cwd is `src/`), the `.git` check fails and the function raises instead of letting GitPython find the repo root in a parent directory. The `search_parent_directories=True` argument on line 91 is therefore never useful.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F67",
+      "location": "src/branch_fixer/services/git/repository.py:328",
+      "class": "bug",
+      "severity": "low",
+      "evidence": "Inside `push()`, `run_command()` calls `_check_command_error()` (line 193) which raises `GitError` on any non-zero returncode. Therefore `result.returncode` is always 0 when execution reaches line 325 (`success = result.returncode == 0`), making `success` always `True` and the `else` branch at line 328 permanently dead code. The failure-logging path (`logger.error`) at line 329 can never execute.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F68",
+      "location": "src/branch_fixer/services/git/repository.py:590",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "`sync_with_remote()` calls `self.pull()` at line 590, which unconditionally raises `NotImplementedError` (see line 352: `raise NotImplementedError('pull method is not implemented yet.')`). The `except GitError` clause at line 593 does not catch `NotImplementedError`, so every call to `sync_with_remote()` propagates `NotImplementedError` to the caller. The method can never return `True` or `False`.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F69",
+      "location": "src/branch_fixer/services/git/repository.py:612",
+      "class": "bug",
+      "severity": "low",
+      "evidence": "`merge_branch()` returns `result.returncode == 0` at line 612 after calling `run_command()`. Since `run_command()` raises `GitError` on any non-zero returncode (via `_check_command_error`), `result.returncode` is always 0 when execution reaches line 612, so this expression is always `True`. The function's declared `bool` return value therefore never indicates failure; only exception indicates failure, and that is undocumented.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F70",
+      "location": "src/branch_fixer/orchestration/coordinator.py:31",
+      "class": "design_defect",
+      "severity": "high",
+      "evidence": "`SessionCoordinator.coordinate_fix_attempt` body is `pass` with a comment `# Implement coordination logic here`. The method is async and returns `None` unconditionally. Any orchestration code that depends on session coordination being performed silently gets a no-op. The class is in the production `orchestration` package, not a stub/test directory.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F71",
+      "location": "src/branch_fixer/orchestration/coordinator.py:47",
+      "class": "design_defect",
+      "severity": "low",
+      "evidence": "`SessionCoordinator.handle_failure` hardcodes `return False` at line 47 with comment `# Implement failure handling logic here`. Recovery always \"fails\" without any logic running. Any caller checking the return value for recovery success will always see `False`, making recovery infrastructure non-functional.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F72",
+      "location": "tests/unit/services/pytest/test_runner.py:470",
+      "class": "test_gap",
+      "severity": "medium",
+      "evidence": "`assert \"Duration: 1.23s\" or \"Duration: 1.2\"` is always truthy: Python evaluates this as `assert (\"Duration: 1.23s\" or \"Duration: 1.2\")` which short-circuits to `assert \"Duration: 1.23s\"`, a non-empty string literal that is always `True`. The test never checks whether the formatted report actually contains a duration string. The intended assertion `assert \"Duration: 1.23s\" in report` is not executed.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F73",
+      "location": "tests/unit/orchestration/test_orchestrator.py:583",
+      "class": "bug",
+      "severity": "low",
+      "evidence": "The fallback `RM.create_checkpoint` raises `SimpleNamespace.__class__(\"CheckpointError\")(\"fail\")`. `SimpleNamespace.__class__` is `type`; `type(\"CheckpointError\")` with one argument returns `str`; `str(\"fail\")` is the string `\"fail\"`. Raising a string literal in Python 3 causes `TypeError: exceptions must derive from BaseException`. If the `from branch_fixer.storage.recovery import CheckpointError` import at line 589 fails, the fallback RM is itself broken, meaning the test exercises a code path that would TypeError, not the intended checkpoint-error-handling path.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F74",
+      "location": "CONTRIBUTING.md:39",
+      "class": "doc_drift",
+      "severity": "low",
+      "evidence": "CONTRIBUTING.md instructs contributors to run `pytest` (bare command). The project's CLAUDE.md mandates `.venv/bin/python -m pytest` because bare `pytest` resolves to the system Python, not the project venv (Python 3.13). A contributor following CONTRIBUTING.md may run tests against the wrong interpreter and get misleading results.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F75",
+      "location": "pyproject.toml:5",
+      "class": "doc_drift",
+      "severity": "low",
+      "evidence": "`description = \"Add your description here\"` is an unfilled placeholder left from project scaffolding. It is published as the PyPI package description and misleads anyone inspecting package metadata.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F76",
+      "location": "scripts/setup_project.sh:7",
+      "class": "doc_drift",
+      "severity": "medium",
+      "evidence": "The script creates a project skeleton rooted at `pytest_fixer/branch_fixer/pytest/error_parser/` (lines 7-85), which does not match the actual layout `src/branch_fixer/services/pytest/parsers/`. It also creates obsolete paths like `branch_fixer/git/`, `branch_fixer/utils/`, and `test_generator/` at the wrong nesting level. Running this script against the repo would create a completely wrong directory tree. The file is also gitignored via `scripts/*` in `.gitignore:21`, meaning it exists in the repo but is excluded from tracking — a hygiene inconsistency.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F77",
+      "location": "docs/developer-guide/prompts/Code-Refactoring-Instructions.md:23",
+      "class": "doc_drift",
+      "severity": "low",
+      "evidence": "The file ends with the literal text `====\\nFULL CODE:\\n====\\nshow the full file dont drop comments or existing functionality` — a raw LLM-prompt editing instruction that was accidentally committed as the final line of an official developer-guide document. This is an unprocessed draft artifact.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F78",
+      "location": "src/branch_fixer/services/git/repository.py:314",
+      "class": "doc_drift",
+      "severity": "low",
+      "evidence": "`push()` docstring at line 314 declares `Raises: GitError: If the push operation fails.` However, the implementation wraps every execution path in `except Exception as e: return False` (lines 333-335), which catches and silences `GitError` and all other exceptions, always returning `False` instead of raising. Callers expecting `GitError` on push failure will silently receive `False` and may not detect the failure.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F79",
+      "location": "tests/integration/pytest/conftest.py:12",
+      "class": "design_defect",
+      "severity": "low",
+      "evidence": "Lines 1-10 of this file define integration-scope pytest fixtures (imports `PytestRunner`, defines `runner` using `test_suite_dir`). Lines 12-30 define unrelated unit-git fixtures (`clean_repo` using `Mock(spec=GitRepository)` and `branch_manager` using `BranchManager`) that belong in `tests/unit/git/conftest.py`. Two unrelated fixture scopes are merged into one file. The `runner` fixture at line 8 also references `test_suite_dir` which is not defined in this file, making it an undeclared fixture dependency.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F80",
+      "location": "src/branch_fixer/storage/state_manager.py:9",
+      "class": "design_defect",
+      "severity": "low",
+      "evidence": "The `TYPE_CHECKING` block at lines 9-10 uses `src.branch_fixer.storage.session_store` and `src.branch_fixer.orchestration.orchestrator` with the `src.` prefix. The rest of the codebase imports as `branch_fixer.*`. While the guard prevents runtime failure, static analysis tools (mypy, pylance) may fail to resolve these paths and produce false-positive type errors.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F81",
+      "location": "tests/test_generator/test_strategy_fabric.py:231",
+      "class": "test_gap",
+      "severity": "low",
+      "evidence": "`test_analysis_uses_analysis_system_prompt` imports `ANALYSIS_SYSTEM_PROMPT` from `src.dev.test_generator.generate.prompts` at line 231 but never uses the imported constant in its assertion. The actual assertion only checks for the generic words `\"analyze\"` or `\"plan\"` in the system message (line 244), rather than verifying the actual expected prompt constant. The test name implies it verifies the exact prompt but the assertion is weaker than advertised.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F82",
+      "location": "src/branch_fixer/storage/state_manager.py:142",
+      "class": "design_defect",
+      "severity": "low",
+      "evidence": "`validate_session_state` is documented as validating that session state is internally consistent but only contains an `# Example logic:` comment and a single check for the `completed` state (lines 151-156). All other states (initializing, running, paused, error, failed) pass without any validation. The method always returns `True` for all non-completed states, making it effectively a no-op for most states.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F83",
+      "location": "src/branch_fixer/storage/recovery.py:135,174,225 + src/branch_fixer/orchestration/orchestrator.py:393,516",
+      "class": "bug",
+      "severity": "high",
+      "evidence": "RecoveryManager.create_checkpoint (line 135), restore_checkpoint (line 174), and handle_failure (line 225) are all declared as `async def`. In orchestrator.py, both callers are synchronous: (1) _create_checkpoint_if_needed at line 516 calls `checkpoint = self.recovery_manager.create_checkpoint(session, metadata)` without await — receives a coroutine object, not a RecoveryPoint; the subsequent `checkpoint.id` at line 518 raises AttributeError which is NOT caught by the `except CheckpointError` handler, so the exception propagates unhandled. (2) handle_error at line 393 calls `recovered = self.recovery_manager.handle_failure(error, self._session, context)` without await — receives a truthy coroutine object; `if recovered:` at line 396 always evaluates True, so handle_error always returns True falsely reporting recovery success without any recovery work being done. Tests in test_recovery.py lines 134-198 confirm the methods are async (all use @pytest.mark.asyncio and await), while test_orchestrator.py lines 565-598 mock the recovery manager with synchronous stubs — masking the mismatch.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F84",
+      "location": "src/branch_fixer/services/git/repository.py:568 + src/branch_fixer/services/git/pr_manager.py:102-112",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "create_pull_request_sync (repository.py:544) is annotated `-> bool` and its docstring states 'Returns: bool: True if the PR creation succeeded, False otherwise.' However, line 568 returns `self.pr_manager.create_pr(...)` whose return type is `PRDetails` (pr_manager.py:48 declares `-> PRDetails` and line 112 returns a PRDetails instance). In cli.py:220, the result is used in a boolean guard: `if self.service and self.service.git_repo.create_pull_request_sync(branch_name, error):`. Since PRDetails is always a truthy object (non-None dataclass instance), this guard is always True — PR creation always appears to succeed even when gh pr create failed and url=None. This means a failed GitHub PR creation is silently treated as success and the branch is still pushed.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F85",
+      "location": "src/branch_fixer/orchestration/orchestrator.py:351",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "In fix_error, each retry constructs FixService with `dev_force_success=False` hardcoded (line 351: `dev_force_success=False,  # Placeholder for logic`). The primary non-interactive execution path is CLI._generate_and_apply_fix (cli.py:210-211) -> orchestrator.start_session + orchestrator.fix_error, which always uses dev_force_success=False regardless of user config. The CLI config passes dev_force_success only to self.service (cli.py:325) which is used only by attempt_manual_fix (fix_service.py:187). The --dev-force-success CLI flag is therefore silently inoperative for the main AI-fix orchestration path. This is distinct from F41 (which notes dev_force_success is wired into self.service) and F48 (which notes the interactive flag is repurposed): the defect here is the hardcoded False inside orchestrator.fix_error.",
+      "intent_mismatch": false
+    },
+    {
+      "id": "F86",
+      "location": "src/branch_fixer/utils/cli.py:220-226 + src/branch_fixer/services/git/pr_manager.py:71-88",
+      "class": "bug",
+      "severity": "high",
+      "evidence": "cli.py:220 calls create_pull_request_sync() which internally executes `gh pr create --head <branch_name>` (pr_manager.py:71-88) BEFORE the branch is pushed to the remote. The push happens at cli.py:226 only AFTER pr_manager.create_pr() has already returned. GitHub requires the branch to exist remotely before a PR can be created, so `gh pr create` fails (exit != 0). pr_manager.create_pr() logs a warning and returns a truthy PRDetails object with url=None regardless of success (line 102-112). cli.py:220 evaluates the truthy PRDetails as True, logs 'Created pull request successfully' at line 222 (false positive), and then pushes the branch at line 226—but no PR was ever created on GitHub. The fix must push before calling create_pr.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F87",
+      "location": "src/branch_fixer/services/pytest/error_processor.py:49-54 + src/branch_fixer/services/code/change_applier.py:127-128",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "error_processor.py:49-54 creates TestError(test_file=Path('unknown_collection_file.py'), test_function='pytest_collection', ...) for every collection error. When this TestError enters the fix pipeline via fix_service.attempt_fix(), generate_fix() is called first (consuming AI API tokens) then apply_changes_with_backup(Path('unknown_collection_file.py'), changes) is called. Inside _backup_file(), line 127-128 checks `if not file_path.exists(): raise FileNotFoundError('Cannot backup non-existent file: unknown_collection_file.py')`. The outer except in apply_changes_with_backup (line 60-62) catches this and returns (False, None). fix_service then calls _handle_failed_attempt and returns False. orchestrator.fix_error() increments temperature and retries. All max_retries attempts burn AI API calls and fail with guaranteed FileNotFoundError—no guard in the pipeline prevents collection errors (which require import fixes, not file edits) from consuming the full retry budget.",
+      "intent_mismatch": true
+    },
+    {
+      "id": "F88",
+      "location": "src/branch_fixer/orchestration/fix_service.py:140-143,165-167 + src/branch_fixer/orchestration/orchestrator.py:357",
+      "class": "bug",
+      "severity": "high",
+      "evidence": "When generate_fix() raises CompletionError (e.g., API rate limit or network failure), fix_service.attempt_fix()'s inner except at line 140-143 re-raises as FixServiceError. The outer except at line 165-167 catches and re-raises it again as FixServiceError. This propagates out of attempt_fix(). orchestrator.fix_error()'s retry loop at line 357 (`success = fix_service.attempt_fix(error, temperature=current_temp)`) has NO try/except, so the FixServiceError escapes the for-loop entirely on the FIRST attempt, bypassing all remaining max_retries-1 retry slots. On any transient API failure (rate limit, network timeout, invalid key), the entire session aborts rather than retrying with a higher temperature. Root cause is distinct from F41 (double-wrapping): the defect here is the unguarded call in fix_error()'s loop that turns a raise into a session-abort instead of a retry.",
+      "intent_mismatch": true
+    }
+  ],
+  "summary": {
+    "critical": 1,
+    "high": 5,
+    "medium": 34,
+    "low": 48
+  },
+  "_meta": {
+    "cost_usd": 17.73
+  }
+}

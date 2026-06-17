@@ -1,12 +1,8 @@
 {
   "completed": {
-    "stage1": 1781665133814
+    "stage1": 1781665133814,
+    "stage2": 1781686219638
   },
   "started": 1781664331962,
-  "totalCost": 4.2416954,
-  "halt": {
-    "stageKey": "stage2",
-    "why": "no fixpoint within 4 rounds — findings set still churning",
-    "at": 1781683450745
-  }
+  "totalCost": 17.7307549
 }
