@@ -1,0 +1,1138 @@
+{
+  "files": [
+    {
+      "path": ".gitattributes",
+      "role": "config",
+      "note": "Git line-ending and diff attribute rules"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "role": "config",
+      "note": "CI pipeline: lint→typecheck→security→test+coverage→integration jobs"
+    },
+    {
+      "path": ".github/workflows/deploy.yml",
+      "role": "config",
+      "note": "GitHub Actions workflow to build and deploy MkDocs site to GitHub Pages on push to main"
+    },
+    {
+      "path": ".github/workflows/docstr-coverage.yml",
+      "role": "config",
+      "note": "GitHub Actions workflow to measure docstring coverage on main and PRs"
+    },
+    {
+      "path": ".gitignore",
+      "role": "config",
+      "note": "Git ignore rules for the repository"
+    },
+    {
+      "path": ".python-version",
+      "role": "config",
+      "note": "Pins Python version for pyenv/asdf (3.13)"
+    },
+    {
+      "path": ".taskmaster/docs/prd.txt",
+      "role": "doc",
+      "note": "Product requirements document for Taskmaster AI project management integration"
+    },
+    {
+      "path": ".windsurfrules",
+      "role": "config",
+      "note": "Windsurf IDE coding rules and dev workflow guidelines for AI assistants"
+    },
+    {
+      "path": "CLAUDE.md",
+      "role": "config",
+      "note": "Claude Code project instructions: critical rules, architecture, known bugs, run commands"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "role": "doc",
+      "note": "Contributor guidelines for the project"
+    },
+    {
+      "path": "LICENSE",
+      "role": "doc",
+      "note": "Project open-source license file"
+    },
+    {
+      "path": "README.md",
+      "role": "doc",
+      "note": "Top-level project readme with overview and quick-start instructions"
+    },
+    {
+      "path": "Taskfile.yml",
+      "role": "config",
+      "note": "Go-Task runner defining all dev tasks: setup, lint, test, run:fix, docs, codescene, clean"
+    },
+    {
+      "path": "ai-manager-ideas/Senkovi",
+      "role": "asset",
+      "note": "Uninitialized git submodule (mode 160000) referencing external Senkovi research repo"
+    },
+    {
+      "path": "ai-manager-ideas/aider-swe-bench",
+      "role": "asset",
+      "note": "Uninitialized git submodule (mode 160000) referencing aider-swe-bench research repo"
+    },
+    {
+      "path": "ai-manager-ideas/marvin",
+      "role": "asset",
+      "note": "Uninitialized git submodule (mode 160000) referencing Marvin AI library research repo"
+    },
+    {
+      "path": "ai-manager-ideas/o1-xml-parser",
+      "role": "asset",
+      "note": "Uninitialized git submodule (mode 160000) referencing o1-xml-parser research repo"
+    },
+    {
+      "path": "audits/AUDIT_DEC_17.md",
+      "role": "doc",
+      "note": "Historical quality audit report from December 17"
+    },
+    {
+      "path": "audits/AUDIT_DEC_18.md",
+      "role": "doc",
+      "note": "Historical quality audit report from December 18"
+    },
+    {
+      "path": "audits/QUALITY_AUDIT.md",
+      "role": "doc",
+      "note": "General quality audit document for the project"
+    },
+    {
+      "path": "docs/aiv-packet-pr9.yaml",
+      "role": "doc",
+      "note": "AIV (AI Verification) verification packet YAML for PR #9"
+    },
+    {
+      "path": "docs/design-and-research/01-strategic-analysis.md",
+      "role": "doc",
+      "note": "Strategic analysis document for project design and research"
+    },
+    {
+      "path": "docs/design-and-research/02-swe-bench-strategy.md",
+      "role": "doc",
+      "note": "SWE-Bench benchmark strategy and approach document"
+    },
+    {
+      "path": "docs/design-and-research/03-git-api-design.md",
+      "role": "doc",
+      "note": "Git API design specification document"
+    },
+    {
+      "path": "docs/developer-guide/01-architecture.md",
+      "role": "doc",
+      "note": "Architecture overview for developers"
+    },
+    {
+      "path": "docs/developer-guide/02-contribution-guide.md",
+      "role": "doc",
+      "note": "Developer contribution guide"
+    },
+    {
+      "path": "docs/developer-guide/03-testing-strategy.md",
+      "role": "doc",
+      "note": "Testing strategy and conventions for the project"
+    },
+    {
+      "path": "docs/developer-guide/04-execution-flow.md",
+      "role": "doc",
+      "note": "Step-by-step execution flow documentation"
+    },
+    {
+      "path": "docs/developer-guide/prompts/Code-Refactoring-Instructions.md",
+      "role": "doc",
+      "note": "LLM prompt template for code refactoring tasks"
+    },
+    {
+      "path": "docs/developer-guide/prompts/Structured-Test-Development-Process.md",
+      "role": "doc",
+      "note": "LLM prompt template for structured test development"
+    },
+    {
+      "path": "docs/developer-guide/prompts/pytest-generation.md",
+      "role": "doc",
+      "note": "LLM prompt template for pytest test generation"
+    },
+    {
+      "path": "docs/developer-guide/prompts/test-refactoring.md",
+      "role": "doc",
+      "note": "LLM prompt template for test refactoring"
+    },
+    {
+      "path": "docs/doc-issues.md",
+      "role": "doc",
+      "note": "Tracking document for known documentation issues"
+    },
+    {
+      "path": "docs/index.md",
+      "role": "doc",
+      "note": "MkDocs site home page"
+    },
+    {
+      "path": "docs/reference/bug-taxonomy.md",
+      "role": "doc",
+      "note": "Taxonomy of bug types the fixer targets"
+    },
+    {
+      "path": "docs/reference/ddd-principles.md",
+      "role": "doc",
+      "note": "Domain-Driven Design principles applied in this project"
+    },
+    {
+      "path": "docs/reference/debugging-workflow.md",
+      "role": "doc",
+      "note": "Debugging workflow reference guide"
+    },
+    {
+      "path": "docs/reference/hypothesis-guide.md",
+      "role": "doc",
+      "note": "Guide to using Hypothesis for property-based testing"
+    },
+    {
+      "path": "docs/reference/target-audience.md",
+      "role": "doc",
+      "note": "Target audience definition for the project"
+    },
+    {
+      "path": "docs/user-guide/01-installation.md",
+      "role": "doc",
+      "note": "Installation instructions for end users"
+    },
+    {
+      "path": "docs/user-guide/02-quickstart.md",
+      "role": "doc",
+      "note": "Quick-start guide for end users"
+    },
+    {
+      "path": "docs/user-guide/03-cli-reference.md",
+      "role": "doc",
+      "note": "CLI command reference documentation"
+    },
+    {
+      "path": "mkdocs.yml",
+      "role": "config",
+      "note": "MkDocs documentation site configuration with nav structure"
+    },
+    {
+      "path": "pyproject.toml",
+      "role": "config",
+      "note": "PEP 517 project metadata, dependencies (click, litellm, gitpython, pytest, tinydb, etc.), and dev extras"
+    },
+    {
+      "path": "pytest.ini",
+      "role": "config",
+      "note": "Pytest configuration: pythonpath=src, testpaths=tests, asyncio_mode=auto, excludes integration marker by default"
+    },
+    {
+      "path": "scripts/add_or_replace_headers.py",
+      "role": "dead",
+      "note": "One-time utility to add/replace file-path header comments in Python files; no longer needed"
+    },
+    {
+      "path": "scripts/analyze_code.sh",
+      "role": "source",
+      "note": "Dev shell script running CodeScene, mypy, and ruff on a given file and copying results to clipboard"
+    },
+    {
+      "path": "scripts/hypot_test_gen.py",
+      "role": "source",
+      "note": "Original monolithic Hypothesis test generation script; superseded by src/dev/test_generator/ DDD refactor but still runnable"
+    },
+    {
+      "path": "scripts/import_update_report.txt",
+      "role": "asset",
+      "note": "Generated text report produced by scripts/update_imports.py listing import changes made during reorganization"
+    },
+    {
+      "path": "scripts/reorganize_project.py",
+      "role": "dead",
+      "note": "One-time project structure reorganization script; has already been run and is no longer needed"
+    },
+    {
+      "path": "scripts/reorganize_tests.sh",
+      "role": "dead",
+      "note": "One-time shell script that created the test directory structure; hardcoded to old volume path, no longer needed"
+    },
+    {
+      "path": "scripts/runner_debug.py",
+      "role": "source",
+      "note": "Debug helper using snoop to trace PytestRunner.run_test() execution with depth=2"
+    },
+    {
+      "path": "scripts/setup_project.sh",
+      "role": "source",
+      "note": "Shell script to scaffold initial project directory structure (mkdir-based)"
+    },
+    {
+      "path": "scripts/test_failure_parser_compare.py",
+      "role": "dead",
+      "note": "Debug script with test_compare_parsers() importing non-existent path branch_fixer.services.pytest.error_parser.failure_parser"
+    },
+    {
+      "path": "scripts/test_failure_parser_debug.py",
+      "role": "dead",
+      "note": "Ad-hoc debug script for failure parser; not under testpaths and imports from old paths"
+    },
+    {
+      "path": "scripts/test_fix_workflow.py",
+      "role": "dead",
+      "note": "Ad-hoc workflow test script in scripts/; documents code paths but not in test suite"
+    },
+    {
+      "path": "scripts/update_imports.py",
+      "role": "dead",
+      "note": "One-time import update script run after project reorganization; no longer needed"
+    },
+    {
+      "path": "src/__init__.py",
+      "role": "source",
+      "note": "Empty package marker for the src/ namespace"
+    },
+    {
+      "path": "src/branch_fixer/config/defaults.py",
+      "role": "source",
+      "note": "Module-level constants: DEFAULT_RETRIES=3, DEFAULT_TIMEOUT=30"
+    },
+    {
+      "path": "src/branch_fixer/config/logging_config.py",
+      "role": "source",
+      "note": "setup_logging() configures console+file handlers writing to logs/app.log"
+    },
+    {
+      "path": "src/branch_fixer/config/settings.py",
+      "role": "source",
+      "note": "Runtime settings: BASE_DIR, DEBUG flag from env, SECRET_KEY from env"
+    },
+    {
+      "path": "src/branch_fixer/core/__init__.py",
+      "role": "source",
+      "note": "Empty package marker for branch_fixer.core"
+    },
+    {
+      "path": "src/branch_fixer/core/exceptions.py",
+      "role": "source",
+      "note": "Core exception hierarchy: FixError, CoordinationError, WorkflowError"
+    },
+    {
+      "path": "src/branch_fixer/core/models.py",
+      "role": "source",
+      "note": "Domain aggregates/value objects: ErrorDetails, FixAttempt, TestError (aggregate root), CodeChanges"
+    },
+    {
+      "path": "src/branch_fixer/main.py",
+      "role": "source",
+      "note": "Main entry point: calls setup_logging(), optionally installs snoop, then delegates to cli()"
+    },
+    {
+      "path": "src/branch_fixer/orchestration/__init__.py",
+      "role": "source",
+      "note": "Empty package marker for branch_fixer.orchestration"
+    },
+    {
+      "path": "src/branch_fixer/orchestration/coordinator.py",
+      "role": "source",
+      "note": "Stub async SessionCoordinator with coordinate_fix_attempt placeholder; not wired into live path"
+    },
+    {
+      "path": "src/branch_fixer/orchestration/dispatcher.py",
+      "role": "source",
+      "note": "Stub async WorkflowDispatcher with dispatch_fix_workflow placeholder; not wired into live path"
+    },
+    {
+      "path": "src/branch_fixer/orchestration/exceptions.py",
+      "role": "source",
+      "note": "Orchestration exceptions: FixOrchestratorError, SessionError, FixAttemptError"
+    },
+    {
+      "path": "src/branch_fixer/orchestration/fix_service.py",
+      "role": "source",
+      "note": "FixService: single-shot attempt_fix() pipeline — validate → AI generate → apply with backup → verify → restore on failure"
+    },
+    {
+      "path": "src/branch_fixer/orchestration/orchestrator.py",
+      "role": "source",
+      "note": "FixOrchestrator: multi-retry session loop with temperature bumping; FixSession dataclass; FixSessionState enum"
+    },
+    {
+      "path": "src/branch_fixer/services/__init__.py",
+      "role": "source",
+      "note": "Empty package marker for branch_fixer.services"
+    },
+    {
+      "path": "src/branch_fixer/services/ai/__init__.py",
+      "role": "source",
+      "note": "Empty package marker for branch_fixer.services.ai"
+    },
+    {
+      "path": "src/branch_fixer/services/ai/manager.py",
+      "role": "source",
+      "note": "AIManager: LiteLLM-based LLM client with persistent per-error conversation thread; analyze-before-fix pipeline at temperature=0.1"
+    },
+    {
+      "path": "src/branch_fixer/services/code/__init__.py",
+      "role": "source",
+      "note": "Empty package marker for branch_fixer.services.code"
+    },
+    {
+      "path": "src/branch_fixer/services/code/change_applier.py",
+      "role": "source",
+      "note": "ChangeApplier: apply AI-generated code with backup, fence stripping, syntax check, AST assert guard, and restore on failure"
+    },
+    {
+      "path": "src/branch_fixer/services/git/__init__.py",
+      "role": "source",
+      "note": "Empty package marker for branch_fixer.services.git"
+    },
+    {
+      "path": "src/branch_fixer/services/git/branch_manager.py",
+      "role": "source",
+      "note": "BranchManager: create_fix_branch, cleanup_fix_branch with name validation and GitRepository integration"
+    },
+    {
+      "path": "src/branch_fixer/services/git/exceptions.py",
+      "role": "source",
+      "note": "Git exception hierarchy: GitError, NotAGitRepositoryError, BranchCreationError, BranchNameError, etc."
+    },
+    {
+      "path": "src/branch_fixer/services/git/models.py",
+      "role": "source",
+      "note": "Git domain models: GitErrorDetails, CommandResult, BranchMetadata, BranchStatus, PRDetails, PRStatus, PRChange"
+    },
+    {
+      "path": "src/branch_fixer/services/git/pr_manager.py",
+      "role": "source",
+      "note": "PRManager: create and update pull requests with validation and history tracking via gh CLI or GitPython"
+    },
+    {
+      "path": "src/branch_fixer/services/git/repository.py",
+      "role": "source",
+      "note": "GitRepository: wraps GitPython Repo; run_command, get_current_branch, push, create_pull_request_sync, branch_manager/pr_manager composition"
+    },
+    {
+      "path": "src/branch_fixer/services/pytest/__init__.py",
+      "role": "source",
+      "note": "Empty package marker for branch_fixer.services.pytest"
+    },
+    {
+      "path": "src/branch_fixer/services/pytest/config.py",
+      "role": "source",
+      "note": "PytestConfig dataclass: working_dir, pytest_args, timeout, capture_output, parallel, max_retries, env_vars"
+    },
+    {
+      "path": "src/branch_fixer/services/pytest/error_info.py",
+      "role": "source",
+      "note": "ErrorInfo dataclass: test_file, function, error_type, error_details, line_number, code_snippet (string-based, older layer)"
+    },
+    {
+      "path": "src/branch_fixer/services/pytest/error_processor.py",
+      "role": "source",
+      "note": "process_pytest_results(): converts SessionResult test_results directly to TestError domain objects, avoiding fragile traceback parsing of raw pytest output; still applies a regex (_extract_error_type, line 14) to each test's error_message string to derive the error type"
+    },
+    {
+      "path": "src/branch_fixer/services/pytest/exceptions.py",
+      "role": "source",
+      "note": "Pytest service exceptions: PytestError, PytestConfigError with optional test_file context"
+    },
+    {
+      "path": "src/branch_fixer/services/pytest/models.py",
+      "role": "source",
+      "note": "TestResult and SessionResult dataclasses capturing per-test outcomes (setup/call/teardown), stdout/stderr, xfail, markers"
+    },
+    {
+      "path": "src/branch_fixer/services/pytest/parsers/__init__.py",
+      "role": "source",
+      "note": "Empty package marker for parsers sub-package"
+    },
+    {
+      "path": "src/branch_fixer/services/pytest/parsers/collection_parser.py",
+      "role": "source",
+      "note": "CollectionParser: regex-based parser for pytest collection errors (import/path conflicts)"
+    },
+    {
+      "path": "src/branch_fixer/services/pytest/parsers/failure_parser.py",
+      "role": "source",
+      "note": "FailureParser: regex-based parser extracting error type/file/line from pytest failure output strings"
+    },
+    {
+      "path": "src/branch_fixer/services/pytest/parsers/unified_error_parser.py",
+      "role": "source",
+      "note": "UnifiedErrorParser: coordinates CollectionParser and FailureParser to produce unified ErrorInfo list from raw output"
+    },
+    {
+      "path": "src/branch_fixer/services/pytest/runner.py",
+      "role": "source",
+      "note": "PytestRunner (aliased TestRunner): in-process pytest via plugin hook for discovery; subprocess verify_fix() for clean verification"
+    },
+    {
+      "path": "src/branch_fixer/storage/__init__.py",
+      "role": "source",
+      "note": "Empty package marker for branch_fixer.storage"
+    },
+    {
+      "path": "src/branch_fixer/storage/recovery.py",
+      "role": "source",
+      "note": "RecoveryManager and RecoveryPoint: checkpoint/restore fix sessions with file hash tracking and git branch metadata"
+    },
+    {
+      "path": "src/branch_fixer/storage/session_store.py",
+      "role": "source",
+      "note": "SessionStore: TinyDB-backed CRUD for FixSession persistence in sessions.json under configurable storage_dir"
+    },
+    {
+      "path": "src/branch_fixer/storage/state_manager.py",
+      "role": "source",
+      "note": "StateManager: validates FixSession state transitions against lowercase valid_transitions dict; records StateTransition history"
+    },
+    {
+      "path": "src/branch_fixer/utils/__init__.py",
+      "role": "source",
+      "note": "Empty package marker for branch_fixer.utils"
+    },
+    {
+      "path": "src/branch_fixer/utils/cli.py",
+      "role": "source",
+      "note": "CLI class: setup_components(), process_errors(), run_fix_workflow(), interactive/non-interactive prompt handlers; ComponentSettings dataclass"
+    },
+    {
+      "path": "src/branch_fixer/utils/run_cli.py",
+      "role": "source",
+      "note": "Click CLI root group and fix command; dynamically registers generate subcommand from dev.cli.generate if available"
+    },
+    {
+      "path": "src/branch_fixer/utils/workspace.py",
+      "role": "source",
+      "note": "WorkspaceValidator: validate_workspace() checks git repo existence; check_dependencies() imports required packages"
+    },
+    {
+      "path": "src/dev/cli/__init__.py",
+      "role": "source",
+      "note": "Empty package marker for dev.cli"
+    },
+    {
+      "path": "src/dev/cli/fix.py",
+      "role": "dead",
+      "note": "Truly empty file (0 lines / no content); placeholder for a future dev CLI fix command"
+    },
+    {
+      "path": "src/dev/cli/generate.py",
+      "role": "source",
+      "note": "Click generate command wiring GenerationOrchestrator+HypothesisStrategy to CLI options; registered into main CLI group"
+    },
+    {
+      "path": "src/dev/shared/__init__.py",
+      "role": "source",
+      "note": "Empty package marker for dev.shared"
+    },
+    {
+      "path": "src/dev/shared/git.py",
+      "role": "dead",
+      "note": "Truly empty file (0 lines / no content); not yet implemented (documented in CLAUDE.md)"
+    },
+    {
+      "path": "src/dev/shared/logging.py",
+      "role": "dead",
+      "note": "Truly empty file (0 lines / no content); not yet implemented (documented in CLAUDE.md)"
+    },
+    {
+      "path": "src/dev/shared/testing.py",
+      "role": "dead",
+      "note": "Truly empty file (0 lines / no content); not yet implemented (documented in CLAUDE.md)"
+    },
+    {
+      "path": "src/dev/test_generator/__init__.py",
+      "role": "source",
+      "note": "Empty package marker for dev.test_generator"
+    },
+    {
+      "path": "src/dev/test_generator/analyze/__init__.py",
+      "role": "source",
+      "note": "Empty package marker for test_generator.analyze"
+    },
+    {
+      "path": "src/dev/test_generator/analyze/context.py",
+      "role": "source",
+      "note": "ContextGatherer: runs mypy, ruff, pytest-cov as subprocesses; returns AnalysisContext for LLM-based generation"
+    },
+    {
+      "path": "src/dev/test_generator/analyze/extractor.py",
+      "role": "source",
+      "note": "select_variants(): pure function mapping TestableEntity type/name to list of GenerationVariant to generate"
+    },
+    {
+      "path": "src/dev/test_generator/analyze/parser.py",
+      "role": "source",
+      "note": "ModuleParser (AST NodeVisitor): extracts public classes, methods, functions into ParsedModule; derives dotted module path"
+    },
+    {
+      "path": "src/dev/test_generator/core/__init__.py",
+      "role": "source",
+      "note": "Empty package marker for test_generator.core"
+    },
+    {
+      "path": "src/dev/test_generator/core/models.py",
+      "role": "source",
+      "note": "DDD domain models: CoverageGap, AnalysisContext, TestableEntity, ParsedModule, GenerationVariant enum, GenerationAttempt, GenerationConfig, GenerationRequest aggregate"
+    },
+    {
+      "path": "src/dev/test_generator/generate/__init__.py",
+      "role": "source",
+      "note": "Empty package marker for test_generator.generate"
+    },
+    {
+      "path": "src/dev/test_generator/generate/optimizer.py",
+      "role": "source",
+      "note": "GenerationOrchestrator: application service driving parse→context→variant-select→generate→write pipeline; supports hypothesis-only and hybrid (LLM+hypothesis) modes"
+    },
+    {
+      "path": "src/dev/test_generator/generate/prompts.py",
+      "role": "source",
+      "note": "Pure LLM prompt builders: SYSTEM_PROMPT, build_user_prompt() for per-entity; ANALYSIS_SYSTEM_PROMPT, MODULE_SYSTEM_PROMPT, build_module_prompt() for two-phase module mode"
+    },
+    {
+      "path": "src/dev/test_generator/generate/strategies/__init__.py",
+      "role": "source",
+      "note": "Empty package marker for test_generator.generate.strategies"
+    },
+    {
+      "path": "src/dev/test_generator/generate/strategies/fabric.py",
+      "role": "source",
+      "note": "FabricStrategy: LLM-based test generation via LiteLLM; generate() per-entity and generate_module() two-phase module mode"
+    },
+    {
+      "path": "src/dev/test_generator/generate/strategies/hypothesis.py",
+      "role": "source",
+      "note": "HypothesisStrategy: calls 'hypothesis write' subprocess with venv-local binary; retries and filters broken output"
+    },
+    {
+      "path": "src/dev/test_generator/generate/strategies/pynguin.py",
+      "role": "dead",
+      "note": "Truly empty file (0 lines / no content); Pynguin strategy not yet implemented (documented in CLAUDE.md)"
+    },
+    {
+      "path": "src/dev/test_generator/generate/templates.py",
+      "role": "source",
+      "note": "build_hypothesis_command(): pure function mapping (TestableEntity, GenerationVariant) to 'hypothesis write' command string with correct flags"
+    },
+    {
+      "path": "src/dev/test_generator/output/__init__.py",
+      "role": "source",
+      "note": "Empty package marker for test_generator.output"
+    },
+    {
+      "path": "src/dev/test_generator/output/formatter.py",
+      "role": "source",
+      "note": "fix_generated_code(): AST transformer removing duplicate 'self' parameters emitted by hypothesis write"
+    },
+    {
+      "path": "src/dev/test_generator/output/writer.py",
+      "role": "source",
+      "note": "write_attempt() and write_module_test(): write generated test strings to deterministic filenames in output_dir"
+    },
+    {
+      "path": "src/dev/test_generator/verify/__init__.py",
+      "role": "source",
+      "note": "Empty package marker for test_generator.verify"
+    },
+    {
+      "path": "src/dev/test_generator/verify/fixer.py",
+      "role": "source",
+      "note": "GeneratedTestFixer: uses AIManager+ChangeApplier to fix failing generated tests; re-verifies after fixes"
+    },
+    {
+      "path": "src/dev/test_generator/verify/runner.py",
+      "role": "source",
+      "note": "VerificationRunner: runs pytest as subprocess on generated test directory; returns VerificationResult with pass/fail details"
+    },
+    {
+      "path": "tests/__init__.py",
+      "role": "test",
+      "note": "Empty package marker for tests root"
+    },
+    {
+      "path": "tests/conftest.py",
+      "role": "test",
+      "note": "Root pytest conftest; registers pytest_asyncio, git_fixtures, integration_fixtures plugins"
+    },
+    {
+      "path": "tests/fixtures/__init__.py",
+      "role": "test",
+      "note": "Empty package marker for tests.fixtures"
+    },
+    {
+      "path": "tests/fixtures/git_fixtures.py",
+      "role": "test",
+      "note": "Shared git-related pytest fixtures (mock repos, etc.)"
+    },
+    {
+      "path": "tests/fixtures/integration_fixtures.py",
+      "role": "test",
+      "note": "Shared integration test fixtures"
+    },
+    {
+      "path": "tests/integration/__init__.py",
+      "role": "test",
+      "note": "Empty package marker for tests.integration"
+    },
+    {
+      "path": "tests/integration/pytest/__init__.py",
+      "role": "test",
+      "note": "Empty package marker for tests.integration.pytest"
+    },
+    {
+      "path": "tests/integration/pytest/conftest.py",
+      "role": "test",
+      "note": "Integration conftest for pytest runner tests"
+    },
+    {
+      "path": "tests/integration/pytest/test_pytest_runner.py",
+      "role": "test",
+      "note": "Integration tests for PytestRunner against real pytest invocations"
+    },
+    {
+      "path": "tests/integration/test_generator_e2e.py",
+      "role": "test",
+      "note": "E2E integration tests for full test generation pipeline (marked integration; requires hypothesis[cli]+black)"
+    },
+    {
+      "path": "tests/integration/workflow/.backups/test_fix_workflow.py-20241228_114425-3e0292d0.bak",
+      "role": "asset",
+      "note": "Backup copy of deleted tests/integration/workflow/test_fix_workflow.py from 2024-12-28"
+    },
+    {
+      "path": "tests/integration/workflow/__init__.py",
+      "role": "test",
+      "note": "Empty package marker for tests.integration.workflow (workflow integration tests directory, currently empty)"
+    },
+    {
+      "path": "tests/temp_failing_test.py",
+      "role": "test",
+      "note": "Deliberate xfail test used as end-to-end fixture for the 'task run:fix-test' target"
+    },
+    {
+      "path": "tests/test_click.py",
+      "role": "dead",
+      "note": "Standalone Click demo script with main() but no test_* functions; not collected by pytest"
+    },
+    {
+      "path": "tests/test_generator/__init__.py",
+      "role": "test",
+      "note": "Empty package marker for tests.test_generator"
+    },
+    {
+      "path": "tests/test_generator/test_analyze_context.py",
+      "role": "test",
+      "note": "Unit tests for ContextGatherer (analyze/context.py)"
+    },
+    {
+      "path": "tests/test_generator/test_analyze_extractor.py",
+      "role": "test",
+      "note": "Unit tests for select_variants() (analyze/extractor.py)"
+    },
+    {
+      "path": "tests/test_generator/test_analyze_parser.py",
+      "role": "test",
+      "note": "Unit tests for ModuleParser (analyze/parser.py)"
+    },
+    {
+      "path": "tests/test_generator/test_core_models.py",
+      "role": "test",
+      "note": "Unit tests for DDD core models (test_generator/core/models.py)"
+    },
+    {
+      "path": "tests/test_generator/test_generate_optimizer.py",
+      "role": "test",
+      "note": "Unit tests for GenerationOrchestrator (generate/optimizer.py)"
+    },
+    {
+      "path": "tests/test_generator/test_generate_prompts.py",
+      "role": "test",
+      "note": "Unit tests for LLM prompt builders (generate/prompts.py)"
+    },
+    {
+      "path": "tests/test_generator/test_generate_templates.py",
+      "role": "test",
+      "note": "Unit tests for build_hypothesis_command() (generate/templates.py)"
+    },
+    {
+      "path": "tests/test_generator/test_output_formatter.py",
+      "role": "test",
+      "note": "Unit tests for fix_generated_code() AST transformer (output/formatter.py)"
+    },
+    {
+      "path": "tests/test_generator/test_output_writer.py",
+      "role": "test",
+      "note": "Unit tests for write_attempt() and output_filename() (output/writer.py)"
+    },
+    {
+      "path": "tests/test_generator/test_strategy_fabric.py",
+      "role": "test",
+      "note": "Unit tests for FabricStrategy LLM generation (generate/strategies/fabric.py)"
+    },
+    {
+      "path": "tests/test_generator/test_strategy_hypothesis.py",
+      "role": "test",
+      "note": "Unit tests for HypothesisStrategy subprocess wrapper (generate/strategies/hypothesis.py)"
+    },
+    {
+      "path": "tests/test_generator/test_verify_fixer.py",
+      "role": "test",
+      "note": "Unit tests for GeneratedTestFixer (verify/fixer.py)"
+    },
+    {
+      "path": "tests/test_generator/test_verify_runner.py",
+      "role": "test",
+      "note": "Unit tests for VerificationRunner subprocess runner (verify/runner.py)"
+    },
+    {
+      "path": "tests/test_math_operations.py",
+      "role": "test",
+      "note": "Trivial math helper test (add function inline); used as a simple smoke-test fixture"
+    },
+    {
+      "path": "tests/unit/__init__.py",
+      "role": "test",
+      "note": "Empty package marker for tests.unit"
+    },
+    {
+      "path": "tests/unit/ai/__init__.py",
+      "role": "test",
+      "note": "Empty package marker for tests.unit.ai"
+    },
+    {
+      "path": "tests/unit/ai/test_ai_manager.py",
+      "role": "test",
+      "note": "Unit tests for AIManager (services/ai/manager.py)"
+    },
+    {
+      "path": "tests/unit/cli/test_generate.py",
+      "role": "test",
+      "note": "Unit tests for the generate CLI command (dev/cli/generate.py)"
+    },
+    {
+      "path": "tests/unit/code/__init__.py",
+      "role": "test",
+      "note": "Empty package marker for tests.unit.code"
+    },
+    {
+      "path": "tests/unit/code/test_change_applier.py",
+      "role": "test",
+      "note": "Unit tests for ChangeApplier (services/code/change_applier.py)"
+    },
+    {
+      "path": "tests/unit/config/test_logging_config.py",
+      "role": "test",
+      "note": "Unit tests for setup_logging() (config/logging_config.py)"
+    },
+    {
+      "path": "tests/unit/core/__init__.py",
+      "role": "test",
+      "note": "Empty package marker for tests.unit.core"
+    },
+    {
+      "path": "tests/unit/core/conftest.py",
+      "role": "test",
+      "note": "Core unit test fixtures (error/session mocks, tmp paths)"
+    },
+    {
+      "path": "tests/unit/core/test_branch_fixer_core_models_GS.py",
+      "role": "test",
+      "note": "GS-style generated unit tests for core models (TestError, FixAttempt, ErrorDetails, CodeChanges)"
+    },
+    {
+      "path": "tests/unit/core/test_error.py",
+      "role": "test",
+      "note": "Unit tests for TestError aggregate domain model (core/models.py)"
+    },
+    {
+      "path": "tests/unit/core/test_models.py",
+      "role": "test",
+      "note": "Additional unit tests for core model dataclasses"
+    },
+    {
+      "path": "tests/unit/core/test_verify_fix_workflow.py",
+      "role": "test",
+      "note": "Unit tests for the PytestRunner fix-verification workflow using tmp_path"
+    },
+    {
+      "path": "tests/unit/git/__init__.py",
+      "role": "test",
+      "note": "Empty package marker for tests.unit.git"
+    },
+    {
+      "path": "tests/unit/git/conftest.py",
+      "role": "test",
+      "note": "Git unit test fixtures (mock GitRepository, mock BranchManager)"
+    },
+    {
+      "path": "tests/unit/git/test_branch_manager.py",
+      "role": "test",
+      "note": "Unit tests for BranchManager (services/git/branch_manager.py)"
+    },
+    {
+      "path": "tests/unit/git/test_pr_manager.py",
+      "role": "test",
+      "note": "Unit tests for PRManager (services/git/pr_manager.py)"
+    },
+    {
+      "path": "tests/unit/git/test_repository.py",
+      "role": "test",
+      "note": "Unit tests for GitRepository (services/git/repository.py)"
+    },
+    {
+      "path": "tests/unit/orchestration/__init__.py",
+      "role": "test",
+      "note": "Empty package marker for tests.unit.orchestration"
+    },
+    {
+      "path": "tests/unit/orchestration/test_fix_service.py",
+      "role": "test",
+      "note": "Unit tests for FixService.attempt_fix() and attempt_manual_fix() with mocked dependencies"
+    },
+    {
+      "path": "tests/unit/orchestration/test_orchestrator.py",
+      "role": "test",
+      "note": "Unit tests for FixOrchestrator session lifecycle (start/run/pause/resume/fix_error)"
+    },
+    {
+      "path": "tests/unit/pytest/__init__.py",
+      "role": "test",
+      "note": "Empty package marker for tests.unit.pytest"
+    },
+    {
+      "path": "tests/unit/pytest/comprehensive_test_inputs.py",
+      "role": "test",
+      "note": "Fixture module: DataPoint dataclass and sample data for pytest service unit tests; no test_ functions"
+    },
+    {
+      "path": "tests/unit/pytest/parsers/__init__.py",
+      "role": "test",
+      "note": "Empty package marker for tests.unit.pytest.parsers"
+    },
+    {
+      "path": "tests/unit/pytest/parsers/test_collection_parser.py",
+      "role": "test",
+      "note": "Unit tests for CollectionParser (services/pytest/parsers/collection_parser.py)"
+    },
+    {
+      "path": "tests/unit/pytest/parsers/test_failure_parser.py",
+      "role": "test",
+      "note": "Unit tests for FailureParser (services/pytest/parsers/failure_parser.py)"
+    },
+    {
+      "path": "tests/unit/pytest/parsers/test_unified_error_parser.py",
+      "role": "test",
+      "note": "Unit tests for UnifiedErrorParser (services/pytest/parsers/unified_error_parser.py)"
+    },
+    {
+      "path": "tests/unit/pytest/test_error_info.py",
+      "role": "test",
+      "note": "Unit tests for ErrorInfo dataclass (services/pytest/error_info.py)"
+    },
+    {
+      "path": "tests/unit/pytest/test_math_fix.py",
+      "role": "test",
+      "note": "Unit test verifying a simple math fix scenario end-to-end"
+    },
+    {
+      "path": "tests/unit/pytest/test_runner.py",
+      "role": "test",
+      "note": "Unit tests for PytestRunner (services/pytest/runner.py)"
+    },
+    {
+      "path": "tests/unit/pytest/test_simple.py",
+      "role": "test",
+      "note": "Simple sanity-check unit tests for basic pytest operation"
+    },
+    {
+      "path": "tests/unit/pytest/test_with_fixtures.py",
+      "role": "test",
+      "note": "Unit tests exercising pytest fixture integration in PytestRunner"
+    },
+    {
+      "path": "tests/unit/services/code/test_change_applier.py",
+      "role": "test",
+      "note": "Additional unit tests for ChangeApplier in services/code subtree (mirrors tests/unit/code/)"
+    },
+    {
+      "path": "tests/unit/services/git/test_repository.py",
+      "role": "test",
+      "note": "Additional unit tests for GitRepository in services/git subtree"
+    },
+    {
+      "path": "tests/unit/services/pytest/test_error_processor.py",
+      "role": "test",
+      "note": "Unit tests for process_pytest_results() (services/pytest/error_processor.py)"
+    },
+    {
+      "path": "tests/unit/services/pytest/test_runner.py",
+      "role": "test",
+      "note": "Additional unit tests for PytestRunner in services/pytest subtree"
+    },
+    {
+      "path": "tests/unit/services/pytest/test_unified_error_parser.py",
+      "role": "test",
+      "note": "Additional unit tests for UnifiedErrorParser in services/pytest subtree"
+    },
+    {
+      "path": "tests/unit/storage/__init__.py",
+      "role": "test",
+      "note": "Empty package marker for tests.unit.storage"
+    },
+    {
+      "path": "tests/unit/storage/test_recovery.py",
+      "role": "test",
+      "note": "Unit tests for RecoveryManager and RecoveryPoint (storage/recovery.py)"
+    },
+    {
+      "path": "tests/unit/storage/test_session_store.py",
+      "role": "test",
+      "note": "Unit tests for SessionStore TinyDB operations (storage/session_store.py)"
+    },
+    {
+      "path": "tests/unit/storage/test_state_manager.py",
+      "role": "test",
+      "note": "Unit tests for StateManager state-transition validation (storage/state_manager.py)"
+    },
+    {
+      "path": "tests/unit/utils/test_cli.py",
+      "role": "test",
+      "note": "Unit tests for CLI class (utils/cli.py)"
+    },
+    {
+      "path": "tests/unit/utils/test_run_cli.py",
+      "role": "test",
+      "note": "Unit tests for Click CLI commands in utils/run_cli.py"
+    },
+    {
+      "path": "tests/unit/utils/test_workspace_validator.py",
+      "role": "test",
+      "note": "Unit tests for WorkspaceValidator (utils/workspace.py)"
+    },
+    {
+      "path": "uv.lock",
+      "role": "generated",
+      "note": "Auto-generated uv dependency lock file pinning all transitive dependency versions"
+    }
+  ],
+  "entry_points": [
+    {
+      "name": "python -m branch_fixer.main",
+      "kind": "module_main",
+      "location": "src/branch_fixer/main.py:10",
+      "description": "Primary module entry point: calls setup_logging(), optionally installs snoop debug tracing, then delegates to cli() Click group"
+    },
+    {
+      "name": "cli fix",
+      "kind": "cli_command",
+      "location": "src/branch_fixer/utils/run_cli.py:75",
+      "description": "Main 'fix' Click command: accepts API key, retry config, test-path, non-interactive/fast-run flags; runs pytest to find failures then drives AI fix loop"
+    },
+    {
+      "name": "cli generate",
+      "kind": "cli_command",
+      "location": "src/dev/cli/generate.py:21",
+      "description": "'generate' Click subcommand (@click.command('generate') decorator at line 21; generate_command function at line 42): accepts --source-path, --output-dir, --strategy; runs GenerationOrchestrator to produce property-based tests via hypothesis write"
+    },
+    {
+      "name": "cli --version",
+      "kind": "cli_command",
+      "location": "src/branch_fixer/utils/run_cli.py:28",
+      "description": "Click version option reading package version from importlib.metadata for 'pytest-fixer' package"
+    },
+    {
+      "name": "scripts/hypot_test_gen.py",
+      "kind": "runnable_script",
+      "location": "scripts/hypot_test_gen.py:1",
+      "description": "Original standalone hypothesis test generation script; parses a source file with AST and calls 'hypothesis write' per entity; superseded by DDD refactor but still runnable"
+    },
+    {
+      "name": "task test",
+      "kind": "task_runner",
+      "location": "Taskfile.yml:56",
+      "description": "Runs full pytest suite with branch coverage under src/branch_fixer; outputs to terminal"
+    },
+    {
+      "name": "task run:fix",
+      "kind": "task_runner",
+      "location": "Taskfile.yml:73",
+      "description": "Runs the pytest-fixer CLI tool via 'python -m branch_fixer.main'; pass arguments after '--'"
+    },
+    {
+      "name": "task run:fix-test",
+      "kind": "task_runner",
+      "location": "Taskfile.yml:78",
+      "description": "Non-interactive fix run against tests/temp_failing_test.py; canonical e2e smoke test"
+    },
+    {
+      "name": "task lint:py",
+      "kind": "task_runner",
+      "location": "Taskfile.yml:46",
+      "description": "Runs ruff check on all Python files; supports --fix via CLI_ARGS"
+    },
+    {
+      "name": "task docs:serve",
+      "kind": "task_runner",
+      "location": "Taskfile.yml:83",
+      "description": "Serves MkDocs documentation locally at localhost:8001 for development"
+    },
+    {
+      "name": "task docs:deploy",
+      "kind": "task_runner",
+      "location": "Taskfile.yml:93",
+      "description": "Builds and deploys MkDocs site to GitHub Pages via mkdocs gh-deploy"
+    },
+    {
+      "name": "CI: lint",
+      "kind": "ci_job",
+      "location": ".github/workflows/ci.yml:10",
+      "description": "GitHub Actions job (lint: key at line 10): runs ruff check and ruff format --check on src/ on push/PR to main"
+    },
+    {
+      "name": "CI: typecheck",
+      "kind": "ci_job",
+      "location": ".github/workflows/ci.yml:32",
+      "description": "GitHub Actions job: runs mypy on src/branch_fixer with --ignore-missing-imports"
+    },
+    {
+      "name": "CI: security",
+      "kind": "ci_job",
+      "location": ".github/workflows/ci.yml:53",
+      "description": "GitHub Actions job: runs pip-audit for dependency vulnerability scanning (non-blocking, continue-on-error)"
+    },
+    {
+      "name": "CI: test",
+      "kind": "ci_job",
+      "location": ".github/workflows/ci.yml:75",
+      "description": "GitHub Actions job: runs pytest with coverage (--cov-fail-under=60) on all tests; uploads coverage.xml artifact; depends on lint"
+    },
+    {
+      "name": "CI: integration",
+      "kind": "ci_job",
+      "location": ".github/workflows/ci.yml:109",
+      "description": "GitHub Actions job: runs pytest -m integration; requires hypothesis[cli] and black; non-blocking (continue-on-error)"
+    },
+    {
+      "name": "CI: build-and-deploy (docs)",
+      "kind": "ci_job",
+      "location": ".github/workflows/deploy.yml:7",
+      "description": "GitHub Actions workflow deploying MkDocs site to GitHub Pages on push to main"
+    },
+    {
+      "name": "CI: docstring-coverage",
+      "kind": "ci_job",
+      "location": ".github/workflows/docstr-coverage.yml:9",
+      "description": "GitHub Actions workflow measuring Python docstring coverage on push/PR to main"
+    }
+  ],
+  "architecture_summary": "The repository contains two main subsystems sharing the src/ package layout.\n\nSubsystem 1 — Branch Fixer (primary, feature-complete):\nPackage: src/branch_fixer/\nLayers: config/ → core/ → services/ → orchestration/ → storage/ → utils/\n\nControl flow: CLI entry (main.py → run_cli.py fix command) → CLI.setup_components() instantiates all services (AIManager, PytestRunner, ChangeApplier, GitRepository, StateManager, SessionStore) → PytestRunner.run_test() runs pytest in-process via PytestPlugin hooks, capturing TestResult objects → process_pytest_results() converts SessionResult to TestError domain aggregates (working on structured SessionResult objects rather than parsing raw pytest tracebacks, though it still regex-matches each test's error_message string to derive the error type) → CLI.process_errors() iterates errors interactively or non-interactively → CLI.run_fix_workflow() per error: (1) creates a git fix branch via BranchManager, (2) delegates to FixOrchestrator.fix_error() which is a temperature-bumping retry loop (max_retries times), (3) each iteration constructs a FixService and calls attempt_fix(): validate workspace → AIManager.generate_fix() (LiteLLM/OpenRouter, persistent conversation thread per error, analyze-before-fix at temperature=0.1) → ChangeApplier.apply_changes_with_backup() strips fences, writes file, syntax-checks, AST assert-guard, restores on failure → PytestRunner.verify_fix() subprocess pytest for clean env → restore backup if failed, retry with higher temperature → on success, optionally PRManager creates pull request and pushes branch.\n\nStorage layer: FixSession (dataclass in orchestrator.py) tracks session state, persisted via SessionStore (TinyDB, sessions.json). StateManager validates FixSessionState transitions (lowercase enum). RecoveryManager provides checkpoint/restore. CoordinationError and WorkflowDispatcher are async stubs not wired into the live path.\n\nParser subsystem (services/pytest/parsers/): CollectionParser and FailureParser parse raw pytest string output; UnifiedErrorParser coordinates them. These are superseded in the live path by process_pytest_results() which works directly on SessionResult objects.\n\nSubsystem 2 — Test Generator (Feature 2, DDD-structured):\nPackage: src/dev/test_generator/\nLayers (DDD): core/models.py (domain) → analyze/ (anti-corruption parse layer) → generate/ (application + infrastructure strategies) → output/ (infrastructure write layer) → verify/ (infrastructure verification layer)\n\nControl flow: CLI entry (dev/cli/generate.py generate command) → GenerationOrchestrator.run() → _ensure_importable() adds src/ to sys.path → ModuleParser (AST NodeVisitor) parses source into ParsedModule of TestableEntity objects → select_variants() (pure function in analyze/extractor.py) maps entity type/name to GenerationVariant list → per entity/variant: HypothesisStrategy.generate() calls 'hypothesis write' subprocess using venv-local binary (Path(sys.executable).parent/'hypothesis'), fix_generated_code() post-processes (removes duplicate self args), write_attempt() persists to output_dir → Optional hybrid mode: ContextGatherer gathers mypy/ruff/coverage context, FabricStrategy.generate_module() calls LLM via LiteLLM for two-phase (analyze → write) consolidated module test. VerificationRunner runs pytest on generated tests as subprocess; GeneratedTestFixer uses AIManager+ChangeApplier to repair failures.\n\nOriginal implementation: scripts/hypot_test_gen.py is a self-contained monolith that was refactored into the DDD structure but remains as a runnable fallback.\n\nCI/CD: ci.yml runs lint→typecheck→security (non-blocking)→test+coverage→integration (non-blocking) on push/PR to main. deploy.yml deploys MkDocs docs to GitHub Pages. docstr-coverage.yml measures docstring coverage.\n\nStubs: coordinator.py (async SessionCoordinator), dispatcher.py (async WorkflowDispatcher) are placeholder source modules; dev/cli/fix.py, dev/shared/{git,logging,testing}.py, and generate/strategies/pynguin.py are truly empty (0-line) files reserved for planned future features.\n\nTest organization: tests/ has unit/ (mocked dependencies, covers all source modules), integration/ (real subprocess/hypothesis), and test_generator/ (covers dev/test_generator/ subsystem). pytest.ini excludes integration marker by default; CI runs integration separately.",
+  "provisional_intent": "PROVISIONAL: This project is an AI-powered automated pytest test fixer. Its purpose is to take a Python repository with failing pytest tests and, without human intervention, generate correct fixes for each failure and submit them as pull requests. The system discovers failures with pytest, formulates LLM prompts (via OpenRouter/LiteLLM) using an analyze-before-fix pipeline, applies code changes with full backup/restore safety, verifies fixes by re-running pytest in a clean subprocess, and creates git branches and pull requests for successful fixes. A secondary feature generates property-based tests using Hypothesis (and optionally LLMs) for untested Python source files. The long-term aspiration visible in the design documents and ai-manager-ideas submodules is to approach SWE-Bench-level autonomous software engineering — automatically finding and fixing real bugs in Python codebases with high accuracy, competing with systems like Aider. Stage 4 refinement should validate whether the SWE-bench framing is still active or if the project has pivoted to a narrower tool-assisted developer-workflow scope.",
+  "_meta": {
+    "denominator": 203,
+    "classified": 203,
+    "entry_points": 18,
+    "falsifier_verdict": "pass_with_corrections",
+    "cost_usd": 4.24
+  }
+}
