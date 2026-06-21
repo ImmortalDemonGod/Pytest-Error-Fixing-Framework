@@ -22,10 +22,10 @@ classification:
 
 ## Claim(s)
 
-1. AIV packet covers all evidence classes A-F for F86 with SHA-pinned canonical intent URL 697ab7f
+1. Evidence artifact covers classes A (with warning — no claim-specific test imports), B (referential scope inventory), and E (intent alignment) for F86 with SHA-pinned canonical intent URL 697ab7f; full A-F coverage is in PACKET_pytest_fixer_f86_impl.md
 2. LIVE-FIRE-PUSH gate passed: git push to local bare remote succeeded with branch listed
 3. PUSH-FIRST gate passed: push at line 223 precedes create_pull_request_sync at line 228
-4. No existing tests were modified or deleted during this change.
+4. This evidence artifact is documentation-only (f86-push-before-pr.md); four existing tests in test_cli.py were updated to push-first semantics in commit bfb3175 (evidenced in EVIDENCE_TESTS_UNIT_UTILS_TEST_CLI.md)
 
 ---
 
