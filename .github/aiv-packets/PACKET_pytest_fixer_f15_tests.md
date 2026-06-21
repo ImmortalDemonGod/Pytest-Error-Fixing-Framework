@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Repository** | github.com/ImmortalDemonGod/aiv-protocol |
+| **Repository** | github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework |
 | **Change ID** | pytest-fixer-f15-tests |
 | **Commits** | `acc56b3`, `be7c9ad`, `886541b` |
 | **Head SHA** | `886541b` |
