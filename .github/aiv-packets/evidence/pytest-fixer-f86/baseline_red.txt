@@ -1,0 +1,106 @@
+============================= test session starts ==============================
+platform linux -- Python 3.13.1, pytest-8.3.4, pluggy-1.5.0
+rootdir: /tmp/pytest-fixer-f86_base
+configfile: pytest.ini
+plugins: anyio-4.7.0, hypothesis-6.122.5, asyncio-0.25.0, cov-7.1.0
+asyncio: mode=Mode.AUTO, asyncio_default_fixture_loop_scope=function
+collected 2 items
+
+tests/unit/utils/test_f86_pr_ordering.py FF                              [100%]
+
+=================================== FAILURES ===================================
+_ TestPushBeforePRCreation.test_push_called_before_create_pull_request_sync_guards_against_branch_not_on_remote _
+
+self = <test_f86_pr_ordering.TestPushBeforePRCreation object at 0x7fad1b595950>
+cli_with_mock_service = <branch_fixer.utils.cli.CLI object at 0x7fad1b3b5e80>
+sample_error = TestError(test_file=PosixPath('/tmp/pytest-of-root/pytest-144/test_push_called_before_create0/test_sample.py'), test_f...'assert failed', stack_trace=None), id=UUID('2b9985bc-2ea2-43b3-876a-cfd85087f9f8'), status='unfixed', fix_attempts=[])
+
+    def test_push_called_before_create_pull_request_sync_guards_against_branch_not_on_remote(
+        self,
+        cli_with_mock_service: CLI,
+        sample_error: TestError,
+    ) -> None:
+        """B1: _create_and_push_pr must push the branch before calling gh pr create.
+    
+        Current bug: create_pull_request_sync (which runs gh pr create) is invoked
+        at cli.py:220 while push is only called at cli.py:226.  GitHub rejects the
+        PR because the head branch does not exist on the remote yet.
+    
+        This test records the order of collaborator calls and asserts push precedes
+        create_pull_request_sync.  It will be RED against the current code because
+        the actual order is ['pr', 'push'] not ['push', 'pr'].
+        """
+        call_order: list[str] = []
+    
+        git_repo = cli_with_mock_service.service.git_repo  # type: ignore[union-attr]
+        git_repo.push.side_effect = lambda *a, **kw: call_order.append("push") or True
+        git_repo.create_pull_request_sync.side_effect = (
+            lambda *a, **kw: call_order.append("pr") or MagicMock()
+        )
+    
+        cli_with_mock_service._create_and_push_pr("fix-branch", sample_error)
+    
+>       assert call_order == ["push", "pr"], (
+            f"push must precede pr creation so the branch exists on the remote "
+            f"when gh pr create runs; actual order was {call_order!r}"
+        )
+E       AssertionError: push must precede pr creation so the branch exists on the remote when gh pr create runs; actual order was ['pr', 'push']
+E       assert ['pr', 'push'] == ['push', 'pr']
+E         
+E         At index 0 diff: 'pr' != 'push'
+E         Use -v to get more diff
+
+tests/unit/utils/test_f86_pr_ordering.py:86: AssertionError
+_ TestPushFailurePreventsGhPRCreate.test_create_pull_request_sync_not_called_when_push_fails_guards_against_ghost_pr _
+
+self = <test_f86_pr_ordering.TestPushFailurePreventsGhPRCreate object at 0x7fad1b595bd0>
+cli_with_mock_service = <branch_fixer.utils.cli.CLI object at 0x7fad1b5965d0>
+sample_error = TestError(test_file=PosixPath('/tmp/pytest-of-root/pytest-144/test_create_pull_request_sync_0/test_sample.py'), test_f...'assert failed', stack_trace=None), id=UUID('d978879a-1228-4506-af76-d1707b18ceeb'), status='unfixed', fix_attempts=[])
+
+    def test_create_pull_request_sync_not_called_when_push_fails_guards_against_ghost_pr(
+        self,
+        cli_with_mock_service: CLI,
+        sample_error: TestError,
+    ) -> None:
+        """B2: if push fails, create_pull_request_sync must NOT be called.
+    
+        Current bug: create_pull_request_sync is called first (cli.py:220), so
+        gh pr create is always attempted regardless of whether push will succeed.
+        In the fixed ordering, a push failure must be detected first and must
+        short-circuit before creating the PR.
+    
+        This test will be RED against the current code because
+        create_pull_request_sync IS called (before push is even attempted).
+        """
+        git_repo = cli_with_mock_service.service.git_repo  # type: ignore[union-attr]
+        git_repo.push.return_value = False
+    
+        result = cli_with_mock_service._create_and_push_pr("fix-branch", sample_error)
+    
+>       git_repo.create_pull_request_sync.assert_not_called()
+
+tests/unit/utils/test_f86_pr_ordering.py:119: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock name='mock.git_repo.create_pull_request_sync' id='140381462950784'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'create_pull_request_sync' to not have been called. Called 1 times.
+E           Calls: [call('fix-branch', TestError(test_file=PosixPath('/tmp/pytest-of-root/pytest-144/test_create_pull_request_sync_0/test_sample.py'), test_function='test_dummy', error_details=ErrorDetails(error_type='AssertionError', message='assert failed', stack_trace=None), id=UUID('d978879a-1228-4506-af76-d1707b18ceeb'), status='unfixed', fix_attempts=[])),
+E            call().__bool__()].
+
+/root/.local/share/uv/python/cpython-3.13.1-linux-x86_64-gnu/lib/python3.13/unittest/mock.py:938: AssertionError
+------------------------------ Captured log call -------------------------------
+ERROR    branch_fixer.utils.cli:cli.py:230 Failed to push branch 'fix-branch' to remote.
+=========================== short test summary info ============================
+FAILED tests/unit/utils/test_f86_pr_ordering.py::TestPushBeforePRCreation::test_push_called_before_create_pull_request_sync_guards_against_branch_not_on_remote
+FAILED tests/unit/utils/test_f86_pr_ordering.py::TestPushFailurePreventsGhPRCreate::test_create_pull_request_sync_not_called_when_push_fails_guards_against_ghost_pr
+============================== 2 failed in 0.24s ===============================

@@ -109,6 +109,7 @@ def test_validate_workspace_dir_not_found(tmp_path: Path) -> None:
         WorkspaceValidator.validate_workspace(non_existent)
 
 
+@pytest.mark.skipif(os.getuid() == 0, reason="root bypasses chmod restrictions; os.access always returns True for root")
 def test_validate_workspace_dir_not_accessible(tmp_git_dir: Path) -> None:
     """
     Confirm validate_workspace raises PermissionError if directory is inaccessible.

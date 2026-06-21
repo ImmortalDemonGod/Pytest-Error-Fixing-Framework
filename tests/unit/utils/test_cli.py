@@ -1,7 +1,7 @@
 import os
 import signal
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 import pytest
 
@@ -203,27 +203,32 @@ class TestCLI:
     # _create_and_push_pr
     def test__create_and_push_pr_pr_and_push_success(self, cli, sample_error, mock_service):
         cli.service = mock_service
-        mock_service.git_repo.create_pull_request_sync.return_value = True
         mock_service.git_repo.push.return_value = True
+        mock_service.git_repo.create_pull_request_sync.return_value = True
         res = cli._create_and_push_pr("fix-branch", sample_error)
         assert res is True
-        mock_service.git_repo.create_pull_request_sync.assert_called_with("fix-branch", sample_error)
-        mock_service.git_repo.push.assert_called_with("fix-branch")
+        # push must be called before create_pull_request_sync (ordering invariant)
+        mock_service.git_repo.assert_has_calls(
+            [call.push("fix-branch"), call.create_pull_request_sync("fix-branch", sample_error)],
+            any_order=False,
+        )
 
-    def test__create_and_push_pr_pr_success_push_fails(self, cli, sample_error, mock_service):
+    def test__create_and_push_pr_push_fails_returns_false(self, cli, sample_error, mock_service):
         cli.service = mock_service
-        mock_service.git_repo.create_pull_request_sync.return_value = True
         mock_service.git_repo.push.return_value = False
         res = cli._create_and_push_pr("fix-branch", sample_error)
         assert res is False
+        mock_service.git_repo.create_pull_request_sync.assert_not_called()
 
     def test__create_and_push_pr_pr_creation_returns_false_considered_success(self, cli, sample_error, mock_service):
         cli.service = mock_service
+        mock_service.git_repo.push.return_value = True
         mock_service.git_repo.create_pull_request_sync.return_value = False
         res = cli._create_and_push_pr("fix-branch", sample_error)
         assert res is True
 
     def test__create_and_push_pr_pr_creation_raises_propagates(self, cli, sample_error, mock_service):
+        mock_service.git_repo.push.return_value = True
         def raise_err(*args, **kwargs):
             raise RuntimeError("pr failed")
         mock_service.git_repo.create_pull_request_sync.side_effect = raise_err

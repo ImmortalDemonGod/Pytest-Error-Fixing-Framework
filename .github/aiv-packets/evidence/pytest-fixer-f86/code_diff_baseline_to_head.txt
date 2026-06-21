@@ -1,0 +1,56 @@
+=== BEFORE (baseline 697ab7f3414459edd480bb72a342446d040b3134) cli.py:213-237 ===
+    def _create_and_push_pr(self, branch_name: str, error: TestError) -> bool:
+        """
+        Create a pull request for the given branch and push to remote.
+        Return True if successful or if PR creation fails but the fix was still okay.
+        Return False if push fails.
+        """
+        logger.info("Creating pull request...")
+        if self.service and self.service.git_repo.create_pull_request_sync(
+            branch_name, error
+        ):
+            logger.info("Created pull request successfully.")
+
+            # 4) Try pushing to remote
+            if self.service.git_repo.push(branch_name):
+                logger.info(f"Successfully pushed branch '{branch_name}' to remote.")
+                return True
+            else:
+                logger.error(f"Failed to push branch '{branch_name}' to remote.")
+                return False
+        else:
+            logger.error("Failed to create pull request (or no repo configured).")
+            # We consider fix successful, but PR creation failed
+            return True
+
+    def run_manual_fix_workflow(self, error: TestError) -> str:
+        """
+        Let the user manually fix the test, then check if it passes:
+        - Create a unique fix branch
+
+=== AFTER (HEAD 29d4582aff69a72ed0f517b156426e95df3e6212) cli.py:213-233 ===
+    def _create_and_push_pr(self, branch_name: str, error: TestError) -> bool:
+        """
+        Create a pull request for the given branch and push to remote.
+        Return True if successful or if PR creation fails but the fix was still okay.
+        Return False if push fails.
+        """
+        if not self.service:
+            logger.error("No service configured, cannot push or create PR.")
+            return False
+        logger.info(f"Pushing branch '{branch_name}' to remote before creating PR...")
+        if not self.service.git_repo.push(branch_name):
+            logger.error(f"Failed to push branch '{branch_name}' to remote.")
+            return False
+        logger.info(f"Successfully pushed '{branch_name}' to remote.")
+        # PRDetails is truthy; bool coercion is intentional — tracked under F84
+        if self.service.git_repo.create_pull_request_sync(branch_name, error):
+            logger.info("Created pull request successfully.")
+        else:
+            logger.error("Failed to create pull request (non-fatal; fix was applied).")
+        return True
+
+
+=== KEY CHANGE: call ordering ===
+BASELINE order: create_pull_request_sync (line 220) THEN push (line 226)
+HEAD order:     push (line 223) THEN create_pull_request_sync (line 228)

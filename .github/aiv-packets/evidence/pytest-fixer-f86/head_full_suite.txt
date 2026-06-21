@@ -1,0 +1,26 @@
+........................................................................ [  7%]
+........................................................................ [ 15%]
+........................................................................ [ 23%]
+........................................................................ [ 31%]
+........................................................................ [ 39%]
+........................................................................ [ 47%]
+........................................................................ [ 55%]
+........................................................................ [ 63%]
+........................................................................ [ 71%]
+........................................................................ [ 79%]
+........................................................................ [ 86%]
+........................................................................ [ 94%]
+.....................................s.........                          [100%]
+=============================== warnings summary ===============================
+tests/integration/pytest/test_pytest_runner.py::TestPytestRunner::test_successful_test_execution
+tests/integration/pytest/test_pytest_runner.py::TestPytestRunner::test_fixture_handling
+tests/integration/pytest/test_pytest_runner.py::TestPytestRunner::test_parameterized_execution
+tests/unit/core/test_verify_fix_workflow.py::test_fix_workflow
+  /home/user/Pytest-Error-Fixing-Framework-pytest-fixer-f86/.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:207: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+  The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+  
+    warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] tests/unit/utils/test_workspace_validator.py:112: root bypasses chmod restrictions; os.access always returns True for root
