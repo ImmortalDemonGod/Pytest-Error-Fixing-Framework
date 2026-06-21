@@ -365,20 +365,25 @@ class TestCLI:
     def test_handle_manual_fix_choice_fixed_returns_true(self, cli, sample_error):
         with patch.object(CLI, "run_manual_fix_workflow", return_value="fixed"):
             res = cli._handle_manual_fix_choice(sample_error)
-            assert res is True
+            assert res == (True, True)
 
     def test_handle_manual_fix_choice_quit_returns_false(self, cli, sample_error):
         with patch.object(CLI, "run_manual_fix_workflow", return_value="quit"):
             res = cli._handle_manual_fix_choice(sample_error)
-            assert res is False
+            assert res == (False, False)
+
+    def test_handle_manual_fix_choice_skip_returns_tuple(self, cli, sample_error):
+        with patch.object(CLI, "run_manual_fix_workflow", return_value="skip"):
+            res = cli._handle_manual_fix_choice(sample_error)
+            assert res == (True, False)
 
     def test_handle_ai_fix_choice_success_and_failure(self, cli, sample_error):
         with patch.object(CLI, "run_fix_workflow", return_value=True):
             res = cli._handle_ai_fix_choice(sample_error)
-            assert res is True
+            assert res == (True, True)
         with patch.object(CLI, "run_fix_workflow", return_value=False):
             res = cli._handle_ai_fix_choice(sample_error)
-            assert res is True
+            assert res == (True, False)
 
     # _prompt_for_fix
     @pytest.mark.parametrize("choice_input, expected", [
@@ -413,19 +418,19 @@ class TestCLI:
         with patch.object(CLI, "_prompt_for_fix", return_value="q"), \
              patch.object(CLI, "_handle_quit_choice", return_value=False) as hq:
             res = cli._process_interactive_error(sample_error)
-            assert res is False
+            assert res == (False, False)
             hq.assert_called_once_with(sample_error)
 
         with patch.object(CLI, "_prompt_for_fix", return_value="n"), \
              patch.object(CLI, "_handle_skip_choice", return_value=True) as hs:
             res = cli._process_interactive_error(sample_error)
-            assert res is True
+            assert res == (True, False)
             hs.assert_called_once_with(sample_error)
 
         with patch.object(CLI, "_prompt_for_fix", return_value="z"), \
-             patch.object(CLI, "_handle_ai_fix_choice", return_value=True) as hai:
+             patch.object(CLI, "_handle_ai_fix_choice", return_value=(True, True)) as hai:
             res = cli._process_interactive_error(sample_error)
-            assert res is True
+            assert res == (True, True)
             hai.assert_called_once_with(sample_error)
 
     # _process_non_interactive_error
@@ -436,9 +441,17 @@ class TestCLI:
             cli._process_non_interactive_error(sample_error)
 
     # process_errors and helper _process_all_errors and _summarize_results
-    def test__process_all_errors_noninteractive_iterates_all(self, cli, sample_error):
+    def test__process_all_errors_noninteractive_success(self, cli, sample_error):
         errors = [sample_error, sample_error, sample_error]
-        with patch.object(CLI, "_process_non_interactive_error", return_value=None) as pn:
+        with patch.object(CLI, "_process_non_interactive_error", return_value=True) as pn:
+            total_processed, success_count = cli._process_all_errors(errors, interactive=False)
+            assert total_processed == 3
+            assert success_count == 3
+            assert pn.call_count == 3
+
+    def test__process_all_errors_noninteractive_failure(self, cli, sample_error):
+        errors = [sample_error, sample_error, sample_error]
+        with patch.object(CLI, "_process_non_interactive_error", return_value=False) as pn:
             total_processed, success_count = cli._process_all_errors(errors, interactive=False)
             assert total_processed == 3
             assert success_count == 0
@@ -446,9 +459,9 @@ class TestCLI:
 
     def test__process_all_errors_interactive_breaks_on_quit(self, cli, sample_error):
         errors = [sample_error, sample_error]
-        with patch.object(CLI, "_process_interactive_error", return_value=False) as pi:
+        with patch.object(CLI, "_process_interactive_error", return_value=(False, False)) as pi:
             total_processed, success_count = cli._process_all_errors(errors, interactive=True)
-            # first interactive returns False so loop breaks before increment
+            # first interactive returns (False, False) so loop breaks before increment
             assert total_processed == 0
             assert success_count == 0
             pi.assert_called_once()

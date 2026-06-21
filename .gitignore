@@ -104,3 +104,6 @@ tools/llm/onefilellm/uncompressed_output.txt
 data/*
 vector_db_storage/*
 uv.lock
+# AIV scaffolding — reasoning trail, captured in the training corpus; kept off main (#1/#40)
+.aiv/launch-briefs/
+.aiv/plans/

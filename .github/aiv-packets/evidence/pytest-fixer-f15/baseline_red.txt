@@ -1,0 +1,147 @@
+============================= test session starts ==============================
+collected 7 items
+
+../../../tmp/pytest-fixer-f15_base/tests/unit/utils/test_cli_f15.py F.FF [ 57%]
+F..                                                                      [100%]
+
+=================================== FAILURES ===================================
+_ TestProcessAllErrorsSuccessCount.test_success_count_is_one_when_single_non_interactive_fix_succeeds _
+
+self = <test_cli_f15.TestProcessAllErrorsSuccessCount object at 0x7f2dd338b610>
+cli = <branch_fixer.utils.cli.CLI object at 0x7f2dd3238440>
+sample_error = TestError(test_file=PosixPath('/tmp/pytest-of-root/pytest-64/test_success_count_is_one_when0/test_sample.py'), test_fu...'assert failed', stack_trace=None), id=UUID('2e13ecd7-2c3b-48e1-bde6-f7a3207f81ce'), status='unfixed', fix_attempts=[])
+
+    def test_success_count_is_one_when_single_non_interactive_fix_succeeds(
+        self, cli, sample_error
+    ):
+        """
+        Guards against: success_count not incremented when run_fix_workflow returns True.
+    
+        When run_fix_workflow returns True for one error in non-interactive mode,
+        _process_all_errors must return success_count == 1.
+    
+        RED: currently returns success_count == 0 because _process_non_interactive_error
+        discards the return value of run_fix_workflow (cli.py:463-470).
+        """
+        with patch.object(CLI, "run_fix_workflow", return_value=True):
+            total, success = cli._process_all_errors([sample_error], interactive=False)
+    
+        assert total == 1
+>       assert success == 1  # RED: currently 0
+        ^^^^^^^^^^^^^^^^^^^
+E       assert 0 == 1
+
+/tmp/pytest-fixer-f15_base/tests/unit/utils/test_cli_f15.py:76: AssertionError
+----------------------------- Captured stdout call -----------------------------
+✓ AI fix for 'test_dummy' succeeded.
+_ TestProcessAllErrorsSuccessCount.test_success_count_tracks_partial_successes_across_multiple_errors _
+
+self = <test_cli_f15.TestProcessAllErrorsSuccessCount object at 0x7f2dd33bb950>
+cli = <branch_fixer.utils.cli.CLI object at 0x7f2dd326c410>
+sample_error = TestError(test_file=PosixPath('/tmp/pytest-of-root/pytest-64/test_success_count_tracks_part0/test_sample.py'), test_fu...'assert failed', stack_trace=None), id=UUID('8cf29ab0-c97d-47d6-8607-a4ff2f5f8a02'), status='unfixed', fix_attempts=[])
+
+    def test_success_count_tracks_partial_successes_across_multiple_errors(
+        self, cli, sample_error
+    ):
+        """
+        Guards against: success_count not tracking mixed fix outcomes.
+    
+        With 3 errors where the first and third succeed and the second fails,
+        success_count must be 2.
+    
+        RED: currently returns success_count == 0 for all outcomes.
+        """
+        outcomes = [True, False, True]
+        with patch.object(CLI, "run_fix_workflow", side_effect=outcomes):
+            total, success = cli._process_all_errors(
+                [sample_error, sample_error, sample_error], interactive=False
+            )
+    
+        assert total == 3
+>       assert success == 2  # RED: currently 0
+        ^^^^^^^^^^^^^^^^^^^
+E       assert 0 == 2
+
+/tmp/pytest-fixer-f15_base/tests/unit/utils/test_cli_f15.py:113: AssertionError
+----------------------------- Captured stdout call -----------------------------
+✓ AI fix for 'test_dummy' succeeded.
+✗ AI fix for 'test_dummy' failed.
+✓ AI fix for 'test_dummy' succeeded.
+_ TestProcessAllErrorsSuccessCount.test_success_count_equals_total_when_all_fixes_succeed _
+
+self = <test_cli_f15.TestProcessAllErrorsSuccessCount object at 0x7f2dd33bbbb0>
+cli = <branch_fixer.utils.cli.CLI object at 0x7f2dd33bb820>
+sample_error = TestError(test_file=PosixPath('/tmp/pytest-of-root/pytest-64/test_success_count_equals_tota0/test_sample.py'), test_fu...'assert failed', stack_trace=None), id=UUID('235878cd-3fe1-4b69-86ff-f450259fc742'), status='unfixed', fix_attempts=[])
+
+    def test_success_count_equals_total_when_all_fixes_succeed(
+        self, cli, sample_error
+    ):
+        """
+        Guards against: success_count != total_processed when all fixes succeed.
+    
+        When every fix succeeds, success_count must equal total_processed so that
+        the caller (process_errors) can return exit-code 0.
+    
+        RED: currently success_count == 0 while total_processed == 2.
+        """
+        with patch.object(CLI, "run_fix_workflow", return_value=True):
+            total, success = cli._process_all_errors(
+                [sample_error, sample_error], interactive=False
+            )
+    
+>       assert total == success  # RED: 2 != 0
+        ^^^^^^^^^^^^^^^^^^^^^^^
+E       assert 2 == 0
+
+/tmp/pytest-fixer-f15_base/tests/unit/utils/test_cli_f15.py:131: AssertionError
+----------------------------- Captured stdout call -----------------------------
+✓ AI fix for 'test_dummy' succeeded.
+✓ AI fix for 'test_dummy' succeeded.
+_ TestProcessErrorsExitCode.test_exit_code_0_when_all_fixes_succeed_non_interactive _
+
+self = <test_cli_f15.TestProcessErrorsExitCode object at 0x7f2dd338bb10>
+cli = <branch_fixer.utils.cli.CLI object at 0x7f2dd32788a0>
+sample_error = TestError(test_file=PosixPath('/tmp/pytest-of-root/pytest-64/test_exit_code_0_when_all_fixe0/test_sample.py'), test_fu...'assert failed', stack_trace=None), id=UUID('f9743b55-7f41-4ebc-8525-b61030d77c0c'), status='unfixed', fix_attempts=[])
+
+    def test_exit_code_0_when_all_fixes_succeed_non_interactive(
+        self, cli, sample_error
+    ):
+        """
+        Guards against: exit-code 1 returned even when every fix succeeded.
+    
+        When run_fix_workflow returns True for every error in non-interactive mode,
+        process_errors must return 0.
+    
+        RED: currently returns 1 because success_count stays 0, so
+        0 == total_processed evaluates to False.
+        """
+        with (
+            patch.object(CLI, "setup_signal_handlers", return_value=None),
+            patch.object(CLI, "run_fix_workflow", return_value=True),
+            patch.object(CLI, "cleanup", return_value=None),
+        ):
+            result = cli.process_errors([sample_error], interactive=False)
+    
+>       assert result == 0  # RED: currently 1
+        ^^^^^^^^^^^^^^^^^^
+E       assert 1 == 0
+
+/tmp/pytest-fixer-f15_base/tests/unit/utils/test_cli_f15.py:170: AssertionError
+----------------------------- Captured stdout call -----------------------------
+Starting fix attempts for 1 failing tests.
+
+✓ AI fix for 'test_dummy' succeeded.
+
+Fix attempts complete.
+Tests processed: 1/1
+Successfully fixed: 0
+Failed/skipped: 1
+
+Starting cleanup...
+Cleanup complete.
+=========================== short test summary info ============================
+FAILED ../../../tmp/pytest-fixer-f15_base/tests/unit/utils/test_cli_f15.py::TestProcessAllErrorsSuccessCount::test_success_count_is_one_when_single_non_interactive_fix_succeeds
+FAILED ../../../tmp/pytest-fixer-f15_base/tests/unit/utils/test_cli_f15.py::TestProcessAllErrorsSuccessCount::test_success_count_tracks_partial_successes_across_multiple_errors
+FAILED ../../../tmp/pytest-fixer-f15_base/tests/unit/utils/test_cli_f15.py::TestProcessAllErrorsSuccessCount::test_success_count_equals_total_when_all_fixes_succeed
+FAILED ../../../tmp/pytest-fixer-f15_base/tests/unit/utils/test_cli_f15.py::TestProcessErrorsExitCode::test_exit_code_0_when_all_fixes_succeed_non_interactive
+========================= 4 failed, 3 passed in 0.16s ==========================

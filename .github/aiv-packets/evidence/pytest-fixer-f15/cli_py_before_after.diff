@@ -1,0 +1,116 @@
+diff --git a/src/branch_fixer/utils/cli.py b/src/branch_fixer/utils/cli.py
+index 031b916..61fea69 100644
+--- a/src/branch_fixer/utils/cli.py
++++ b/src/branch_fixer/utils/cli.py
+@@ -379,7 +379,7 @@ class CLI:
+         logger.info("User chose to skip.")
+         return True
+ 
+-    def _handle_manual_fix_choice(self, error: TestError) -> bool:
++    def _handle_manual_fix_choice(self, error: TestError) -> Tuple[bool, bool]:
+         """Handle the 'm' user choice: run manual fix workflow."""
+         click.echo("Switching to manual fix mode...\n")
+         manual_result = self.run_manual_fix_workflow(error)
+@@ -387,22 +387,24 @@ class CLI:
+             click.echo(
+                 f"✓ Successfully fixed '{error.test_function}' via manual fix.\n"
+             )
++            return (True, True)
+         elif manual_result == "skip":
+             click.echo(f"✗ '{error.test_function}' not fixed in manual fix mode.\n")
+-        elif manual_result == "quit":
++            return (True, False)
++        else:  # "quit"
+             click.echo("\nQuitting as requested.")
+             logger.info("User chose to quit manual fix mode entirely.")
+-            return False
+-        return True
++            return (False, False)
+ 
+-    def _handle_ai_fix_choice(self, error: TestError) -> bool:
++    def _handle_ai_fix_choice(self, error: TestError) -> Tuple[bool, bool]:
+         """Handle the 'y' user choice: run AI-based fix."""
+         click.echo("Attempting AI-based fix...\n")
+-        if self.run_fix_workflow(error, interactive=True):
++        fixed = self.run_fix_workflow(error, interactive=True)
++        if fixed:
+             click.echo(f"✓ Successfully fixed '{error.test_function}' with AI.\n")
+         else:
+             click.echo(f"✗ AI fix attempt for '{error.test_function}' failed.\n")
+-        return True
++        return (True, fixed)
+ 
+     # -- END: Extracted user-choice handlers for interactive error --
+ 
+@@ -440,34 +442,33 @@ class CLI:
+             # Else re-prompt
+             click.echo("\nInvalid choice. Enter 'y', 'm', 'n', or 'q'.")
+ 
+-    def _process_interactive_error(self, error: TestError) -> bool:
++    def _process_interactive_error(self, error: TestError) -> Tuple[bool, bool]:
+         """
+         Handles interactive error processing logic.
+-        Returns True if user chooses to continue, False if user quits.
++        Returns (continue, fixed): continue=False means quit the loop.
+         """
+         choice: Optional[str] = self._prompt_for_fix(error)
+-        handlers = {
+-            "q": self._handle_quit_choice,
+-            "n": self._handle_skip_choice,
+-            "m": self._handle_manual_fix_choice,
+-            "y": self._handle_ai_fix_choice,
+-        }
+-
+-        handler = handlers.get(choice) if choice is not None else None
+-        if handler:
+-            return handler(error)
+-        else:
+-            # If somehow not recognized, default to AI fix
+-            return self._handle_ai_fix_choice(error)
+-
+-    def _process_non_interactive_error(self, error: TestError):
++        if choice == "q":
++            self._handle_quit_choice(error)
++            return (False, False)
++        if choice == "n":
++            self._handle_skip_choice(error)
++            return (True, False)
++        if choice == "m":
++            return self._handle_manual_fix_choice(error)
++        # 'y' or any unrecognised input defaults to AI fix
++        return self._handle_ai_fix_choice(error)
++
++    def _process_non_interactive_error(self, error: TestError) -> bool:
+         """
+         Handles non-interactive error processing logic.
+         """
+-        if self.run_fix_workflow(error, interactive=False):
++        result = self.run_fix_workflow(error, interactive=False)
++        if result:
+             click.echo(f"✓ AI fix for '{error.test_function}' succeeded.")
+         else:
+             click.echo(f"✗ AI fix for '{error.test_function}' failed.")
++        return result
+ 
+     def process_errors(self, errors: List[TestError], interactive: bool) -> int:
+         """
+@@ -529,13 +530,15 @@ class CLI:
+             )
+ 
+             if interactive:
+-                # If the user chooses to quit in interactive mode, we break out
+-                if not self._process_interactive_error(error):
++                should_continue, fixed = self._process_interactive_error(error)
++                if not should_continue:
+                     break
++                if fixed:
++                    success_count += 1
+             else:
+-                self._process_non_interactive_error(error)
++                if self._process_non_interactive_error(error):
++                    success_count += 1
+ 
+-            # If you track actual success/fail logic, you can increment success_count here.
+             total_processed += 1
+ 
+         return total_processed, success_count
