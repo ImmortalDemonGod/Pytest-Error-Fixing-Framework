@@ -29,7 +29,7 @@ classification:
 1. _create_and_push_pr calls git push before gh pr create so the branch exists on remote when GitHub receives the PR request
 2. push failure returns False immediately without calling create_pull_request_sync
 3. Absence of push or PR call when service is None: _create_and_push_pr does NOT invoke push or create_pull_request_sync; returns False immediately
-4. No existing tests were modified or deleted during this change (commit bfb3175)
+4. Four inherited tests in tests/unit/utils/test_cli.py were modified in commit bfb3175 because their old oracles encoded the F86 bug; justification filed at .aiv/oracle-corrections/pytest-fixer-f86-impl.md (commit e39d356)
 5. _create_and_push_pr ordering test asserts push is called before create_pull_request_sync using assert_has_calls with any_order=False
 6. push-fails test asserts create_pull_request_sync is NOT called when push returns False
 7. all four _create_and_push_pr tests pass under the corrected push-first implementation (commit bfb3175)
@@ -126,6 +126,16 @@ reflect the corrected push-first semantics — they were not deleted, replaced w
 removed from the collection. The git diff for `bfb3175` shows semantic updates only (changed
 `return_value` setup, renamed one test, added `assert_has_calls` ordering assertion, added
 `assert_not_called` for the push-fail case). All four tests remain in the file and pass.
+
+**Oracle-corrections record:** The four inherited tests were modified because their original
+oracles encoded the F86 bug (PR-before-push call sequence). The per-test justification is
+recorded at `.aiv/oracle-corrections/pytest-fixer-f86-impl.md` (commit `e39d356`). In summary:
+- `test__create_and_push_pr_pr_and_push_success`: lacked ordering constraint; passed against buggy code
+- `test__create_and_push_pr_pr_success_push_fails` (renamed): name and setup encoded PR-before-push as correct
+- `test__create_and_push_pr_pr_creation_returns_false_considered_success`: omitted `push.return_value` because push was never called in buggy path
+- `test__create_and_push_pr_pr_creation_raises_propagates`: omitted `push.return_value` because PR raised before push in buggy sequence
+
+All four justifications are anchored to F86's ordering invariant, independent of implementation.
 
 **Anti-regression run (601 tests, 0 failures):**
 `.venv/bin/python -m pytest tests/unit/ --ignore=tests/unit/core/test_branch_fixer_core_models_GS.py --ignore=tests/unit/utils/test_workspace_validator.py`
