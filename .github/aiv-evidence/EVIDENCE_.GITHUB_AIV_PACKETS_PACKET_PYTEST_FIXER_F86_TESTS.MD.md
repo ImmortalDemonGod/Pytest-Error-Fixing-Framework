@@ -23,9 +23,9 @@ classification:
 
 ## Claim(s)
 
-1. All 4 claims now explicitly bound to their evidence class (A→1,4; B→3; F→2) so aiv check passes with 0 blocking errors and 0 warnings
+1. All 3 claims now explicitly bound to their evidence class (A→1; B→3; F→2) so aiv check passes with 0 blocking errors and 0 warnings
 2. Class E uses required **Link:** field so parser extracts SHA-pinned URL correctly
-3. No existing tests were modified or deleted during this change.
+3. This evidence artifact is documentation-only (PACKET_pytest_fixer_f86_tests.md); four existing tests in test_cli.py were updated to push-first semantics in commit bfb3175 (evidenced in EVIDENCE_TESTS_UNIT_UTILS_TEST_CLI.md)
 
 ---
 
