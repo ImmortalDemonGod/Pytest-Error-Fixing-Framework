@@ -45,11 +45,11 @@ classification:
 
 ### Class A (Behavioral / Direct Execution Evidence)
 
-**Claim 1:** https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/commit/802ade9750bc285c0ff6f0efa1ead158e2ebee54
+**Claim 1:** https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/commit/802ade9bd54653d5b8aaf3e37b76a81724118e41
 
 Bug catalog evaluation section confirmed: 2 bugs caught (B1 order, B2 short-circuit), 0 characterized, 0 discovered during writing. Evidence: RED test run at this commit.
 
-**Claim 4:** https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/commit/802ade9750bc285c0ff6f0efa1ead158e2ebee54
+**Claim 4:** https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/commit/802ade9bd54653d5b8aaf3e37b76a81724118e41
 
 Ghost PR bug confirmed: `Expected 'create_pull_request_sync' to not have been called. Called 1 times.` This live test failure proves create_pull_request_sync fires even when push returns False.
 
@@ -76,7 +76,7 @@ SHA-pinned reference to cli.py:220 — the exact line where create_pull_request_
 **Scope Inventory** (SHA-pinned)
 
 - [`tests/unit/utils/test_f86_pr_ordering.py#L1-L122`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/08ce029750bc285c0ff6f0efa1ead158e2ebee54/tests/unit/utils/test_f86_pr_ordering.py#L1-L122) (commit `08ce029`)
-- [`tests/unit/utils/test_f86_pr_ordering.bug-catalog.md#L137`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/802ade9750bc285c0ff6f0efa1ead158e2ebee54/tests/unit/utils/test_f86_pr_ordering.bug-catalog.md#L137) (commit `802ade9`)
+- [`tests/unit/utils/test_f86_pr_ordering.bug-catalog.md#L137`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/802ade9bd54653d5b8aaf3e37b76a81724118e41/tests/unit/utils/test_f86_pr_ordering.bug-catalog.md#L137) (commit `802ade9`)
 - [`src/branch_fixer/utils/cli.py#L213-L235`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/697ab7f3414459edd480bb72a342446d040b3134/src/branch_fixer/utils/cli.py#L213-L235) — code under test, bug site
 
 ### Class C (Negative Evidence — What Was Searched For and NOT Found)
