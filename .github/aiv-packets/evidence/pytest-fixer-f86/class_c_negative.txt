@@ -1,0 +1,11 @@
+=== Class C Negative Search ===
+Searching for any remaining 'create_pull_request_sync' calls that precede 'push' in cli.py
+
+--- git grep for create_pull_request_sync in cli.py at HEAD ---
+src/branch_fixer/utils/cli.py:223:        if not self.service.git_repo.push(branch_name):
+src/branch_fixer/utils/cli.py:228:        if self.service.git_repo.create_pull_request_sync(branch_name, error):
+
+--- Scope searched: src/branch_fixer/utils/cli.py, src/branch_fixer/services/git/pr_manager.py ---
+--- No remaining invocation of create_pull_request_sync before push() in _create_and_push_pr ---
+src/branch_fixer/services/git/repository.py:544:    def create_pull_request_sync(
+src/branch_fixer/utils/cli.py:228:        if self.service.git_repo.create_pull_request_sync(branch_name, error):

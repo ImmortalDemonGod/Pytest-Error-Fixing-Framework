@@ -1,0 +1,28 @@
+=== ADVERSARIAL PROBE REPORT ===
+
+Probe: Does baseline_red.txt actually exercise the defect?
+
+WEAKNESSES_FOUND by adversarial agent:
+1. Baseline provenance question: cannot verify /tmp/pytest-fixer-f86_base is real origin/main vs hand-crafted stub
+
+REBUTTAL (by implementing agent):
+  The baseline worktree was created via:
+    git worktree add /tmp/pytest-fixer-f86_base origin/main
+  Worktree HEAD was: 697ab7f3414459edd480bb72a342446d040b3134
+  This is a git-tracked operation against the actual remote-tracking branch origin/main,
+  not a hand-crafted stub. The baseline rootdir in baseline_red.txt reads:
+    "rootdir: /tmp/pytest-fixer-f86_base"
+  and the failure message shows actual call order ['pr', 'push'] matching the real baseline code.
+  
+  Additional corroboration: `git show 697ab7f:src/branch_fixer/utils/cli.py | sed -n '213,240p'`
+  shows create_pull_request_sync called at line 220 before push at line 226 — confirming
+  the worktree was the real baseline, not a fabrication.
+
+2. B2 "overconstrained" concern: B2 tests short-circuit (push failure prevents PR create),
+   which is a separate but co-located concern. The finding description explicitly states
+   "PR creation is not attempted if the push fails" as part of the fix. Both B1 (ordering)
+   and B2 (short-circuit) are behavioral properties of the fix, each independently verifiable.
+
+ADVERSARIAL VERDICT: WEAKNESSES_FOUND (provenance not self-evident from artifact text alone)
+REBUTTAL VERDICT: ADDRESSED via git worktree provenance + code verification above
+FINAL DISPOSITION: Baseline provenance confirmed via `git show` independently.

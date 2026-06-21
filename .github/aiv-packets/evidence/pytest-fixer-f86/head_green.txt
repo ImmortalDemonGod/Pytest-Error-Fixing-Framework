@@ -1,0 +1,11 @@
+============================= test session starts ==============================
+platform linux -- Python 3.13.1, pytest-8.3.4, pluggy-1.5.0
+rootdir: /home/user/Pytest-Error-Fixing-Framework-pytest-fixer-f86
+configfile: pytest.ini
+plugins: anyio-4.7.0, hypothesis-6.122.5, asyncio-0.25.0, cov-7.1.0
+asyncio: mode=Mode.AUTO, asyncio_default_fixture_loop_scope=function
+collected 2 items
+
+tests/unit/utils/test_f86_pr_ordering.py ..                              [100%]
+
+============================== 2 passed in 0.15s ===============================
