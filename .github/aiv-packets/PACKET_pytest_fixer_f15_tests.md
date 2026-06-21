@@ -42,6 +42,60 @@ classification:
 | 2 | EVIDENCE_TESTS_UNIT_UTILS_TEST_CLI_F15.md | `be7c9ad` | A, B, C, E, F |
 | 3 | EVIDENCE_TESTS_UNIT_UTILS_CLI.BUG_CATALOG.MD.md | `886541b` | A, B, E |
 
+### Class A (Behavioral / Direct Evidence)
+
+**Command:** `.venv/bin/python -m pytest tests/unit/utils/test_cli_f15.py -v`
+**Run date:** 2026-06-21 (HEAD `22c1dfd`)
+
+```
+============================= test session info ================================
+platform linux -- Python 3.13.12, pytest-9.1.1
+rootdir: /home/user/Pytest-Error-Fixing-Framework-pytest-fixer-f15
+configfile: pytest.ini
+collected 7 items
+
+tests/unit/utils/test_cli_f15.py F.FFF..                                 [100%]
+
+FAILED TestProcessAllErrorsSuccessCount::test_success_count_is_one_when_single_non_interactive_fix_succeeds
+  assert 0 == 1   # success_count stays 0; never incremented
+
+FAILED TestProcessAllErrorsSuccessCount::test_success_count_tracks_partial_successes_across_multiple_errors
+  assert 0 == 2   # success_count stays 0 for mixed True/False outcomes
+
+FAILED TestProcessAllErrorsSuccessCount::test_success_count_equals_total_when_all_fixes_succeed
+  assert 2 == 0   # total_processed (2) != success_count (0)
+
+FAILED TestProcessErrorsExitCode::test_exit_code_0_when_all_fixes_succeed_non_interactive
+  assert 1 == 0   # process_errors returns 1 because success_count==0 never equals total_processed
+
+PASSED TestProcessAllErrorsSuccessCount::test_success_count_is_zero_when_single_non_interactive_fix_fails
+PASSED TestProcessErrorsExitCode::test_exit_code_1_when_all_fixes_fail_non_interactive
+PASSED TestProcessErrorsExitCode::test_exit_code_1_when_partial_fixes_succeed_non_interactive
+
+========================= 4 failed, 3 passed in 0.13s ==========================
+```
+
+**Interpretation:** All 4 RED tests fail with assertion errors proving `success_count` (initialized to 0 at `cli.py:519`) is never incremented — confirming the F15 bug is present at HEAD and the tests correctly detect it. The 3 passing tests confirm that the failure-path and partial-success-path characterization is correctly pinned.
+
+**Pre-existing suite (no regressions):**
+```
+.venv/bin/python -m pytest tests/unit/utils/test_cli.py tests/unit/utils/test_run_cli.py -q
+68 passed, 0 failed
+```
+
+### Class D (Static Analysis: Lint / Type / Build)
+
+**ruff (linting):**
+```
+ruff check tests/unit/utils/test_cli_f15.py
+All checks passed!
+```
+0 errors, 0 warnings. (Two unused imports — `pathlib.Path` and `unittest.mock.Mock` — were removed in the same change before committing; HEAD is clean.)
+
+**mypy (type checking):** N/A — test file uses `Any`-typed mocks and no public type contract was changed; mypy is not configured for the test suite in `mypy.ini`.
+
+**build:** N/A — pure-Python project, no compilation step.
+
 ### Class E (Intent Alignment)
 
 - **Link:** [https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/697ab7f3414459edd480bb72a342446d040b3134/audit/02-static-audit.md#L11](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/697ab7f3414459edd480bb72a342446d040b3134/audit/02-static-audit.md#L11)
