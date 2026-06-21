@@ -134,10 +134,19 @@ The same pattern was extended to cover all `gh` failures.
 
 ---
 
-## 4. Evaluation (to be filled post-run)
+## 4. Evaluation (post-run)
 
 | Category | Count | Notes |
 |---|---|---|
-| Bugs caught (test RED first run) | _TBD_ | |
-| Bugs characterized (test GREEN first run) | _TBD_ | |
-| Bugs discovered during writing | _TBD_ | |
+| Bugs caught (test RED first run) | 2 | B1: order `['pr','push']` ≠ `['push','pr']`; B2: `create_pull_request_sync` called despite `push→False` |
+| Bugs characterized (test GREEN first run) | 0 | No tests passed — all two tests are RED |
+| Bugs discovered during writing | 0 | Catalog was accurate; no additional bugs surfaced |
+
+**Manual verification command:**
+```
+.venv/bin/python -m pytest tests/unit/utils/test_f86_pr_ordering.py -v
+```
+**Result:** 2 failed / 0 passed — both tests are RED as required for the design-tests stage.
+
+**B3 evaluation:** `PRManager.create_pr` silently swallows `gh` failures — deferred as follow-up;
+root cause (B1 ordering) is the primary deliverable for F86.

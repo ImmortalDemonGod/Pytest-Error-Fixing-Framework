@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/unit/utils/test_f86_pr_ordering.bug-catalog.md`
-**Commit:** `88edcf3`
-**Generated:** 2026-06-21T08:57:51Z
+**Commit:** `08ce029`
+**Previous:** `9c6f8c5`
+**Generated:** 2026-06-21T09:00:52Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -15,14 +16,14 @@ classification:
   sod_mode: S0
   critical_surfaces: []
   blast_radius: "tests/unit/utils/test_f86_pr_ordering.bug-catalog.md"
-  classification_rationale: "Documentation-only file, no code logic — R0 tier appropriate; --skip-checks because no Python to analyze"
+  classification_rationale: "Documentation-only update — R0 appropriate; catalog completeness record"
   classified_by: "ImmortalDemonGod"
-  classified_at: "2026-06-21T08:57:51Z"
+  classified_at: "2026-06-21T09:00:52Z"
 ```
 
 ## Claim(s)
 
-1. Bug catalog documents B1 (gh pr create before push), B2 (push failure does not prevent PR creation), and B3 (silent gh swallow) for cli.py:220-226
+1. Bug catalog evaluation section documents 2 bugs caught (B1 order, B2 short-circuit), 0 characterized, 0 discovered during writing
 2. No existing tests were modified or deleted during this change.
 
 ---
@@ -32,18 +33,19 @@ classification:
 ### Class E (Intent Alignment)
 
 - **Link:** [https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/697ab7f3414459edd480bb72a342446d040b3134/audit/02-static-audit.md#L15](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/697ab7f3414459edd480bb72a342446d040b3134/audit/02-static-audit.md#L15)
-- **Requirements Verified:** F86 requires documenting all plausible bugs at cli.py:220-226 and pr_manager.py:71-88 before writing RED tests
+- **Requirements Verified:** F86 design-tests skill requires catalog evaluation section filled after test suite is written
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`88edcf3`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/88edcf315af191ec0b8bc24a778858ed29f4b58a))
+**Scope Inventory** (SHA: [`08ce029`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/08ce029750bc285c0ff6f0efa1ead158e2ebee54))
 
-- [`tests/unit/utils/test_f86_pr_ordering.bug-catalog.md#L1-L143`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/88edcf315af191ec0b8bc24a778858ed29f4b58a/tests/unit/utils/test_f86_pr_ordering.bug-catalog.md#L1-L143)
+- [`tests/unit/utils/test_f86_pr_ordering.bug-catalog.md#L137`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/08ce029750bc285c0ff6f0efa1ead158e2ebee54/tests/unit/utils/test_f86_pr_ordering.bug-catalog.md#L137)
+- [`tests/unit/utils/test_f86_pr_ordering.bug-catalog.md#L141-L152`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/08ce029750bc285c0ff6f0efa1ead158e2ebee54/tests/unit/utils/test_f86_pr_ordering.bug-catalog.md#L141-L152)
 
 ### Class A (Execution Evidence)
 
 - Local checks skipped (--skip-checks).
-- **Skip reason:** Markdown documentation file only — no Python code, no tests to run, no lint/type targets
+- **Skip reason:** Markdown documentation only — no Python logic, no lint/type/test targets to evaluate
 
 
 ---
@@ -51,11 +53,11 @@ classification:
 ## Verification Methodology
 
 **R0 (trivial) -- local checks skipped.**
-**Reason:** Markdown documentation file only — no Python code, no tests to run, no lint/type targets
+**Reason:** Markdown documentation only — no Python logic, no lint/type/test targets to evaluate
 Only git diff scope inventory was collected. No execution evidence.
 
 ---
 
 ## Summary
 
-Bug catalog for F86: PR creation before push ordering bug in _create_and_push_pr
+Update F86 bug catalog with post-run evaluation: 2 RED tests confirmed, 0 caught-as-green
