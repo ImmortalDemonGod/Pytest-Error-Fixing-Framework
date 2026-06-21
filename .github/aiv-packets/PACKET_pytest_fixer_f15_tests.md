@@ -43,6 +43,17 @@ classification:
 
 
 
+### Class E (Intent Alignment)
+
+**Canonical intent source (SHA-pinned):**
+https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/697ab7f3414459edd480bb72a342446d040b3134/audit/02-static-audit.md#L11
+
+**Finding F15 (critical):** `success_count` is initialised to 0 at `cli.py:519` inside `_process_all_errors` and is never incremented. The comment at line 538 explicitly acknowledges this (`If you track actual success/fail logic, you can increment success_count here`). `process_errors` at line 509 returns `0 if success_count == total_processed`, meaning it returns 0 only when both are 0 (nothing processed). Any run with ≥ 1 error processed always yields exit-code 1 regardless of fix outcome.
+
+**Alignment:** All four RED tests target exactly this invariant violation — `success_count` must reflect the number of errors for which `run_fix_workflow` returned `True`. Tests assert the correct post-fix values and are currently failing precisely because the increment is missing, as described in the audit finding.
+
+---
+
 ### Class B (Referential Evidence)
 
 **Scope Inventory** (from 2 file references across evidence files)
