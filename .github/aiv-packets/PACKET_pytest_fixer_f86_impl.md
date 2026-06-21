@@ -49,6 +49,27 @@ classification:
 
 
 
+### Class E (Intent Alignment)
+
+**Canonical intent URL (SHA-pinned):**
+https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/697ab7f3414459edd480bb72a342446d040b3134/audit/02-static-audit.md#L15
+
+**What the audit source records:** `audit/02-static-audit.md` line 15 records that
+`cli.py:220` calls `create_pull_request_sync()` — which internally executes
+`gh pr create --head <branch_name>` — **before** the branch is pushed to the remote.
+The push occurs at `cli.py:226` only after `create_pr()` has returned.
+GitHub requires the head branch to exist remotely before a PR can be created.
+
+**Alignment assessment:** This change addresses the recorded defect directly. The reordered
+`_create_and_push_pr` calls `self.service.git_repo.push(branch_name)` at line 223 (before
+`create_pull_request_sync` at line 228). Push failure returns `False` immediately —
+`create_pull_request_sync` is never invoked when the branch is absent from the remote.
+The audit's root-cause (wrong call order, line 220 before 226) is corrected at the root,
+not masked. Verification: PUSH-FIRST gate (grep confirms push line 223 < PR line 228) and
+ORDERING-TEST gate (assert_has_calls with any_order=False in test_cli.py:211-214).
+
+---
+
 ### Class B (Referential Evidence)
 
 **Scope Inventory** (from 10 file references across evidence files)
