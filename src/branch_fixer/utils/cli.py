@@ -216,23 +216,20 @@ class CLI:
         Return True if successful or if PR creation fails but the fix was still okay.
         Return False if push fails.
         """
-        logger.info("Creating pull request...")
-        if self.service and self.service.git_repo.create_pull_request_sync(
-            branch_name, error
-        ):
+        if not self.service:
+            logger.error("No service configured, cannot push or create PR.")
+            return False
+        logger.info(f"Pushing branch '{branch_name}' to remote before creating PR...")
+        if not self.service.git_repo.push(branch_name):
+            logger.error(f"Failed to push branch '{branch_name}' to remote.")
+            return False
+        logger.info(f"Successfully pushed '{branch_name}' to remote.")
+        # PRDetails is truthy; bool coercion is intentional — tracked under F84
+        if self.service.git_repo.create_pull_request_sync(branch_name, error):
             logger.info("Created pull request successfully.")
-
-            # 4) Try pushing to remote
-            if self.service.git_repo.push(branch_name):
-                logger.info(f"Successfully pushed branch '{branch_name}' to remote.")
-                return True
-            else:
-                logger.error(f"Failed to push branch '{branch_name}' to remote.")
-                return False
         else:
-            logger.error("Failed to create pull request (or no repo configured).")
-            # We consider fix successful, but PR creation failed
-            return True
+            logger.error("Failed to create pull request (non-fatal; fix was applied).")
+        return True
 
     def run_manual_fix_workflow(self, error: TestError) -> str:
         """
