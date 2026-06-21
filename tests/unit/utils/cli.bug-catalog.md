@@ -108,8 +108,19 @@ No — they assert on the return value of `_process_all_errors` (observable outp
 
 ---
 
-## Post-Run Evaluation (to be filled after tests run)
+## Post-Run Evaluation
 
-- **Bugs caught (test failed first run):** TBD — expected B1 to be caught
-- **Bugs characterised (test passed first run):** TBD
-- **Bugs discovered during writing:** B2 (dead-code initialisation), B3 (interactive path untracked)
+- **Bugs caught (test failed first run, bug is real and present today):**
+  - `test_success_count_is_one_when_single_non_interactive_fix_succeeds` → FAIL (B1 confirmed)
+  - `test_success_count_tracks_partial_successes_across_multiple_errors` → FAIL (B1 confirmed)
+  - `test_success_count_equals_total_when_all_fixes_succeed` → FAIL (B1 confirmed)
+  - `test_exit_code_0_when_all_fixes_succeed_non_interactive` → FAIL (B1 exit-code consequence confirmed)
+  Total: 4 caught.
+
+- **Bugs characterised (test passed first run, behavior pinned):**
+  - `test_success_count_is_zero_when_single_non_interactive_fix_fails` → PASS (trivially correct: success_count stays 0 when fix fails)
+  - `test_exit_code_1_when_all_fixes_fail_non_interactive` → PASS (trivially correct: exit-code 1 when all fail)
+  - `test_exit_code_1_when_partial_fixes_succeed_non_interactive` → PASS (currently "correct" for wrong reasons — success_count is always 0, so partial-success path also returns 1)
+  Total: 3 characterised.
+
+- **Bugs discovered during writing:** B2 (dead-code `success_count` initialisation at line 479), B3 (interactive-mode path also untracked).

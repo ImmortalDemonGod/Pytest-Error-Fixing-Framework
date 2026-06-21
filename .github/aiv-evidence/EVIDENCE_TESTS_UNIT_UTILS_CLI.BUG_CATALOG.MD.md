@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/unit/utils/cli.bug-catalog.md`
-**Commit:** `a489e65`
-**Generated:** 2026-06-21T03:27:21Z
+**Commit:** `b9eb740`
+**Previous:** `3ee7580`
+**Generated:** 2026-06-21T03:54:05Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -15,14 +16,14 @@ classification:
   sod_mode: S0
   critical_surfaces: []
   blast_radius: "tests/unit/utils/cli.bug-catalog.md"
-  classification_rationale: "R0: documentation-only file, no logic changes, no risk"
+  classification_rationale: "R0: documentation-only update to markdown file, no logic changes"
   classified_by: "ImmortalDemonGod"
-  classified_at: "2026-06-21T03:27:21Z"
+  classified_at: "2026-06-21T03:54:05Z"
 ```
 
 ## Claim(s)
 
-1. Bug catalog documents B1 (success_count never incremented), B2 (dead-code init), B3 (interactive path)
+1. Bug catalog post-run evaluation documents 4 RED tests (B1 confirmed) and 3 passing characterisation tests
 2. No existing tests were modified or deleted during this change.
 
 ---
@@ -32,24 +33,13 @@ classification:
 ### Class E (Intent Alignment)
 
 - **Link:** [https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/697ab7f3414459edd480bb72a342446d040b3134/audit/02-static-audit.md#L11](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/697ab7f3414459edd480bb72a342446d040b3134/audit/02-static-audit.md#L11)
-- **Requirements Verified:** F15 requires test coverage for success_count not being incremented in _process_all_errors
+- **Requirements Verified:** F15: document which tests caught the bug vs. which characterise existing behaviour
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`a489e65`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/a489e652283cbfa3547531745e365d1767363439))
+**Scope Inventory** (SHA: [`b9eb740`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/b9eb740d7bf0ff35e279d7c6f211e3d438560315))
 
-- [`tests/unit/utils/cli.bug-catalog.md#L1-L115`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/a489e652283cbfa3547531745e365d1767363439/tests/unit/utils/cli.bug-catalog.md#L1-L115)
-
-### Class C (Negative Evidence)
-
-- No prior bug catalog for `cli.py` existed in the repository (`grep -rn "cli.bug-catalog" .github/aiv-evidence/` → zero hits before commit `acc56b3`).
-- No existing test coverage of `_process_all_errors` `success_count` increment: `grep -n "success_count" tests/unit/utils/test_cli.py` → zero hits — confirms the gap targeted by B1 was entirely uncovered before this change.
-
-### Class F (Provenance — git chain-of-custody)
-
-- `tests/unit/utils/cli.bug-catalog.md` status in commit `acc56b3`: `A` (Added) — this is a new file; no prior documentation was modified or deleted.
-- Pre-existing test suite unchanged at HEAD `c8ed7d6`: `tests/unit/utils/test_cli.py` (55 passed), `tests/unit/utils/test_run_cli.py` (13 passed).
-- [`tests/unit/utils/cli.bug-catalog.md#L1-L116`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/acc56b3aca85d2be43bcdf896cd1040d386f773e/tests/unit/utils/cli.bug-catalog.md#L1-L116) — full file as committed.
+- [`tests/unit/utils/cli.bug-catalog.md#L111-L126`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/b9eb740d7bf0ff35e279d7c6f211e3d438560315/tests/unit/utils/cli.bug-catalog.md#L111-L126)
 
 ### Class A (Execution Evidence)
 
@@ -69,4 +59,4 @@ Only git diff scope inventory was collected. No execution evidence.
 
 ## Summary
 
-Bug catalog for F15: success_count never incremented in CLI._process_all_errors
+Post-run evaluation for F15 bug catalog: 4 caught, 3 characterised
