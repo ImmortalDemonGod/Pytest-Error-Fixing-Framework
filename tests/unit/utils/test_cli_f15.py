@@ -14,8 +14,7 @@ Root cause:
 These tests are intentionally RED until the fix is implemented.
 """
 
-from pathlib import Path
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 
 import pytest
 
