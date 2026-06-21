@@ -42,6 +42,42 @@ classification:
 
 - [`tests/unit/utils/test_cli_f15.py#L1-L217`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/acc56b3aca85d2be43bcdf896cd1040d386f773e/tests/unit/utils/test_cli_f15.py#L1-L217)
 
+### Class C (Negative Evidence)
+
+**Bugs considered and explicitly NOT tested in this commit (per bug catalog Skipped section):**
+
+- **B3 — Interactive-mode path (`non_interactive=False`):** Deferred. Interactive path invokes `run_fix_workflow` with different parameters; testing it requires mocking the interactive prompts. Excluded from this commit; listed in `cli.bug-catalog.md` Skipped section with rationale.
+- **Searched `test_cli.py` for existing coverage of `success_count` increment** — zero hits on `success_count`, confirming no prior test covers this invariant (`grep -n "success_count" tests/unit/utils/test_cli.py` → no output).
+- **Searched for `process_errors` return-value assertions in existing tests** — `test_cli.py` exercises `process_errors` but does not assert its return value (`grep -n "process_errors" tests/unit/utils/test_cli.py` → lines only call the function, never check the integer result).
+
+**Conclusion:** No prior test covers the `success_count` increment or `process_errors` exit-code. All skipped bugs are intentional deferrals documented in the catalog.
+
+---
+
+### Class F (Provenance — git chain-of-custody)
+
+**Files touched in commits `acc56b3`..`be7c9ad` (git diff-filter=A,M,D):**
+
+```
+be7c9ad — A  .github/aiv-evidence/EVIDENCE_TESTS_UNIT_UTILS_TEST_CLI_F15.md
+           A  tests/unit/utils/test_cli_f15.py
+acc56b3 — A  .github/aiv-evidence/EVIDENCE_TESTS_UNIT_UTILS_CLI.BUG_CATALOG.MD.md
+           A  tests/unit/utils/cli.bug-catalog.md
+```
+
+All entries are `A` (Added). Zero `M` (Modified) or `D` (Deleted) entries for any existing test file.
+
+**Pre-existing test suite status at HEAD (commit `c8ed7d6`):**
+
+- `tests/unit/utils/test_cli.py` — **55 passed** (verified by `.venv/bin/python -m pytest tests/unit/utils/test_cli.py -q`)
+- `tests/unit/utils/test_run_cli.py` — **13 passed** (verified by `.venv/bin/python -m pytest tests/unit/utils/test_run_cli.py -q`)
+- Total: **68 passed, 0 failed, 0 errors** — no regressions introduced.
+
+**SHA-pinned diff link:**
+[`a489e65..be7c9ad`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/compare/a489e65...be7c9ad)
+
+---
+
 ### Class A (Execution Evidence)
 
 **Per-symbol test coverage (AST analysis):**

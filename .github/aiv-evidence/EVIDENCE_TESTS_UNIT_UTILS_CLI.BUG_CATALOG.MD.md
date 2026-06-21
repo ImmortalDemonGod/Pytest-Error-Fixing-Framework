@@ -40,6 +40,17 @@ classification:
 
 - [`tests/unit/utils/cli.bug-catalog.md#L1-L115`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/a489e652283cbfa3547531745e365d1767363439/tests/unit/utils/cli.bug-catalog.md#L1-L115)
 
+### Class C (Negative Evidence)
+
+- No prior bug catalog for `cli.py` existed in the repository (`grep -rn "cli.bug-catalog" .github/aiv-evidence/` → zero hits before commit `acc56b3`).
+- No existing test coverage of `_process_all_errors` `success_count` increment: `grep -n "success_count" tests/unit/utils/test_cli.py` → zero hits — confirms the gap targeted by B1 was entirely uncovered before this change.
+
+### Class F (Provenance — git chain-of-custody)
+
+- `tests/unit/utils/cli.bug-catalog.md` status in commit `acc56b3`: `A` (Added) — this is a new file; no prior documentation was modified or deleted.
+- Pre-existing test suite unchanged at HEAD `c8ed7d6`: `tests/unit/utils/test_cli.py` (55 passed), `tests/unit/utils/test_run_cli.py` (13 passed).
+- [`tests/unit/utils/cli.bug-catalog.md#L1-L116`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/acc56b3aca85d2be43bcdf896cd1040d386f773e/tests/unit/utils/cli.bug-catalog.md#L1-L116) — full file as committed.
+
 ### Class A (Execution Evidence)
 
 - Local checks skipped (--skip-checks).
