@@ -6,8 +6,8 @@
 |-------|-------|
 | **Repository** | github.com/ImmortalDemonGod/aiv-protocol |
 | **Change ID** | pytest-fixer-f15-tests |
-| **Commits** | `acc56b3`, `be7c9ad` |
-| **Head SHA** | `be7c9ad` |
+| **Commits** | `acc56b3`, `be7c9ad`, `ee94a49`, `c8ed7d6` |
+| **Head SHA** | `c8ed7d6` |
 | **Base SHA** | `a489e65` |
 | **Created** | 2026-06-21T03:28:16Z |
 
@@ -38,15 +38,15 @@ classification:
 
 | # | Evidence File | Commit SHA | Classes |
 |---|---------------|------------|---------|
-| 1 | EVIDENCE_TESTS_UNIT_UTILS_CLI.BUG_CATALOG.MD.md | `acc56b3` | A, B, E |
-| 2 | EVIDENCE_TESTS_UNIT_UTILS_TEST_CLI_F15.md | `be7c9ad` | A, B, E |
+| 1 | EVIDENCE_TESTS_UNIT_UTILS_CLI.BUG_CATALOG.MD.md | `acc56b3` | A, B, C, E, F |
+| 2 | EVIDENCE_TESTS_UNIT_UTILS_TEST_CLI_F15.md | `be7c9ad` | A, B, C, E, F |
 
 
 
 ### Class E (Intent Alignment)
 
 **Canonical intent source (SHA-pinned):**
-https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/697ab7f3414459edd480bb72a342446d040b3134/audit/02-static-audit.md#L11
+[https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/697ab7f3414459edd480bb72a342446d040b3134/audit/02-static-audit.md#L11](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/697ab7f3414459edd480bb72a342446d040b3134/audit/02-static-audit.md#L11)
 
 **Finding F15 (critical):** `success_count` is initialised to 0 at `cli.py:519` inside `_process_all_errors` and is never incremented. The comment at line 538 explicitly acknowledges this (`If you track actual success/fail logic, you can increment success_count here`). `process_errors` at line 509 returns `0 if success_count == total_processed`, meaning it returns 0 only when both are 0 (nothing processed). Any run with ≥ 1 error processed always yields exit-code 1 regardless of fix outcome.
 
@@ -58,8 +58,35 @@ https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/697ab7f34
 
 **Scope Inventory** (from 2 file references across evidence files)
 
-- `tests/unit/utils/cli.bug-catalog.md#L1-L115`
-- `tests/unit/utils/test_cli_f15.py#L1-L217`
+- [`tests/unit/utils/cli.bug-catalog.md#L1-L115`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/acc56b3aca85d2be43bcdf896cd1040d386f773e/tests/unit/utils/cli.bug-catalog.md#L1-L115)
+- [`tests/unit/utils/test_cli_f15.py#L1-L217`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/be7c9ad67c9b8d4ef5741929bc1dba0bcd02ade3/tests/unit/utils/test_cli_f15.py#L1-L217)
+
+---
+
+### Class C (Negative Evidence)
+
+**Bugs explicitly NOT tested (per `cli.bug-catalog.md` Skipped section):**
+
+- **B3 (interactive path):** Deferred — interactive mode requires mocking prompts; tracked in bug catalog as intentional skip.
+- **`success_count` increment in existing `test_cli.py`:** `grep -n "success_count" tests/unit/utils/test_cli.py` → zero hits — confirms the gap is new, not duplicated.
+- **`process_errors` return-value assertions in prior tests:** `grep -n "process_errors" tests/unit/utils/test_cli.py` → function is called but return value is never asserted in the pre-existing suite.
+
+---
+
+### Class F (Provenance — git chain-of-custody)
+
+**Commits `acc56b3`..`be7c9ad` file status:**
+
+```
+be7c9ad — A  .github/aiv-evidence/EVIDENCE_TESTS_UNIT_UTILS_TEST_CLI_F15.md
+           A  tests/unit/utils/test_cli_f15.py
+acc56b3 — A  .github/aiv-evidence/EVIDENCE_TESTS_UNIT_UTILS_CLI.BUG_CATALOG.MD.md
+           A  tests/unit/utils/cli.bug-catalog.md
+```
+
+All entries are `A` (Added). No existing test file was Modified (`M`) or Deleted (`D`).
+
+**Pre-existing suite at HEAD `c8ed7d6`:** `tests/unit/utils/test_cli.py` (55 passed) + `tests/unit/utils/test_run_cli.py` (13 passed) = **68 passed, 0 failed** — no regressions.
 
 ---
 
