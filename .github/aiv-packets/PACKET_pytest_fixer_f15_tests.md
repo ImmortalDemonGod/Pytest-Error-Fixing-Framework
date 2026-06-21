@@ -123,8 +123,25 @@ All checks passed!
 **Bugs explicitly NOT tested (per `cli.bug-catalog.md` Skipped section):**
 
 - **B3 (interactive path):** Deferred — interactive mode requires mocking prompts; tracked in bug catalog as intentional skip.
-- **`success_count` increment in existing `test_cli.py`:** `grep -n "success_count" tests/unit/utils/test_cli.py` → zero hits — confirms the gap is new, not duplicated.
-- **`process_errors` return-value assertions in prior tests:** prior test suite calls `process_errors` but never asserts its integer return value.
+
+- **`success_count` increment in existing `test_cli.py`:** `grep -n "success_count" tests/unit/utils/test_cli.py` at base SHA `a489e65` returns **6 hits** (lines 442, 444, 450, 453, 467, 487). The earlier packet version stated "zero hits" — that was incorrect and is retracted here. The 6 pre-existing references break down as follows:
+  - Lines 442/444: failure-path test — patches `_process_non_interactive_error` to return `None` and asserts `success_count == 0` (passes even with the bug because 0 == 0).
+  - Lines 450/453: interactive-break-path test — patches `_process_interactive_error` to return `False` and asserts `success_count == 0` (loop exits before any increment; also passes with the bug).
+  - Line 467: `test_process_errors_returns_0_when_all_processed_and_success_count_equal` — mocks `_process_all_errors` itself to return `(2, 2)`, bypassing the real increment logic entirely.
+  - Line 487: `_summarize_results(success_count=2)` call — passes the value as a display parameter; does not test the increment path.
+  - **Gap the new tests fill:** none of the pre-existing tests patch `_process_non_interactive_error` to return `True` and then assert `success_count >= 1`. The tests in `test_cli_f15.py` are the first to exercise this success-path invariant.
+
+  ```
+  $ git show a489e65:tests/unit/utils/test_cli.py | grep -n "success_count"
+  442:            total_processed, success_count = cli._process_all_errors(errors, interactive=False)
+  444:            assert success_count == 0
+  450:            total_processed, success_count = cli._process_all_errors(errors, interactive=True)
+  453:            assert success_count == 0
+  467:    def test_process_errors_returns_0_when_all_processed_and_success_count_equal(self, cli, sample_error):
+  487:        cli._summarize_results(total_processed=3, total_errors=5, success_count=2)
+  ```
+
+- **`process_errors` return-value assertions in prior tests:** prior test suite calls `process_errors` indirectly (via mocked `_process_all_errors`) but never asserts its integer return value from a live (non-mocked) `_process_all_errors` call.
 
 ### Class F (Provenance — git chain-of-custody)
 
