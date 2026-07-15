@@ -467,7 +467,7 @@ class TestPytestRunner:
         r = PytestRunner()
         report = r.format_report(sess)
         assert "Test Execution Report" in report
-        assert "Duration: 1.23s" or "Duration: 1.2"  # allow formatting variance
+        assert "Duration: 1.23s" in report
         assert "Status: " in report
         assert "Total Tests: 3" in report
         assert "Passed: 2" in report
