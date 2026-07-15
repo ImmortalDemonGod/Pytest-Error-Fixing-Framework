@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/pef-p29-fix-always-true-and-broken-r.bug-catalog.md`
-**Commit:** `a6e80af`
-**Generated:** 2026-07-15T17:52:33Z
+**Commit:** `f991ff2`
+**Previous:** `dae2765`
+**Generated:** 2026-07-15T17:57:14Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/pef-p29-fix-always-true-and-broken-r.bug-catalog.md"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T17:52:33Z"
+  classified_at: "2026-07-15T17:57:14Z"
 ```
 
 ## Claim(s)
@@ -36,9 +37,9 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`a6e80af`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/a6e80af0fa3edd7ab7bcf0c85dffc36844250776))
+**Scope Inventory** (SHA: [`f991ff2`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/f991ff2f93ba4533b455cd88eea293d70aad2c24))
 
-- [`tests/pef-p29-fix-always-true-and-broken-r.bug-catalog.md#L1-L44`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/a6e80af0fa3edd7ab7bcf0c85dffc36844250776/tests/pef-p29-fix-always-true-and-broken-r.bug-catalog.md#L1-L44)
+- [`tests/pef-p29-fix-always-true-and-broken-r.bug-catalog.md#L45-L56`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/f991ff2f93ba4533b455cd88eea293d70aad2c24/tests/pef-p29-fix-always-true-and-broken-r.bug-catalog.md#L45-L56)
 
 ### Class A (Execution Evidence)
 

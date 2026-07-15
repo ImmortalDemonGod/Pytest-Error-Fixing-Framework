@@ -42,3 +42,15 @@
     and logs a warning without propagating (`src/branch_fixer/orchestration/orchestrator.py:520-521`).
     There is no production defect here either — this is a leftover broken fallback class in the
     test file that the real code path never reaches.
+
+## Note on test-layer strategy
+
+Both F72 and F73 are defects in *test source code* (a vacuous assertion, a dead/broken exception
+construction), not in production code — `format_report` and `_create_checkpoint_if_needed` already
+behave correctly. Because there is no production bug to exercise, a new test that calls the
+production symbols with correct expectations would pass today and would therefore not be RED.
+Instead, `tests/test_pef-p29-fix-always-true-and-broken-r.py` pins each defect by parsing the exact
+buggy function's AST source out of the *current* test files and asserting the corrected pattern is
+present (F72) / the broken pattern is absent (F73). Both assertions are false against the current
+(buggy) test files, so the test is genuinely RED, and each assertion will independently flip to
+green once test_runner.py:470 and test_orchestrator.py:583 are corrected by the implement-fix stage.
