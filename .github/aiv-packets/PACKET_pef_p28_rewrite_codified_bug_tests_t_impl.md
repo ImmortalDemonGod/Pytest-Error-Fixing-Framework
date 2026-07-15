@@ -6,10 +6,10 @@
 |-------|-------|
 | **Repository** | github.com/ImmortalDemonGod/aiv-protocol |
 | **Change ID** | pef-p28-rewrite-codified-bug-tests-t-impl |
-| **Commits** | `126507d` |
-| **Head SHA** | `126507d` |
-| **Base SHA** | `fceaf85` |
-| **Created** | 2026-07-15T18:08:26Z |
+| **Commits** | `148f417` |
+| **Head SHA** | `148f417` |
+| **Base SHA** | `35b6b71` |
+| **Created** | 2026-07-15T18:16:56Z |
 
 ## Classification
 
@@ -21,7 +21,7 @@ classification:
   blast_radius: component
   classification_rationale: "TODO: Describe why this tier was chosen"
   classified_by: "Claude"
-  classified_at: "2026-07-15T18:08:26Z"
+  classified_at: "2026-07-15T18:16:56Z"
 ```
 
 ## Claims
@@ -35,7 +35,7 @@ classification:
 
 | # | Evidence File | Commit SHA | Classes |
 |---|---------------|------------|---------|
-| 1 | EVIDENCE_TESTS_UNIT_GIT_TEST_PR_MANAGER.md | `126507d` | A, B, E |
+| 1 | EVIDENCE_TESTS_UNIT_GIT_TEST_PR_MANAGER.md | `148f417` | A, B, E |
 
 
 
