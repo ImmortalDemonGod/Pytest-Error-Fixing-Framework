@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/pef-p09-resolve-async-sync-mismatch.bug-catalog.md`
-**Commit:** `5f8e831`
-**Generated:** 2026-07-15T17:48:02Z
+**Commit:** `d31c8ad`
+**Previous:** `0088426`
+**Generated:** 2026-07-15T17:50:22Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/pef-p09-resolve-async-sync-mismatch.bug-catalog.md"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T17:48:02Z"
+  classified_at: "2026-07-15T17:50:22Z"
 ```
 
 ## Claim(s)
@@ -36,9 +37,11 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`5f8e831`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/5f8e831dca473a436be449930105ef5b9d1e8fc7))
+**Scope Inventory** (SHA: [`d31c8ad`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/d31c8add1d8b84a629e513be249ba047872d11c5))
 
-- [`tests/pef-p09-resolve-async-sync-mismatch.bug-catalog.md#L1-L8`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/5f8e831dca473a436be449930105ef5b9d1e8fc7/tests/pef-p09-resolve-async-sync-mismatch.bug-catalog.md#L1-L8)
+- [`tests/pef-p09-resolve-async-sync-mismatch.bug-catalog.md#L1`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/d31c8add1d8b84a629e513be249ba047872d11c5/tests/pef-p09-resolve-async-sync-mismatch.bug-catalog.md#L1)
+- [`tests/pef-p09-resolve-async-sync-mismatch.bug-catalog.md#L3-L9`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/d31c8add1d8b84a629e513be249ba047872d11c5/tests/pef-p09-resolve-async-sync-mismatch.bug-catalog.md#L3-L9)
+- [`tests/pef-p09-resolve-async-sync-mismatch.bug-catalog.md#L11-L50`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/d31c8add1d8b84a629e513be249ba047872d11c5/tests/pef-p09-resolve-async-sync-mismatch.bug-catalog.md#L11-L50)
 
 ### Class A (Execution Evidence)
 
