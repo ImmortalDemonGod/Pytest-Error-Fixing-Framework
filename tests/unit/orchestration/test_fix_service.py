@@ -24,7 +24,7 @@ def tmp_file(tmp_path):
 def fake_ai_manager():
     m = Mock()
     # Default: return a simple CodeChanges
-    m.generate_fix = Mock(return_value=CodeChanges(original_code="", modified_code="print('fixed')\n"))
+    m.generate_fix = Mock(return_value=CodeChanges(modified_code="print('fixed')\n"))
     return m
 
 
