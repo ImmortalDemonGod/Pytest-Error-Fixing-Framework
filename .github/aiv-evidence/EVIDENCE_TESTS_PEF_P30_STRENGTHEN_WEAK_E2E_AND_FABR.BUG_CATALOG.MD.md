@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/pef-p30-strengthen-weak-e2e-and-fabr.bug-catalog.md`
-**Commit:** `96c8cac`
-**Generated:** 2026-07-15T17:49:46Z
+**Commit:** `c5d5dfe`
+**Previous:** `a35a122`
+**Generated:** 2026-07-15T17:55:01Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/pef-p30-strengthen-weak-e2e-and-fabr.bug-catalog.md"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T17:49:46Z"
+  classified_at: "2026-07-15T17:55:01Z"
 ```
 
 ## Claim(s)
@@ -36,9 +37,11 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`96c8cac`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/96c8cacc6de1cecdf3d5d99c5b67bb990ec24820))
+**Scope Inventory** (SHA: [`c5d5dfe`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/c5d5dfeb7eb3b66606b8d9d5d2c4f720b1ef417f))
 
-- [`tests/pef-p30-strengthen-weak-e2e-and-fabr.bug-catalog.md#L1-L8`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/96c8cacc6de1cecdf3d5d99c5b67bb990ec24820/tests/pef-p30-strengthen-weak-e2e-and-fabr.bug-catalog.md#L1-L8)
+- [`tests/pef-p30-strengthen-weak-e2e-and-fabr.bug-catalog.md#L1`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/c5d5dfeb7eb3b66606b8d9d5d2c4f720b1ef417f/tests/pef-p30-strengthen-weak-e2e-and-fabr.bug-catalog.md#L1)
+- [`tests/pef-p30-strengthen-weak-e2e-and-fabr.bug-catalog.md#L3-L10`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/c5d5dfeb7eb3b66606b8d9d5d2c4f720b1ef417f/tests/pef-p30-strengthen-weak-e2e-and-fabr.bug-catalog.md#L3-L10)
+- [`tests/pef-p30-strengthen-weak-e2e-and-fabr.bug-catalog.md#L12-L20`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/c5d5dfeb7eb3b66606b8d9d5d2c4f720b1ef417f/tests/pef-p30-strengthen-weak-e2e-and-fabr.bug-catalog.md#L12-L20)
 
 ### Class A (Execution Evidence)
 
