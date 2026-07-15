@@ -314,7 +314,7 @@ class AIManager:
             else:
                 modified_code = response.strip()
 
-            return CodeChanges(original_code="", modified_code=modified_code)
+            return CodeChanges(modified_code=modified_code)
 
         except Exception as e:
             raise ValueError(f"Failed to parse response: {str(e)}") from e
