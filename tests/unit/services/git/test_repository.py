@@ -570,10 +570,9 @@ class TestSyncAndMerge:
         gr.push = lambda *a, **k: None
         assert gr.sync_with_remote() is False
 
-        # Non-GitError (NotImplementedError) should propagate
+        # NotImplementedError (e.g. unimplemented pull()) -> should return False
         gr.pull = lambda *a, **k: (_ for _ in ()).throw(NotImplementedError("not"))
-        with pytest.raises(NotImplementedError):
-            gr.sync_with_remote()
+        assert gr.sync_with_remote() is False
 
     def test_merge_branch_forms_command_and_returns(self):
         gr = repository_module.GitRepository.__new__(GitRepository)
