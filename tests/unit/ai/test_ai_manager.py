@@ -314,7 +314,7 @@ class TestParseResponse:
         result = m._parse_response(response)
         assert "y = 2" in result.modified_code
 
-    def test_codechanges_has_no_original_code_field(self):
+    def test_original_code_is_empty_string(self):
         m = AIManager(api_key=None)
         result = m._parse_response(VALID_RESPONSE)
-        assert not hasattr(result, "original_code")
+        assert result.original_code == ""
