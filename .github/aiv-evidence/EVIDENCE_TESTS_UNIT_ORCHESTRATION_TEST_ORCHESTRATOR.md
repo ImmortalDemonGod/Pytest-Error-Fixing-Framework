@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/unit/orchestration/test_orchestrator.py`
-**Commit:** `156ab2d`
-**Generated:** 2026-07-15T18:05:33Z
+**Commit:** `594620f`
+**Previous:** `f477028`
+**Generated:** 2026-07-15T18:14:12Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/unit/orchestration/test_orchestrator.py"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T18:05:33Z"
+  classified_at: "2026-07-15T18:14:12Z"
 ```
 
 ## Claim(s)
@@ -36,9 +37,9 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`156ab2d`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/156ab2d0aade0333a4ceef96c8874b0e5695480f))
+**Scope Inventory** (SHA: [`594620f`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/594620fb485a93017bfa775bd26a23c5392260ba))
 
-- [`tests/unit/orchestration/test_orchestrator.py#L583`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/156ab2d0aade0333a4ceef96c8874b0e5695480f/tests/unit/orchestration/test_orchestrator.py#L583)
+- [`tests/unit/orchestration/test_orchestrator.py#L583`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/594620fb485a93017bfa775bd26a23c5392260ba/tests/unit/orchestration/test_orchestrator.py#L583)
 
 ### Class A (Execution Evidence)
 
