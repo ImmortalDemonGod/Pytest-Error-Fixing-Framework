@@ -241,7 +241,7 @@ class TestGenerateModule:
             strat.generate_module(_ctx())
 
         phase1_system = captured[0][0]["content"]
-        assert "analyze" in phase1_system.lower() or "plan" in phase1_system.lower()
+        assert phase1_system == ANALYSIS_SYSTEM_PROMPT
 
     def test_writing_phase_includes_plan_from_analysis(self):
         """Phase 2 user prompt must contain the plan produced by Phase 1."""
