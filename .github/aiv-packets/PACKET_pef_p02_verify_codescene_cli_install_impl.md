@@ -6,10 +6,10 @@
 |-------|-------|
 | **Repository** | github.com/ImmortalDemonGod/aiv-protocol |
 | **Change ID** | pef-p02-verify-codescene-cli-install-impl |
-| **Commits** | `45cc634`, `8c77070` |
-| **Head SHA** | `8c77070` |
-| **Base SHA** | `e1fd05f` |
-| **Created** | 2026-07-15T17:57:46Z |
+| **Commits** | `8036e8c`, `daf8560` |
+| **Head SHA** | `daf8560` |
+| **Base SHA** | `0557004` |
+| **Created** | 2026-07-15T18:11:40Z |
 
 ## Classification
 
@@ -21,7 +21,7 @@ classification:
   blast_radius: component
   classification_rationale: "TODO: Describe why this tier was chosen"
   classified_by: "Claude"
-  classified_at: "2026-07-15T17:57:46Z"
+  classified_at: "2026-07-15T18:11:40Z"
 ```
 
 ## Claims
@@ -35,18 +35,17 @@ classification:
 
 | # | Evidence File | Commit SHA | Classes |
 |---|---------------|------------|---------|
-| 1 | EVIDENCE_SCRIPTS_ANALYZE_CODE.SH.md | `45cc634` | A, B, E |
-| 2 | EVIDENCE_TESTS_FIXTURES_CODESCENE_INSTALLER.md | `8c77070` | A, B, E |
+| 1 | EVIDENCE_TESTS_UNIT_ORCHESTRATION_TEST_ORCHESTRATOR.md | `8036e8c` | A, B, E |
+| 2 | EVIDENCE_TESTS_UNIT_SERVICES_PYTEST_TEST_RUNNER.md | `daf8560` | A, B, E |
 
 
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (from 3 file references across evidence files)
+**Scope Inventory** (from 2 file references across evidence files)
 
-- `scripts/analyze_code.sh#L96-L99`
-- `scripts/analyze_code.sh#L101`
-- `scripts/analyze_code.sh#L104-L114`
+- `tests/unit/orchestration/test_orchestrator.py#L583`
+- `tests/unit/services/pytest/test_runner.py#L470`
 
 ---
 
