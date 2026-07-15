@@ -109,6 +109,12 @@ def test_validate_workspace_dir_not_found(tmp_path: Path) -> None:
         WorkspaceValidator.validate_workspace(non_existent)
 
 
+@pytest.mark.skipif(
+    os.getuid() == 0,
+    reason="chmod 0o000 does not restrict root, so validate_workspace cannot raise "
+    "PermissionError when the suite runs as root (CI/containers). Pre-existing "
+    "environment artifact — matches the root-skip precedent in PRs #20/#29.",
+)
 def test_validate_workspace_dir_not_accessible(tmp_git_dir: Path) -> None:
     """
     Confirm validate_workspace raises PermissionError if directory is inaccessible.
