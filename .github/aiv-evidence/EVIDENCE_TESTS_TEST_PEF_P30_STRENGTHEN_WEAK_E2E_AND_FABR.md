@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/test_pef_p30_strengthen_weak_e2e_and_fabr.py`
-**Commit:** `a35a122`
-**Generated:** 2026-07-15T17:49:47Z
+**Commit:** `300a289`
+**Previous:** `39de3d9`
+**Generated:** 2026-07-15T17:55:05Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/test_pef_p30_strengthen_weak_e2e_and_fabr.py"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T17:49:47Z"
+  classified_at: "2026-07-15T17:55:05Z"
 ```
 
 ## Claim(s)
@@ -36,15 +37,17 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`a35a122`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/a35a122f05164399bacf6ad27774b21e46f27657))
+**Scope Inventory** (SHA: [`300a289`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/300a289a588b1c133d661777975c5f7c166524cb))
 
-- [`tests/test_pef_p30_strengthen_weak_e2e_and_fabr.py#L1-L11`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/a35a122f05164399bacf6ad27774b21e46f27657/tests/test_pef_p30_strengthen_weak_e2e_and_fabr.py#L1-L11)
+- [`tests/test_pef_p30_strengthen_weak_e2e_and_fabr.py#L1-L3`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/300a289a588b1c133d661777975c5f7c166524cb/tests/test_pef_p30_strengthen_weak_e2e_and_fabr.py#L1-L3)
+- [`tests/test_pef_p30_strengthen_weak_e2e_and_fabr.py#L6-L15`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/300a289a588b1c133d661777975c5f7c166524cb/tests/test_pef_p30_strengthen_weak_e2e_and_fabr.py#L6-L15)
+- [`tests/test_pef_p30_strengthen_weak_e2e_and_fabr.py#L18-L39`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/300a289a588b1c133d661777975c5f7c166524cb/tests/test_pef_p30_strengthen_weak_e2e_and_fabr.py#L18-L39)
 
 ### Class A (Execution Evidence)
 
 **Per-symbol test coverage (AST analysis):**
 
-- **`test_analysis_system_prompt_pins_the_finding_defect`** (L1-L11): FAIL -- WARNING: No tests import or call `test_analysis_system_prompt_pins_the_finding_defect`
+- **`test_analysis_system_prompt_pins_the_finding_defect`** (L1-L3): FAIL -- WARNING: No tests import or call `test_analysis_system_prompt_pins_the_finding_defect`
 
 **Coverage summary:** 0/1 symbols verified by tests.
 
