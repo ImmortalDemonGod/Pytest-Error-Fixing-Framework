@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/test_pef_p22_delete_dead_exception_taxono.py`
-**Commit:** `4c45b56`
-**Generated:** 2026-07-15T17:49:19Z
+**Commit:** `e3e5f34`
+**Previous:** `eaa1e49`
+**Generated:** 2026-07-15T17:52:49Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/test_pef_p22_delete_dead_exception_taxono.py"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T17:49:19Z"
+  classified_at: "2026-07-15T17:52:49Z"
 ```
 
 ## Claim(s)
@@ -36,15 +37,16 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`4c45b56`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/4c45b56f1dcd20e83ab52ecd2ab4c1645b6857bd))
+**Scope Inventory** (SHA: [`e3e5f34`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/e3e5f341e8a6c76bdae299be01ffda3c44931502))
 
-- [`tests/test_pef_p22_delete_dead_exception_taxono.py#L1-L11`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/4c45b56f1dcd20e83ab52ecd2ab4c1645b6857bd/tests/test_pef_p22_delete_dead_exception_taxono.py#L1-L11)
+- [`tests/test_pef_p22_delete_dead_exception_taxono.py#L1`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/e3e5f341e8a6c76bdae299be01ffda3c44931502/tests/test_pef_p22_delete_dead_exception_taxono.py#L1)
+- [`tests/test_pef_p22_delete_dead_exception_taxono.py#L6-L27`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/e3e5f341e8a6c76bdae299be01ffda3c44931502/tests/test_pef_p22_delete_dead_exception_taxono.py#L6-L27)
 
 ### Class A (Execution Evidence)
 
 **Per-symbol test coverage (AST analysis):**
 
-- **`test_coordinationerror_pins_the_finding_defect`** (L1-L11): FAIL -- WARNING: No tests import or call `test_coordinationerror_pins_the_finding_defect`
+- **`test_coordinationerror_pins_the_finding_defect`** (L1): FAIL -- WARNING: No tests import or call `test_coordinationerror_pins_the_finding_defect`
 
 **Coverage summary:** 0/1 symbols verified by tests.
 
