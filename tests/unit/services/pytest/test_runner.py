@@ -275,14 +275,14 @@ class TestPytestRunner:
         assert any(line.startswith("E   boom") for line in lines)
         assert "traceback" in lines[-1]
 
-    def test_format_test_failures_nodeid_without_double_colons_raises(self, runner):
+    def test_format_test_failures_nodeid_without_double_colons_handled_gracefully(self, runner):
         sess = SessionResult(start_time=datetime.now(), end_time=datetime.now(), duration=0.0, exit_code=ExitCode.OK)
         tr = TestResult(nodeid="no_colon_id", test_file=Path("file"), test_function=None, error_message=None, longrepr=None)
         tr.failed = True
         sess.test_results = {tr.nodeid: tr}
         runner._current_session = sess
-        with pytest.raises(ValueError):
-            runner.format_test_failures()
+        lines = runner.format_test_failures()
+        assert any("no_colon_id" in line for line in lines)
 
     def test_capture_test_output_combines_outputs(self, runner):
         sess = SessionResult(start_time=datetime.now(), end_time=datetime.now(), duration=0.0, exit_code=ExitCode.OK)
