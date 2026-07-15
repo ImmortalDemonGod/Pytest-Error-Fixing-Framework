@@ -6,10 +6,10 @@
 |-------|-------|
 | **Repository** | github.com/ImmortalDemonGod/aiv-protocol |
 | **Change ID** | pef-p20-make-setup-logging-idempoten-impl |
-| **Commits** | `d19a8b1` |
-| **Head SHA** | `d19a8b1` |
-| **Base SHA** | `fbb5bd7` |
-| **Created** | 2026-07-15T18:03:51Z |
+| **Commits** | `d53c4e9` |
+| **Head SHA** | `d53c4e9` |
+| **Base SHA** | `6a6376f` |
+| **Created** | 2026-07-15T18:08:46Z |
 
 ## Classification
 
@@ -21,7 +21,7 @@ classification:
   blast_radius: component
   classification_rationale: "TODO: Describe why this tier was chosen"
   classified_by: "Claude"
-  classified_at: "2026-07-15T18:03:51Z"
+  classified_at: "2026-07-15T18:08:46Z"
 ```
 
 ## Claims
@@ -35,15 +35,16 @@ classification:
 
 | # | Evidence File | Commit SHA | Classes |
 |---|---------------|------------|---------|
-| 1 | EVIDENCE_BRANCH_FIXER_ORCHESTRATION_COORDINATOR.md | `d19a8b1` | A, B, E |
+| 1 | EVIDENCE_TESTS_UNIT_CONFIG_TEST_LOGGING_CONFIG.md | `d53c4e9` | A, B, E |
 
 
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (from 1 file references across evidence files)
+**Scope Inventory** (from 2 file references across evidence files)
 
-- `src/branch_fixer/orchestration/coordinator.py#L1-L17`
+- `tests/unit/config/test_logging_config.py#L166-L167`
+- `tests/unit/config/test_logging_config.py#L181-L182`
 
 ---
 
