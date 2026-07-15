@@ -333,15 +333,29 @@ class TestBranchManager:
             mgr.cleanup_fix_branch("fix/10")
         assert "Failed to clean up branch fix/10" in str(excinfo.value)
 
-    def test_get_branch_metadata_raises_not_implemented(self, manager_factory):
-        mgr = manager_factory()
-        with pytest.raises(NotImplementedError):
-            mgr.get_branch_metadata("any")
+    def test_get_branch_metadata_returns_populated_metadata(self, manager_factory):
+        mgr = manager_factory(current_branch="feature-x")
+        mgr.repository.set_run_command_result(
+            FakeCommandResult(returncode=0, stdout="abc123\n")
+        )
+        metadata = mgr.get_branch_metadata("feature-x")
+        assert metadata.name == "feature-x"
+        assert metadata.current is True
+        assert metadata.last_commit == "abc123"
 
-    def test_is_branch_merged_raises_not_implemented(self, manager_factory):
+    def test_is_branch_merged_true_for_merged_branch(self, manager_factory):
         mgr = manager_factory()
-        with pytest.raises(NotImplementedError):
-            mgr.is_branch_merged("any", target_branch="main")
+        mgr.repository.set_run_command_result(
+            FakeCommandResult(returncode=0, stdout="  feature-x\n* main\n")
+        )
+        assert mgr.is_branch_merged("feature-x", target_branch="main") is True
+
+    def test_is_branch_merged_false_for_unmerged_branch(self, manager_factory):
+        mgr = manager_factory()
+        mgr.repository.set_run_command_result(
+            FakeCommandResult(returncode=0, stdout="* main\n")
+        )
+        assert mgr.is_branch_merged("feature-x", target_branch="main") is False
 
     def test_validate_branch_name_wraps_unexpected_exceptions_as_BranchNameError(self, manager_factory):
         mgr = manager_factory()
