@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/test_pef_p20_make_setup_logging_idempoten.py`
-**Commit:** `28abc2d`
-**Generated:** 2026-07-15T17:45:55Z
+**Commit:** `00f0d84`
+**Previous:** `750d963`
+**Generated:** 2026-07-15T17:47:01Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/test_pef_p20_make_setup_logging_idempoten.py"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T17:45:55Z"
+  classified_at: "2026-07-15T17:47:01Z"
 ```
 
 ## Claim(s)
@@ -36,15 +37,17 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`28abc2d`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/28abc2ddcc83b24c8a868419cd374a969a18444e))
+**Scope Inventory** (SHA: [`00f0d84`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/00f0d84e49268a1970449706c29997020efbb273))
 
-- [`tests/test_pef_p20_make_setup_logging_idempoten.py#L1-L11`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/28abc2ddcc83b24c8a868419cd374a969a18444e/tests/test_pef_p20_make_setup_logging_idempoten.py#L1-L11)
+- [`tests/test_pef_p20_make_setup_logging_idempoten.py#L1`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/00f0d84e49268a1970449706c29997020efbb273/tests/test_pef_p20_make_setup_logging_idempoten.py#L1)
+- [`tests/test_pef_p20_make_setup_logging_idempoten.py#L4-L5`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/00f0d84e49268a1970449706c29997020efbb273/tests/test_pef_p20_make_setup_logging_idempoten.py#L4-L5)
+- [`tests/test_pef_p20_make_setup_logging_idempoten.py#L8-L19`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/00f0d84e49268a1970449706c29997020efbb273/tests/test_pef_p20_make_setup_logging_idempoten.py#L8-L19)
 
 ### Class A (Execution Evidence)
 
 **Per-symbol test coverage (AST analysis):**
 
-- **`test_setup_logging_pins_the_finding_defect`** (L1-L11): FAIL -- WARNING: No tests import or call `test_setup_logging_pins_the_finding_defect`
+- **`test_setup_logging_pins_the_finding_defect`** (L1): FAIL -- WARNING: No tests import or call `test_setup_logging_pins_the_finding_defect`
 
 **Coverage summary:** 0/1 symbols verified by tests.
 
