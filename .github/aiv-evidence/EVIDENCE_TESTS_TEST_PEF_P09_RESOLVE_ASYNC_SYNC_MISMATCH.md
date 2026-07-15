@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/test_pef_p09_resolve_async_sync_mismatch.py`
-**Commit:** `0088426`
-**Generated:** 2026-07-15T17:48:04Z
+**Commit:** `b1ab203`
+**Previous:** `cc75cb6`
+**Generated:** 2026-07-15T17:50:24Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/test_pef_p09_resolve_async_sync_mismatch.py"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T17:48:04Z"
+  classified_at: "2026-07-15T17:50:24Z"
 ```
 
 ## Claim(s)
@@ -36,15 +37,16 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`0088426`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/0088426c39c9f283e5d06e3dd2be298fc8c0926a))
+**Scope Inventory** (SHA: [`b1ab203`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/b1ab20370fe98f8ed684b597618b1bfbb19ace8b))
 
-- [`tests/test_pef_p09_resolve_async_sync_mismatch.py#L1-L11`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/0088426c39c9f283e5d06e3dd2be298fc8c0926a/tests/test_pef_p09_resolve_async_sync_mismatch.py#L1-L11)
+- [`tests/test_pef_p09_resolve_async_sync_mismatch.py#L1`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/b1ab20370fe98f8ed684b597618b1bfbb19ace8b/tests/test_pef_p09_resolve_async_sync_mismatch.py#L1)
+- [`tests/test_pef_p09_resolve_async_sync_mismatch.py#L6-L34`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/b1ab20370fe98f8ed684b597618b1bfbb19ace8b/tests/test_pef_p09_resolve_async_sync_mismatch.py#L6-L34)
 
 ### Class A (Execution Evidence)
 
 **Per-symbol test coverage (AST analysis):**
 
-- **`test_checkpointerror_pins_the_finding_defect`** (L1-L11): FAIL -- WARNING: No tests import or call `test_checkpointerror_pins_the_finding_defect`
+- **`test_checkpointerror_pins_the_finding_defect`** (L1): FAIL -- WARNING: No tests import or call `test_checkpointerror_pins_the_finding_defect`
 
 **Coverage summary:** 0/1 symbols verified by tests.
 
