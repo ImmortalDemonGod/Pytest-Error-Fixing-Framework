@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/test_pef_p19_avoid_importing_exitcode_fro.py`
-**Commit:** `e360d8d`
-**Generated:** 2026-07-15T17:44:04Z
+**Commit:** `94351c7`
+**Previous:** `9e7e065`
+**Generated:** 2026-07-15T17:45:05Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/test_pef_p19_avoid_importing_exitcode_fro.py"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T17:44:04Z"
+  classified_at: "2026-07-15T17:45:05Z"
 ```
 
 ## Claim(s)
@@ -36,15 +37,16 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`e360d8d`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/e360d8d69320aa02b4eae45ffe2c059aadbc797c))
+**Scope Inventory** (SHA: [`94351c7`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/94351c78dea3ffa4b911a6ec68c40ebc0bb7198d))
 
-- [`tests/test_pef_p19_avoid_importing_exitcode_fro.py#L1-L11`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/e360d8d69320aa02b4eae45ffe2c059aadbc797c/tests/test_pef_p19_avoid_importing_exitcode_fro.py#L1-L11)
+- [`tests/test_pef_p19_avoid_importing_exitcode_fro.py#L1-L4`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/94351c78dea3ffa4b911a6ec68c40ebc0bb7198d/tests/test_pef_p19_avoid_importing_exitcode_fro.py#L1-L4)
+- [`tests/test_pef_p19_avoid_importing_exitcode_fro.py#L9-L20`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/94351c78dea3ffa4b911a6ec68c40ebc0bb7198d/tests/test_pef_p19_avoid_importing_exitcode_fro.py#L9-L20)
 
 ### Class A (Execution Evidence)
 
 **Per-symbol test coverage (AST analysis):**
 
-- **`test_sessionresult_pins_the_finding_defect`** (L1-L11): FAIL -- WARNING: No tests import or call `test_sessionresult_pins_the_finding_defect`
+- **`test_sessionresult_pins_the_finding_defect`** (L1-L4): FAIL -- WARNING: No tests import or call `test_sessionresult_pins_the_finding_defect`
 
 **Coverage summary:** 0/1 symbols verified by tests.
 

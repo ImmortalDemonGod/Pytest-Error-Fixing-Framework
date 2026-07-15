@@ -1,11 +1,20 @@
-# RED test for the finding — the fix-pipeline harness pre-resolved and VERIFIED the import below (#146).
-# Your ONLY job: replace the sentinel line in the test body with a REAL assertion that FAILS against the
-# CURRENT (buggy) value of SessionResult (assert the CORRECT expected value). Do NOT change the import line.
-# Use the FACT output(s) above for the CORRECT expected value — do NOT invent a number.
+# RED test for the finding — import verified by the harness; expected value from the finding's own command (see FACT).
+import inspect
+import sys
+
 from src.branch_fixer.services.pytest.models import SessionResult  # verified working import — do not edit
 
 
 def test_sessionresult_pins_the_finding_defect():
-    # SessionResult is imported above and ready to assert on.
-    # Replace the next line with e.g.:  assert abs(SessionResult - <CORRECT_VALUE_from_the_FACT_above>) < <TOL>
-    raise NotImplementedError("SCAFFOLD_SENTINEL_fill_the_red_assertion")
+    # The finding: models.py imports ExitCode from the *private* _pytest.main
+    # module instead of the public `pytest` package. Since `pytest.ExitCode`
+    # and `_pytest.main.ExitCode` are the same object, a type check can't
+    # distinguish them — the defect is which module the import statement
+    # names, so we inspect the defining module's source directly.
+    module = sys.modules[SessionResult.__module__]
+    source = inspect.getsource(module)
+    assert "_pytest" not in source, (
+        "SessionResult's defining module must not reference the private "
+        "_pytest package (e.g. `from _pytest.main import ExitCode`); it "
+        "should import ExitCode from the public `pytest` package instead"
+    )
