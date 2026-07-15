@@ -141,7 +141,8 @@ class TestPytestPlugin:
         items = [types.SimpleNamespace(nodeid="a::test_one"), types.SimpleNamespace(nodeid="b::test_two")]
         plugin.pytest_collection_modifyitems(None, None, items)
         captured = capsys.readouterr()
-        assert captured.out == ""
+        assert "  - a::test_one" in captured.out
+        assert "  - b::test_two" in captured.out
 
     def test_pytest_runtest_logreport_forwards_to_runner(self):
         fake_runner = Mock()
