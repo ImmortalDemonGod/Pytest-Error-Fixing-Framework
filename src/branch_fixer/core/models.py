@@ -111,5 +111,4 @@ class TestError:
 class CodeChanges:
     """Represents code changes suggested by AI."""
 
-    original_code: str
     modified_code: str
