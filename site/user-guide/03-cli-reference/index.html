@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>CLI Reference - Pytest Fixer</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "CLI Reference";
+        var mkdocs_page_input_path = "user-guide/03-cli-reference.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Pytest Fixer
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User Guide</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../01-installation/">Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../02-quickstart/">Quick Start</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">CLI Reference</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#main-command-fix">Main Command: fix</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#command-line-options">Command-Line Options</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#interactive-mode">Interactive Mode</a>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developer Guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developer-guide/01-architecture/">Architecture</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developer-guide/02-contribution-guide/">Contributing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developer-guide/03-testing-strategy/">Testing Strategy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developer-guide/04-execution-flow/">Execution Flow</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >LLM Prompts</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../developer-guide/prompts/pytest-generation/">Pytest Generation</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../developer-guide/prompts/Code-Refactoring-Instructions/">Code Refactoring</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../developer-guide/prompts/Structured-Test-Development-Process/">Structured Test Development</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../developer-guide/prompts/test-refactoring/">Test Refactoring</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design & Research</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../design-and-research/01-strategic-analysis/">Strategic Analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../design-and-research/02-swe-bench-strategy/">SWE-bench Strategy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../design-and-research/03-git-api-design/">Git API Design</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/ddd-principles/">DDD Principles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/debugging-workflow/">Debugging Workflow</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/bug-taxonomy/">Bug Taxonomy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/hypothesis-guide/">Hypothesis Guide</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Pytest Fixer</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">User Guide</li>
+      <li class="breadcrumb-item active">CLI Reference</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="cli-command-reference">CLI Command Reference</h1>
+<p>This document provides a complete reference for the command-line interface (CLI) of <code>pytest-fixer</code>.</p>
+<hr />
+<h2 id="main-command-fix">Main Command: <code>fix</code></h2>
+<p>The primary command for running the test-fixing workflow.</p>
+<p><strong>Usage:</strong></p>
+<pre><code class="language-bash">.venv/bin/python -m branch_fixer.main fix [OPTIONS]
+</code></pre>
+<hr />
+<h2 id="command-line-options">Command-Line Options</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Option</th>
+<th style="text-align: left;">Type</th>
+<th style="text-align: left;">Default</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>--api-key</code></td>
+<td style="text-align: left;"><code>STRING</code></td>
+<td style="text-align: left;">(env var)</td>
+<td style="text-align: left;">Your OpenRouter API key. Can also be set via the <code>OPENROUTER_API_KEY</code> environment variable. <strong>(Required)</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--test-path</code></td>
+<td style="text-align: left;"><code>PATH</code></td>
+<td style="text-align: left;">(none)</td>
+<td style="text-align: left;">The specific test file or directory to run fixes on. If not provided, <code>pytest</code> will discover tests from the root.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--test-function</code></td>
+<td style="text-align: left;"><code>STRING</code></td>
+<td style="text-align: left;">(none)</td>
+<td style="text-align: left;">The specific test function to fix (e.g., <code>test_add</code>). Requires <code>--test-path</code> to also be set.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--non-interactive</code></td>
+<td style="text-align: left;"><code>FLAG</code></td>
+<td style="text-align: left;"><code>False</code></td>
+<td style="text-align: left;">Runs the tool in fully automated mode without prompting the user for decisions.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--max-retries</code></td>
+<td style="text-align: left;"><code>INT</code></td>
+<td style="text-align: left;"><code>3</code></td>
+<td style="text-align: left;">The maximum number of times the AI will attempt to fix a single error.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--initial-temp</code></td>
+<td style="text-align: left;"><code>FLOAT</code></td>
+<td style="text-align: left;"><code>0.4</code></td>
+<td style="text-align: left;">The initial temperature (randomness) for the AI model's first fix attempt.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--temp-increment</code></td>
+<td style="text-align: left;"><code>FLOAT</code></td>
+<td style="text-align: left;"><code>0.1</code></td>
+<td style="text-align: left;">The amount to increase the temperature on each subsequent retry.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--fast-run</code></td>
+<td style="text-align: left;"><code>FLAG</code></td>
+<td style="text-align: left;"><code>False</code></td>
+<td style="text-align: left;">A debugging mode that only attempts to fix the <em>first</em> failing test it finds, then exits.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--cleanup-only</code></td>
+<td style="text-align: left;"><code>FLAG</code></td>
+<td style="text-align: left;"><code>False</code></td>
+<td style="text-align: left;">Skips the fixing workflow and only runs the cleanup process to remove any leftover <code>fix-...</code> branches.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--dev-force-success</code></td>
+<td style="text-align: left;"><code>FLAG</code></td>
+<td style="text-align: left;"><code>False</code></td>
+<td style="text-align: left;">A development flag that marks all fix attempts as successful without calling the AI, useful for testing the workflow logic.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--version</code></td>
+<td style="text-align: left;"><code>FLAG</code></td>
+<td style="text-align: left;"><code>False</code></td>
+<td style="text-align: left;">Show the version number and exit.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--help</code></td>
+<td style="text-align: left;"><code>FLAG</code></td>
+<td style="text-align: left;"><code>False</code></td>
+<td style="text-align: left;">Show the help message and exit.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="interactive-mode">Interactive Mode</h2>
+<p>When running in interactive mode (the default, without <code>--non-interactive</code>), the tool will pause at each failing test and prompt you for an action:</p>
+<ul>
+<li><strong>[Y] Attempt AI-based fix:</strong> (Default) Proceeds with the automated AI fixing workflow.</li>
+<li><strong>[M] Perform manual fix:</strong> Pauses the tool and allows you to edit the files manually. Press Enter when you are done to re-run the test and verify your fix.</li>
+<li><strong>[N] Skip this test:</strong> Skips the current failing test and moves on to the next one.</li>
+<li><strong>[Q] Quit fixing tests entirely:</strong> Aborts the entire session and proceeds to cleanup.</li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../02-quickstart/" class="btn btn-neutral float-left" title="Quick Start"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../../developer-guide/01-architecture/" class="btn btn-neutral float-right" title="Architecture">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../02-quickstart/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../../developer-guide/01-architecture/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

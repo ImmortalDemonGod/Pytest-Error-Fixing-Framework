@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Documentation Issues &amp; Feature Status - Pytest Fixer</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Documentation Issues \u0026amp; Feature Status";
+        var mkdocs_page_input_path = "doc-issues.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Pytest Fixer
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User Guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../user-guide/01-installation/">Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../user-guide/02-quickstart/">Quick Start</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../user-guide/03-cli-reference/">CLI Reference</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developer Guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../developer-guide/01-architecture/">Architecture</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../developer-guide/02-contribution-guide/">Contributing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../developer-guide/03-testing-strategy/">Testing Strategy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../developer-guide/04-execution-flow/">Execution Flow</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >LLM Prompts</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../developer-guide/prompts/pytest-generation/">Pytest Generation</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../developer-guide/prompts/Code-Refactoring-Instructions/">Code Refactoring</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../developer-guide/prompts/Structured-Test-Development-Process/">Structured Test Development</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../developer-guide/prompts/test-refactoring/">Test Refactoring</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design & Research</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../design-and-research/01-strategic-analysis/">Strategic Analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../design-and-research/02-swe-bench-strategy/">SWE-bench Strategy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../design-and-research/03-git-api-design/">Git API Design</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../reference/ddd-principles/">DDD Principles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../reference/debugging-workflow/">Debugging Workflow</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../reference/bug-taxonomy/">Bug Taxonomy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../reference/hypothesis-guide/">Hypothesis Guide</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Pytest Fixer</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Documentation Issues &amp; Feature Status</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="documentation-issues-feature-status">Documentation Issues &amp; Feature Status</h1>
+<p>Audit conducted 2026-03-30. Critical user-guide fixes already applied.</p>
+<hr />
+<h2 id="project-feature-status">Project Feature Status</h2>
+<p>This project has TWO features. Both exist, but in different states of integration.</p>
+<h3 id="feature-1-test-fixing-fully-integrated">Feature 1: Test Fixing — FULLY INTEGRATED</h3>
+<p>Entry point: <code>.venv/bin/python -m branch_fixer.main fix</code>
+Code: <code>src/branch_fixer/</code> — full DDD architecture, wired to CLI, tests exist</p>
+<h3 id="feature-2-test-generation-working-script-not-yet-integrated">Feature 2: Test Generation — WORKING SCRIPT, NOT YET INTEGRATED</h3>
+<p>The actual implementation lives in <code>scripts/hypot_test_gen.py</code> — it is real,
+working code. The <code>src/dev/test_generator/</code> directory is empty scaffolding
+created afterwards to receive a cleaned-up version of this script.</p>
+<p><strong>What <code>scripts/hypot_test_gen.py</code> actually does:</strong>
+- Parses a Python source file with AST (<code>ModuleParser</code>) to discover all
+  public classes, methods, and functions (<code>TestableEntity</code>)
+- Calls <code>hypothesis write &lt;module.path.Entity&gt;</code> for each entity to auto-generate
+  property-based tests
+- Applies smart variant selection based on method name patterns:
+  - <code>encode</code>/<code>decode</code> → roundtrip tests
+  - <code>transform</code>/<code>convert</code> → idempotent tests
+  - <code>validate</code>/<code>verify</code> → errors-equivalent tests
+  - <code>add</code>/<code>multiply</code> → binary-op tests
+- Post-processes output with an AST transformer (<code>TestFixer</code>) that fixes duplicate
+  <code>self</code> parameters that <code>hypothesis write</code> sometimes emits
+- Writes generated tests to <code>generated_tests/</code> directory
+- Entry point: <code>python scripts/hypot_test_gen.py &lt;path/to/source.py&gt;</code></p>
+<p><strong>What <code>src/dev/test_generator/</code> is:</strong>
+Empty placeholder files for the planned refactored/integrated version:
+- <code>analyze/parser.py</code> ← will replace <code>ModuleParser</code> in hypot_test_gen.py
+- <code>analyze/extractor.py</code> ← will replace <code>get_module_contents</code>
+- <code>generate/strategies/hypothesis.py</code> ← will replace <code>TestGenerator.run_hypothesis_write</code>
+- <code>generate/strategies/pynguin.py</code> ← planned alternative: Pynguin automated test synthesis
+- <code>generate/strategies/fabric.py</code> ← planned LLM-based generation (uses prompts/ templates)
+- <code>generate/templates.py</code> ← planned for LLM prompt templates
+- <code>generate/optimizer.py</code> ← planned deduplication/optimization pass
+- <code>output/formatter.py</code>, <code>output/writer.py</code> ← planned to replace direct file writes
+- <code>cli/generate.py</code> ← planned CLI entry point (currently no <code>generate</code> subcommand)</p>
+<p><strong>What the <code>docs/developer-guide/prompts/</code> folder is for:</strong>
+These are the AI prompt templates intended for <code>strategies/fabric.py</code> (LLM-based
+generation strategy), which is not yet implemented:
+- <code>pytest-generation.md</code> — system prompt for generating tests from a function
+- <code>test-refactoring.md</code> — prompt for consolidating/improving generated tests
+- <code>Structured-Test-Development-Process.md</code> — pre-analysis checklist before generation
+- <code>Code-Refactoring-Instructions.md</code> — refactoring reference baked into the refactor prompt</p>
+<p><strong>What <code>scripts/analyze_code.sh</code> is:</strong>
+The developer workflow tool that ties everything together today (before the CLI
+integration exists):
+1. Runs CodeScene (code complexity/health analysis) on a source file
+2. Runs Mypy (type checking)
+3. Runs Ruff (linting + formatting, auto-fix)
+4. Detects if a test file exists and runs coverage
+5. If coverage &lt; 100%, auto-activates test mode
+6. Appends the appropriate AI prompt (test generation or refactoring) to the analysis
+7. Copies the full combined report to clipboard — ready to paste into an AI assistant</p>
+<p>So the current workflow is: <code>analyze_code.sh file.py</code> → clipboard → paste into AI →
+AI writes tests or refactors → developer reviews. The <code>src/dev/</code> scaffold is meant
+to automate this loop inside the CLI as a <code>generate</code> subcommand.</p>
+<hr />
+<h2 id="what-each-doc-is-actually-for-corrected">What Each Doc Is Actually For (Corrected)</h2>
+<h3 id="user-guide-operational-docs-for-feature-1-fix">User Guide — operational docs for Feature 1 (fix)</h3>
+<ul>
+<li><code>01-installation.md</code> — setup. Fixed in this audit.</li>
+<li><code>02-quickstart.md</code> — example run of <code>fix</code>. Fixed in this audit.</li>
+<li><code>03-cli-reference.md</code> — CLI options for <code>fix</code>. Fixed in this audit.
+  Note: missing documentation of the planned <code>generate</code> subcommand entirely.</li>
+</ul>
+<h3 id="developer-guide">Developer Guide</h3>
+<ul>
+<li><code>01-architecture.md</code> — accurate reference for Feature 1's layer design</li>
+<li><code>02-contribution-guide.md</code> — PR/linting workflow. Says <code>pytest</code> not <code>.venv/bin/python -m pytest</code></li>
+<li><code>03-testing-strategy.md</code> — SPLIT: first half (philosophy, layer descriptions) valid;
+  second half (lines 68–317) is pre-implementation pseudocode for Feature 1, never cleaned up</li>
+<li><code>04-execution-flow.md</code> — call chain for Feature 1. Mostly accurate, a few stale snippets</li>
+</ul>
+<h3 id="developer-guide-prompts-ai-prompt-templates-for-feature-2s-llm-strategy">Developer Guide / prompts — AI prompt templates for Feature 2's LLM strategy</h3>
+<p>Intended for <code>strategies/fabric.py</code>. Currently used manually via <code>analyze_code.sh</code>.</p>
+<h3 id="design-and-research">Design and Research</h3>
+<ul>
+<li><code>01-strategic-analysis.md</code> — full assessment of both features and their strategic context.
+  References deleted <code>manager_design_draft.py</code>.</li>
+<li><code>02-swe-bench-strategy.md</code> — raw AI conversation about using Feature 1 against SWE-bench</li>
+<li><code>03-git-api-design.md</code> — raw AI conversation; backlog for <code>src/dev/shared/git.py</code></li>
+</ul>
+<h3 id="reference">Reference</h3>
+<ul>
+<li><code>ddd-principles.md</code> — explains Feature 1's architecture choices</li>
+<li><code>debugging-workflow.md</code> — systematic debugging methodology behind Feature 1's design</li>
+<li><code>bug-taxonomy.md</code> — defect classification background for Feature 2's test targeting</li>
+<li><code>hypothesis-guide.md</code> — practical guide for Feature 2's <code>strategies/hypothesis.py</code></li>
+<li><code>target-audience.md</code> — user persona analysis. Wrong command at line 60.</li>
+</ul>
+<hr />
+<h2 id="remaining-accuracy-issues">Remaining Accuracy Issues</h2>
+<h3 id="high">High</h3>
+<ul>
+<li><code>developer-guide/03-testing-strategy.md</code> lines 68–317: planning pseudocode with
+  wrong imports (<code>src.domain.models</code>), wrong class names, wrong field names.</li>
+<li><code>developer-guide/04-execution-flow.md</code>: <code>envvar='OPENAI_API_KEY'</code> (wrong),
+  mentions <code>marvin</code> (deleted), shows <code>async run_command</code> (actually sync).</li>
+</ul>
+<h3 id="medium">Medium</h3>
+<ul>
+<li><code>design-and-research/01-strategic-analysis.md</code>: references deleted <code>manager_design_draft.py</code></li>
+<li><code>reference/target-audience.md</code> line 60: wrong command <code>python -m src.branch_fixer.main fix</code></li>
+<li><code>developer-guide/02-contribution-guide.md</code>: says <code>pytest</code> not <code>.venv/bin/python -m pytest</code></li>
+<li>No documentation anywhere for Feature 2's current entry point (<code>scripts/hypot_test_gen.py</code>)
+  or the developer workflow (<code>scripts/analyze_code.sh</code>)</li>
+</ul>
+<h3 id="minor">Minor</h3>
+<ul>
+<li><code>reference/ddd-principles.md</code>: mentions <code>GenerationStrategy</code> — doesn't exist yet</li>
+<li><code>developer-guide/prompts/test-refactoring.md</code>: says "ready-to-run with <code>python -m unittest</code>"</li>
+<li><code>reference/hypothesis-guide.md</code>: <code>reversed(reversed(xs)) == xs</code> fails (iterator, not list)</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

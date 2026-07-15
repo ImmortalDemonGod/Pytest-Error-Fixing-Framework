@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Quick Start - Pytest Fixer</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Quick Start";
+        var mkdocs_page_input_path = "user-guide/02-quickstart.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Pytest Fixer
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User Guide</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../01-installation/">Installation</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Quick Start</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#your-first-fix-a-step-by-step-example">Your First Fix: A Step-by-Step Example</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#1-create-a-failing-test">1. Create a Failing Test</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2-run-the-fixer">2. Run the Fixer</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#3-observe-the-workflow">3. Observe the Workflow</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#4-reviewing-the-result">4. Reviewing the Result</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../03-cli-reference/">CLI Reference</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developer Guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developer-guide/01-architecture/">Architecture</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developer-guide/02-contribution-guide/">Contributing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developer-guide/03-testing-strategy/">Testing Strategy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developer-guide/04-execution-flow/">Execution Flow</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >LLM Prompts</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../developer-guide/prompts/pytest-generation/">Pytest Generation</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../developer-guide/prompts/Code-Refactoring-Instructions/">Code Refactoring</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../developer-guide/prompts/Structured-Test-Development-Process/">Structured Test Development</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../developer-guide/prompts/test-refactoring/">Test Refactoring</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design & Research</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../design-and-research/01-strategic-analysis/">Strategic Analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../design-and-research/02-swe-bench-strategy/">SWE-bench Strategy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../design-and-research/03-git-api-design/">Git API Design</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/ddd-principles/">DDD Principles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/debugging-workflow/">Debugging Workflow</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/bug-taxonomy/">Bug Taxonomy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/hypothesis-guide/">Hypothesis Guide</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Pytest Fixer</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">User Guide</li>
+      <li class="breadcrumb-item active">Quick Start</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="quick-start-guide">Quick Start Guide</h1>
+<p>This guide will get you up and running with <code>pytest-fixer</code> in just a few minutes. It assumes you have already completed the <a href="../01-installation/">Installation and Setup</a>.</p>
+<hr />
+<h2 id="your-first-fix-a-step-by-step-example">Your First Fix: A Step-by-Step Example</h2>
+<p>Let's walk through a complete end-to-end example of using <code>pytest-fixer</code> to automatically fix a failing test.</p>
+<h3 id="1-create-a-failing-test">1. Create a Failing Test</h3>
+<p>Create a file named <code>tests/test_math_operations.py</code> with the following content:</p>
+<pre><code class="language-python"># tests/test_math_operations.py
+
+def add(a, b):
+    # A buggy implementation
+    return a - b
+
+def test_add():
+    &quot;&quot;&quot;This test will fail because of the bug in add().&quot;&quot;&quot;
+    assert add(2, 3) == 5
+</code></pre>
+<h3 id="2-run-the-fixer">2. Run the Fixer</h3>
+<p>From the root of the <code>Pytest-Error-Fixing-Framework</code> directory, load your environment and run the <code>fix</code> command:</p>
+<pre><code class="language-bash">set -a &amp;&amp; source .env &amp;&amp; set +a
+.venv/bin/python -m branch_fixer.main fix --test-path tests/test_math_operations.py --non-interactive
+</code></pre>
+<h3 id="3-observe-the-workflow">3. Observe the Workflow</h3>
+<p>The tool will execute its automated workflow. You will see logs indicating the following steps:</p>
+<ol>
+<li><strong>Test Execution:</strong> <code>pytest-fixer</code> runs the test and discovers that <code>test_add</code> is failing.</li>
+<li><strong>Error Analysis:</strong> It parses the failure to understand the <code>AssertionError</code>.</li>
+<li><strong>Branch Creation:</strong> It creates a new, isolated Git branch (e.g., <code>fix-test_math_operations-test_add-xxxxxxxx</code>) to safely contain the fix.</li>
+<li><strong>AI Fix Generation:</strong> It sends the error context to an LLM and receives a suggested code change.</li>
+<li><strong>Code Application:</strong> It safely applies the fix, changing <code>return a - b</code> to <code>return a + b</code>.</li>
+<li><strong>Verification:</strong> It re-runs <code>test_add</code>, which now passes.</li>
+<li><strong>Cleanup:</strong> It logs the success and cleans up.</li>
+</ol>
+<h3 id="4-reviewing-the-result">4. Reviewing the Result</h3>
+<p>The fix has been applied to your local file. The tool creates a Git branch containing the fix — you can review it, push it, or open a pull request from it.</p>
+<p>You have successfully used <code>pytest-fixer</code> to automate a debugging and fixing cycle!</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../01-installation/" class="btn btn-neutral float-left" title="Installation"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../03-cli-reference/" class="btn btn-neutral float-right" title="CLI Reference">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../01-installation/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../03-cli-reference/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

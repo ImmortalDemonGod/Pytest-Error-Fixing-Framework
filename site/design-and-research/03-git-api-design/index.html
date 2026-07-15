@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Git API Design - Pytest Fixer</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Git API Design";
+        var mkdocs_page_input_path = "design-and-research/03-git-api-design.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Pytest Fixer
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User Guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user-guide/01-installation/">Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user-guide/02-quickstart/">Quick Start</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user-guide/03-cli-reference/">CLI Reference</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developer Guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developer-guide/01-architecture/">Architecture</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developer-guide/02-contribution-guide/">Contributing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developer-guide/03-testing-strategy/">Testing Strategy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developer-guide/04-execution-flow/">Execution Flow</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >LLM Prompts</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../developer-guide/prompts/pytest-generation/">Pytest Generation</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../developer-guide/prompts/Code-Refactoring-Instructions/">Code Refactoring</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../developer-guide/prompts/Structured-Test-Development-Process/">Structured Test Development</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../developer-guide/prompts/test-refactoring/">Test Refactoring</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design & Research</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../01-strategic-analysis/">Strategic Analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../02-swe-bench-strategy/">SWE-bench Strategy</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Git API Design</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/ddd-principles/">DDD Principles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/debugging-workflow/">Debugging Workflow</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/bug-taxonomy/">Bug Taxonomy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/hypothesis-guide/">Hypothesis Guide</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Pytest Fixer</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Design & Research</li>
+      <li class="breadcrumb-item active">Git API Design</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <p>Your outlined Git operations cover a solid foundation for the project and align well with common requirements for managing a Git-based workflow in an automated system. However, there are a few potential gaps and enhancements worth addressing to ensure comprehensive functionality.</p>
+<p>Core Operations You Have</p>
+<p>Your outlined operations cover the following use cases effectively:
+    1.  Repository Initialization and Validation:
+    •   Ensure the project is inside a valid Git repository.
+    •   Verify GitHub authentication.
+    2.  Branch Management:
+    •   Create and switch to branches.
+    •   Handle uncommitted changes using stash/pop.
+    •   Ensure a clean working directory.
+    3.  Change Management:
+    •   Stage, commit, revert changes.
+    4.  Remote Operations:
+    •   Push branches, pull updates, and retrieve remote repository information.
+    5.  PR Workflow:
+    •   Automate PR creation with a title and description using GitHub CLI.</p>
+<p>Potential Gaps and Enhancements</p>
+<ol>
+<li>Enhanced Recovery Mechanisms
+    •   Your _handle_revert_state and ensure_clean_state methods are a good start, but you might also need:
+    •   Conflict Resolution Handling:
+    •   Automatically resolve or notify about merge conflicts when pulling the main branch or merging PRs.
+    •   Stash Inspection:
+    •   Provide functionality to inspect and selectively apply stashed changes.</li>
+</ol>
+<p>Example:</p>
+<p>def inspect_stash(self) -&gt; list[str]:
+    """List items in the current stash"""</p>
+<ol>
+<li>History and Diff Analysis
+    •   SWE Bench challenges often require understanding why a problem exists, which might benefit from analyzing recent commit history or changes:
+    •   Log Commit History:
+    •   Retrieve the last n commits for diagnostic purposes.
+    •   Diff Files:
+    •   Generate a diff of changes for a specific branch or commit.</li>
+</ol>
+<p>Example:</p>
+<p>def get_commit_history(self, n: int = 10) -&gt; list[dict]:
+    """Get the last <code>n</code> commit messages and metadata"""</p>
+<p>def diff_branch(self, branch: str) -&gt; str:
+    """Generate a diff for changes in the branch compared to main"""</p>
+<ol>
+<li>Merge Operations
+    •   Merging branches might become relevant in scenarios involving multi-branch workflows:
+    •   Fast-forward or Non-fast-forward Merges:
+    •   Allow merging fix branches into the main branch.
+    •   Conflict Detection:
+    •   Identify and log merge conflicts without executing the merge.</li>
+</ol>
+<p>Example:</p>
+<p>def merge_branch(self, branch: str, no_ff: bool = False) -&gt; bool:
+    """Merge a branch into the current branch, optionally without fast-forward"""</p>
+<ol>
+<li>Automation for CI/CD Compatibility
+    •   Ensure that the system plays well with continuous integration pipelines:
+    •   Tagging:
+    •   Add tags to commits for version tracking or marking significant changes.
+    •   Triggering Pipelines:
+    •   Push changes to a specific branch and trigger remote CI/CD workflows.</li>
+</ol>
+<p>Example:</p>
+<p>def create_tag(self, tag_name: str, message: str) -&gt; bool:
+    """Create a new Git tag"""</p>
+<ol>
+<li>Multi-Remote and Fork Scenarios
+    •   If working with forks or multiple remotes (e.g., origin and upstream), include:
+    •   Fetching updates from the upstream repository.
+    •   Rebasing the fork’s branch against upstream.</li>
+</ol>
+<p>Example:</p>
+<p>def add_remote(self, name: str, url: str) -&gt; bool:
+    """Add a new remote"""</p>
+<p>def fetch_remote(self, remote: str) -&gt; bool:
+    """Fetch updates from a remote repository"""</p>
+<p>def rebase_branch(self, branch: str, upstream: str) -&gt; bool:
+    """Rebase the branch against an upstream branch"""</p>
+<ol>
+<li>Context-Aware Operations
+    •   Provide more granular operations tailored for the SWE Bench workflow:
+    •   Selective Staging:
+    •   Stage files related to a specific GitHub issue or bug fix only.
+    •   Context-Aware Commit Messages:
+    •   Automatically generate commit messages based on SWE Bench issue descriptions or fixes.</li>
+</ol>
+<p>Example:</p>
+<p>def stage_files_by_context(self, issue_context: str) -&gt; bool:
+    """Stage files matching a specific issue context"""</p>
+<p>def auto_generate_commit_message(self, issue_context: str) -&gt; str:
+    """Generate a commit message based on the issue context"""</p>
+<p>Full Updated Git Operations List</p>
+<p>Here’s a revised and expanded Git operations list incorporating the above enhancements:</p>
+<ol>
+<li>
+<p>Repository Management
+    •   _find_git_root()
+    •   _get_main_branch()
+    •   _check_gh_auth()
+    •   add_remote(name, url)
+    •   fetch_remote(remote)</p>
+</li>
+<li>
+<p>Branch Management
+    •   get_branch_status()
+    •   create_fix_branch(name)
+    •   stash_changes()
+    •   pop_stash()
+    •   merge_branch(branch, no_ff)
+    •   rebase_branch(branch, upstream)</p>
+</li>
+<li>
+<p>Change Management
+    •   stage_file(path)
+    •   stage_files_by_context(issue_context)
+    •   commit_changes(message)
+    •   auto_generate_commit_message(issue_context)
+    •   revert_changes(file)</p>
+</li>
+<li>
+<p>Remote Operations
+    •   push_branch(branch, force)
+    •   pull_main()
+    •   get_remote_info()
+    •   create_pull_request(branch, title, body)</p>
+</li>
+<li>
+<p>History and Diff Analysis
+    •   get_commit_history(n)
+    •   diff_branch(branch)</p>
+</li>
+<li>
+<p>Safety and Recovery
+    •   _handle_revert_state()
+    •   _check_branch_status()
+    •   ensure_clean_state()
+    •   inspect_stash()</p>
+</li>
+<li>
+<p>CI/CD Compatibility
+    •   create_tag(tag_name, message)</p>
+</li>
+</ol>
+<p>Conclusion</p>
+<p>Your initial Git operations list is solid, but the additional functionality outlined above will:
+    1.  Enhance robustness and flexibility.
+    2.  Address SWE Bench requirements like context-aware fixes, conflict handling, and history analysis.
+    3.  Provide compatibility with real-world workflows, including CI/CD and multi-remote repositories.</p>
+<p>Would you like help prioritizing or implementing any of these additional features?</p>
+<p>======</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../02-swe-bench-strategy/" class="btn btn-neutral float-left" title="SWE-bench Strategy"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../../reference/ddd-principles/" class="btn btn-neutral float-right" title="DDD Principles">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../02-swe-bench-strategy/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../../reference/ddd-principles/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

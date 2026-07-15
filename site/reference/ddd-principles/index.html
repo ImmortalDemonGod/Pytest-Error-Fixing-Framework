@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>DDD Principles - Pytest Fixer</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "DDD Principles";
+        var mkdocs_page_input_path = "reference/ddd-principles.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Pytest Fixer
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User Guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user-guide/01-installation/">Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user-guide/02-quickstart/">Quick Start</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user-guide/03-cli-reference/">CLI Reference</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developer Guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developer-guide/01-architecture/">Architecture</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developer-guide/02-contribution-guide/">Contributing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developer-guide/03-testing-strategy/">Testing Strategy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developer-guide/04-execution-flow/">Execution Flow</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >LLM Prompts</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../developer-guide/prompts/pytest-generation/">Pytest Generation</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../developer-guide/prompts/Code-Refactoring-Instructions/">Code Refactoring</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../developer-guide/prompts/Structured-Test-Development-Process/">Structured Test Development</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../developer-guide/prompts/test-refactoring/">Test Refactoring</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design & Research</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../design-and-research/01-strategic-analysis/">Strategic Analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../design-and-research/02-swe-bench-strategy/">SWE-bench Strategy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../design-and-research/03-git-api-design/">Git API Design</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">DDD Principles</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#core-ddd-concepts">Core DDD Concepts</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#1-ubiquitous-language">1. Ubiquitous Language</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2-bounded-contexts">2. Bounded Contexts</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#3-aggregates">3. Aggregates</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#4-entities">4. Entities</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#5-value-objects">5. Value Objects</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#6-domain-services">6. Domain Services</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#7-repositories">7. Repositories</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#8-domain-events">8. Domain Events</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../debugging-workflow/">Debugging Workflow</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../bug-taxonomy/">Bug Taxonomy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hypothesis-guide/">Hypothesis Guide</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Pytest Fixer</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Reference</li>
+      <li class="breadcrumb-item active">DDD Principles</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="reference-domain-driven-design-ddd-principles">Reference: Domain-Driven Design (DDD) Principles</h1>
+<p>This document provides a reference for the core concepts of Domain-Driven Design (DDD) that inform the architecture of the <code>pytest-fixer</code> project. These principles help in building a robust, maintainable, and scalable system by aligning the software design with the business domain.</p>
+<hr />
+<h2 id="core-ddd-concepts">Core DDD Concepts</h2>
+<h3 id="1-ubiquitous-language">1. Ubiquitous Language</h3>
+<p>A shared, rigorous language between developers and domain experts. This language is used in all forms of communication, including code, to eliminate ambiguity and ensure that the software model accurately reflects the domain.</p>
+<p><strong>In <code>pytest-fixer</code>:</strong> Terms like <code>TestError</code>, <code>FixAttempt</code>, <code>FixSession</code>, and <code>GenerationStrategy</code> are part of the ubiquitous language.</p>
+<h3 id="2-bounded-contexts">2. Bounded Contexts</h3>
+<p>A boundary within which a particular domain model is defined and applicable. Each bounded context has its own ubiquitous language and model. This helps to manage complexity by breaking down a large system into smaller, more manageable parts.</p>
+<p><strong>In <code>pytest-fixer</code>:</strong> We have two primary bounded contexts:
+-   <strong>Test Generation Context</strong>: Responsible for creating new tests.
+-   <strong>Branch Fixing Context</strong>: Responsible for fixing failing tests.</p>
+<h3 id="3-aggregates">3. Aggregates</h3>
+<p>A cluster of associated objects that are treated as a single unit for the purpose of data changes. An aggregate has a root entity, known as the <strong>Aggregate Root</strong>, which is the only member of the aggregate that outside objects are allowed to hold references to. This ensures the consistency and integrity of the objects within the aggregate.</p>
+<h3 id="4-entities">4. Entities</h3>
+<p>Objects that have a distinct identity that runs through time and different states. They are not defined by their attributes, but rather by their thread of continuity and identity.</p>
+<h3 id="5-value-objects">5. Value Objects</h3>
+<p>Objects that describe a characteristic or an attribute of a domain, but have no conceptual identity. They are immutable and are defined by their attributes. Two value objects with the same attributes are considered equal.</p>
+<h3 id="6-domain-services">6. Domain Services</h3>
+<p>Operations that don't naturally fit within an entity or value object. They represent a stateless operation within the domain layer that acts on domain objects.</p>
+<h3 id="7-repositories">7. Repositories</h3>
+<p>Mediates between the domain and data mapping layers, providing a collection-like interface for accessing domain objects. They encapsulate the logic required to obtain object references and persist changes.</p>
+<h3 id="8-domain-events">8. Domain Events</h3>
+<p>A record of something that happened in the domain. They are used to communicate changes between different parts of the system, often across bounded contexts, in a decoupled manner.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../../design-and-research/03-git-api-design/" class="btn btn-neutral float-left" title="Git API Design"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../debugging-workflow/" class="btn btn-neutral float-right" title="Debugging Workflow">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../../design-and-research/03-git-api-design/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../debugging-workflow/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

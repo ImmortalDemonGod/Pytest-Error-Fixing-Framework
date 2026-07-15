@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Execution Flow - Pytest Fixer</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Execution Flow";
+        var mkdocs_page_input_path = "developer-guide/04-execution-flow.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Pytest Fixer
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User Guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user-guide/01-installation/">Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user-guide/02-quickstart/">Quick Start</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user-guide/03-cli-reference/">CLI Reference</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developer Guide</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../01-architecture/">Architecture</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../02-contribution-guide/">Contributing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../03-testing-strategy/">Testing Strategy</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Execution Flow</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#1-program-entry-point">1. Program Entry Point</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#11-cli-entry-run_clipy">1.1 CLI Entry (run_cli.py)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#12-component-initialization">1.2 Component Initialization</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#2-test-discovery-and-analysis">2. Test Discovery and Analysis</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#21-test-execution-testrunnerrun_test">2.1 Test Execution (TestRunner.run_test)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#22-error-processing-parse_pytest_errors">2.2 Error Processing (parse_pytest_errors)</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#3-fix-attempt-workflow">3. Fix Attempt Workflow</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#31-fix-service-implementation">3.1 Fix Service Implementation</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#32-ai-manager-operation">3.2 AI Manager Operation</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#4-git-operations">4. Git Operations</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#41-branch-management">4.1 Branch Management</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#42-git-command-execution">4.2 Git Command Execution</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#5-error-handling">5. Error Handling</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#51-error-hierarchy">5.1 Error Hierarchy</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#52-recovery-implementation-optional">5.2 Recovery Implementation (Optional)</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#6-state-management">6. State Management</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#61-state-transition-validation">6.1 State Transition Validation</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#62-progress-tracking">6.2 Progress Tracking</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#7-orchestrator-session-flow">7. Orchestrator &amp; Session Flow</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#71-orchestrator-session">7.1 Orchestrator &amp; Session</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#72-resource-cleanup">7.2 Resource Cleanup</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#8-dispatcher-coordinator-modules">8. Dispatcher &amp; Coordinator Modules</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#9-areas-needing-further-implementation">9. Areas Needing Further Implementation</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#conclusion">Conclusion</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" >LLM Prompts</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../prompts/pytest-generation/">Pytest Generation</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../prompts/Code-Refactoring-Instructions/">Code Refactoring</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../prompts/Structured-Test-Development-Process/">Structured Test Development</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../prompts/test-refactoring/">Test Refactoring</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design & Research</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../design-and-research/01-strategic-analysis/">Strategic Analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../design-and-research/02-swe-bench-strategy/">SWE-bench Strategy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../design-and-research/03-git-api-design/">Git API Design</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/ddd-principles/">DDD Principles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/debugging-workflow/">Debugging Workflow</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/bug-taxonomy/">Bug Taxonomy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/hypothesis-guide/">Hypothesis Guide</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Pytest Fixer</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Developer Guide</li>
+      <li class="breadcrumb-item active">Execution Flow</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="program-execution-flow-documentation-updated"><strong>Program Execution Flow Documentation (Updated)</strong></h1>
+<h2 id="1-program-entry-point"><strong>1. Program Entry Point</strong></h2>
+<h3 id="11-cli-entry-run_clipy"><strong>1.1 CLI Entry (<code>run_cli.py</code>)</strong></h3>
+<ul>
+<li>The program begins in <strong><code>run_cli.py</code></strong> where a <code>@click.group()</code> command named <code>fix</code> is defined.  </li>
+<li><strong>Command Line Arguments</strong> are parsed for things like <code>--api-key</code>, <code>--max-retries</code>, <code>--test-path</code>, etc.  </li>
+<li><strong>Initialization Steps</strong>:</li>
+<li><strong>Logging</strong>: <code>setup_logging()</code> configures console + file logging.  </li>
+<li><strong>CLI instance</strong>: <code>cli = CLI()</code> is created.  </li>
+<li><strong>Component setup</strong>: <code>cli.setup_components(...)</code> creates <code>AIManager</code>, <code>TestRunner</code>, <code>ChangeApplier</code>, <code>GitRepository</code>, and the <code>FixService</code>. An optional <code>FixOrchestrator</code> is also instantiated for session-based flows.  </li>
+<li><strong>Signal Handlers</strong>: For graceful exit on Ctrl-C or termination.  </li>
+<li><strong>Cleanup</strong>: If <code>--cleanup-only</code> was passed, we call <code>cli.cleanup()</code> and exit. Otherwise, we proceed to discover failing tests and attempt fixes.</li>
+</ul>
+<p><strong>Example</strong> (from <code>run_cli.py</code>):</p>
+<pre><code class="language-python">@click.command()
+@click.option('--api-key', envvar='OPENAI_API_KEY', required=True)
+@click.option('--max-retries', default=3)
+@click.option('--initial-temp', default=0.4)
+@click.option('--temp-increment', default=0.1)
+@click.option('--non-interactive', is_flag=True)
+@click.option('--test-path', type=click.Path(exists=True, path_type=Path))
+@click.option('--test-function')
+@click.option('--cleanup-only', is_flag=True)
+def fix(...):
+    setup_logging()
+    cli = CLI()
+    if not cli.setup_components(...):
+        return 1
+    ...
+</code></pre>
+<h3 id="12-component-initialization"><strong>1.2 Component Initialization</strong></h3>
+<p>Within <code>cli.setup_components(...)</code>:</p>
+<pre><code class="language-python">def setup_components(self, api_key: str, max_retries: int, 
+                    initial_temp: float, temp_increment: float) -&gt; bool:
+    try:
+        # 1) Instantiate AIManager, TestRunner, etc.
+        # 2) Create FixService
+        # 3) (Optional) Create FixOrchestrator
+        # 4) Validate workspace + dependencies
+        return True
+    except Exception as e:
+        ...
+</code></pre>
+<p>If successful, the user (or CLI) runs tests and attempts to fix discovered failures.</p>
+<hr />
+<h2 id="2-test-discovery-and-analysis"><strong>2. Test Discovery and Analysis</strong></h2>
+<h3 id="21-test-execution-testrunnerrun_test"><strong>2.1 Test Execution (<code>TestRunner.run_test</code>)</strong></h3>
+<ul>
+<li>The CLI calls <code>test_runner.run_test(...)</code> to run <code>pytest</code> in a “headless” mode, registering a <code>PytestPlugin</code> that captures test output.  </li>
+<li><strong>SessionResult</strong> is updated with how many tests passed/failed, plus the final <code>exit_code</code>.</li>
+</ul>
+<p><strong>Key Steps</strong>:
+1. Create base pytest arguments (disable <code>addopts</code>, turn off terminal UI).<br />
+2. If <code>--test-path</code> or <code>--test-function</code> was passed, append them to <code>args</code>.<br />
+3. Invoke <code>pytest.main(args, plugins=[plugin])</code>.<br />
+4. On completion, record the <code>end_time</code>, <code>duration</code>, and final <code>exit_code</code>.</p>
+<pre><code class="language-python">def run_test(self, test_path=None, test_function=None) -&gt; SessionResult:
+    start_time = datetime.now()
+    ...
+    exit_code = pytest.main(args, plugins=[plugin])
+    ...
+    self._current_session.exit_code = ExitCode(exit_code)
+    return self._current_session
+</code></pre>
+<h3 id="22-error-processing-parse_pytest_errors"><strong>2.2 Error Processing (<code>parse_pytest_errors</code>)</strong></h3>
+<ul>
+<li>After the test run, the CLI calls <code>parse_pytest_errors(session_result.output)</code> to convert the textual output into a list of <code>TestError</code>s.  </li>
+<li>Each error has fields like <code>test_file</code>, <code>test_function</code>, <code>error_details.error_type</code>, and <code>error_details.message</code>.</li>
+</ul>
+<pre><code class="language-python">def parse_pytest_errors(output: str) -&gt; List[TestError]:
+    # Regex to find &quot;FAILED file::func&quot; blocks
+    # For each match, extract error type + message
+    return test_errors
+</code></pre>
+<hr />
+<h2 id="3-fix-attempt-workflow"><strong>3. Fix Attempt Workflow</strong></h2>
+<h3 id="31-fix-service-implementation"><strong>3.1 Fix Service Implementation</strong></h3>
+<p>The <strong><code>FixService</code></strong> handles the actual fix logic for a single <code>TestError</code>:
+1. <strong>Validate</strong> the workspace.<br />
+2. <strong>Generate</strong> code changes via <code>AIManager.generate_fix</code>.<br />
+3. <strong>Apply</strong> changes with backup (<code>ChangeApplier.apply_changes_with_backup</code>).<br />
+4. <strong>Verify</strong> by re-running the test. If it fails, revert.<br />
+5. Mark the <code>TestError</code> as fixed (or failed).</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="language-python">def attempt_fix(self, error: TestError) -&gt; bool:
+    # 1) Validate workspace
+    # 2) Possibly skip if dev_force_success
+    # 3) Generate fix -&gt; apply -&gt; verify
+    # 4) Revert if needed
+    # 5) Return True/False
+</code></pre>
+<h3 id="32-ai-manager-operation"><strong>3.2 AI Manager Operation</strong></h3>
+<p><strong><code>AIManager.generate_fix(...)</code></strong>:
+- Optionally consult a “StateManager” or “RecoveryManager” to handle advanced flows.<br />
+- Generate code changes via an LLM call (<code>litellm</code> or <code>marvin</code> or whichever backend).
+- If certain attempts fail, it tries to adapt (temperature +0.1 or +0.2).<br />
+- Returns <code>CodeChanges</code> on success.</p>
+<pre><code class="language-python">def generate_fix(self, error: TestError, temperature: float) -&gt; CodeChanges:
+    # Build LLM prompt
+    # Post-process AI output =&gt; CodeChanges
+    ...
+</code></pre>
+<p>If the fix is validated, we mark success. Otherwise, the fix attempt is flagged as failed and can trigger rollback or incremental changes.</p>
+<hr />
+<h2 id="4-git-operations"><strong>4. Git Operations</strong></h2>
+<h3 id="41-branch-management"><strong>4.1 Branch Management</strong></h3>
+<p>Often, the fix is done on a new branch named <code>fix-{test_file_stem}-{test_function}</code>, so we can create a PR or revert easily:</p>
+<pre><code class="language-python">async def create_fix_branch(self, branch_name, from_branch=None) -&gt; bool:
+    # Validate name
+    # if exists -&gt; raise
+    # run_command('git checkout -b ...')
+    ...
+</code></pre>
+<h3 id="42-git-command-execution"><strong>4.2 Git Command Execution</strong></h3>
+<p><strong><code>run_command(['git', 'checkout', ...])</code></strong> spawns an async subprocess for Git:</p>
+<pre><code class="language-python">async def run_command(self, cmd: List[str]) -&gt; CommandResult:
+    process = await asyncio.create_subprocess_exec(...)
+    stdout, stderr = await process.communicate()
+    return CommandResult(...)
+</code></pre>
+<hr />
+<h2 id="5-error-handling"><strong>5. Error Handling</strong></h2>
+<h3 id="51-error-hierarchy"><strong>5.1 Error Hierarchy</strong></h3>
+<p>We have specialized exceptions:<br />
+- <strong><code>FixError</code></strong> and subtypes for fix coordination or workflow issues.<br />
+- <strong><code>GitError</code></strong> for Git-based failures.<br />
+- <strong><code>AIManagerError</code></strong> for AI-based failures.</p>
+<p>The CLI or orchestrator might catch these exceptions to revert or log partial success.</p>
+<h3 id="52-recovery-implementation-optional"><strong>5.2 Recovery Implementation (Optional)</strong></h3>
+<p><strong><code>RecoveryManager</code></strong> can do advanced rollbacks:</p>
+<pre><code class="language-python">async def handle_failure(self, error, session, context):
+    # Find last checkpoint
+    # Restore files
+    # Reset branch
+    return True/False
+</code></pre>
+<p>This is used if you want to revert to a known good state after a partial fix failure.</p>
+<hr />
+<h2 id="6-state-management"><strong>6. State Management</strong></h2>
+<h3 id="61-state-transition-validation"><strong>6.1 State Transition Validation</strong></h3>
+<p>If using the <strong>Orchestrator</strong> with session-based flows:</p>
+<pre><code class="language-python">def validate_transition(self, from_state: 'FixSessionState', to_state: 'FixSessionState'):
+    # 'INITIALIZING' -&gt; {'RUNNING','FAILED'}, etc.
+</code></pre>
+<p>We only allow valid transitions, e.g. <code>RUNNING -&gt; COMPLETED</code>.</p>
+<h3 id="62-progress-tracking"><strong>6.2 Progress Tracking</strong></h3>
+<p><strong><code>FixProgress</code></strong> is a data class that can track how many total errors vs. how many have been fixed, the current error, etc. If integrated, it can be used to update a UI or logs as the session proceeds.</p>
+<hr />
+<h2 id="7-orchestrator-session-flow"><strong>7. Orchestrator &amp; Session Flow</strong></h2>
+<h3 id="71-orchestrator-session"><strong>7.1 Orchestrator &amp; Session</strong></h3>
+<p>A <strong><code>FixOrchestrator</code></strong> can manage an entire session (<code>FixSession</code>), which includes:
+- <code>INITIALIZING</code>, <code>RUNNING</code>, <code>PAUSED</code>, <code>COMPLETED</code>, <code>FAILED</code>, or <code>ERROR</code>.<br />
+- A list of <code>TestError</code>s to fix, plus references to a <code>RecoveryManager</code> if needed.<br />
+- Methods like <code>start_session(...)</code> and <code>run_session(...)</code> to handle the entire multi-error fix flow.</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="language-python">async def run_session(self, session_id: UUID) -&gt; bool:
+    # For each error in session.errors:
+    #   fix_error()
+    #   if fail -&gt; session.state = FAILED
+    # session.state = COMPLETED
+    return True/False
+</code></pre>
+<h3 id="72-resource-cleanup"><strong>7.2 Resource Cleanup</strong></h3>
+<p>At the end (or if the user hits Ctrl-C), the CLI calls <code>cli.cleanup()</code>:
+1. Remove leftover fix branches.<br />
+2. Checkout main.<br />
+3. Possibly revert partial changes if desired.</p>
+<hr />
+<h2 id="8-dispatcher-coordinator-modules"><strong>8. Dispatcher &amp; Coordinator Modules</strong></h2>
+<ul>
+<li><strong><code>dispatcher.py</code></strong> (WorkflowDispatcher) and <strong><code>coordinator.py</code></strong> (SessionCoordinator) exist as <strong>placeholders</strong> for more advanced or parallel fix flows.  </li>
+<li>They are <strong>not</strong> actively used in the standard path. If you plan more sophisticated multi-session coordination or specialized component error handling, you would finish and call them.</li>
+</ul>
+<hr />
+<h2 id="9-areas-needing-further-implementation"><strong>9. Areas Needing Further Implementation</strong></h2>
+<ol>
+<li><strong>Session &amp; State Persistence</strong>  </li>
+<li>
+<p>If you want to track and resume fix sessions across runs, complete <code>SessionStore</code> usage in the orchestrator or <code>FixService</code>.</p>
+</li>
+<li>
+<p><strong>Recovery Mechanisms</strong>  </p>
+</li>
+<li>
+<p>Decide how thoroughly you want to roll back partial fixes (entire Git branch or just a file’s changes).</p>
+</li>
+<li>
+<p><strong>PR Management</strong>  </p>
+</li>
+<li>
+<p>Code for creating a PR is partial (<code>create_pull_request_sync</code>). Could integrate with GitHub/GitLab for a real flow.</p>
+</li>
+<li>
+<p><strong>Testing Infrastructure</strong>  </p>
+</li>
+<li>Expand coverage for fix attempts, partial reverts, concurrency, and performance.</li>
+</ol>
+<hr />
+<h2 id="conclusion"><strong>Conclusion</strong></h2>
+<p>This updated <strong>Program Execution Flow</strong> outlines how:</p>
+<ol>
+<li><strong><code>run_cli.py</code></strong> sets up the CLI,  </li>
+<li><strong><code>CLI.setup_components()</code></strong> builds the essential services,  </li>
+<li><strong><code>TestRunner</code></strong> discovers failing tests,  </li>
+<li><strong><code>FixService</code></strong> attempts to fix them (with optional <code>AIManager</code>, <code>ChangeApplier</code>, and <strong><code>RecoveryManager</code></strong>),  </li>
+<li><strong><code>Orchestrator</code></strong> optionally manages session states,  </li>
+<li>And we finalize with cleanup, removing branches and checking out the main branch again.</li>
+</ol>
+<p>Unused modules like <strong><code>dispatcher.py</code></strong> and <strong><code>coordinator.py</code></strong> remain for future advanced workflows.  </p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../03-testing-strategy/" class="btn btn-neutral float-left" title="Testing Strategy"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../prompts/pytest-generation/" class="btn btn-neutral float-right" title="Pytest Generation">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../03-testing-strategy/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../prompts/pytest-generation/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

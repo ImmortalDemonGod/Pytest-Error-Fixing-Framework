@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>Test Refactoring - Pytest Fixer</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Test Refactoring";
+        var mkdocs_page_input_path = "developer-guide/prompts/test-refactoring.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> Pytest Fixer
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../..">Home</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User Guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../user-guide/01-installation/">Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../user-guide/02-quickstart/">Quick Start</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../user-guide/03-cli-reference/">CLI Reference</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developer Guide</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../../01-architecture/">Architecture</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../02-contribution-guide/">Contributing</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../03-testing-strategy/">Testing Strategy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../04-execution-flow/">Execution Flow</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" >LLM Prompts</a>
+    <ul class="current">
+                <li class="toctree-l2"><a class="reference internal" href="../pytest-generation/">Pytest Generation</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../Code-Refactoring-Instructions/">Code Refactoring</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../Structured-Test-Development-Process/">Structured Test Development</a>
+                </li>
+                <li class="toctree-l2 current"><a class="reference internal current" href="#">Test Refactoring</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design & Research</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../design-and-research/01-strategic-analysis/">Strategic Analysis</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../design-and-research/02-swe-bench-strategy/">SWE-bench Strategy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../design-and-research/03-git-api-design/">Git API Design</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../reference/ddd-principles/">DDD Principles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../reference/debugging-workflow/">Debugging Workflow</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../reference/bug-taxonomy/">Bug Taxonomy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../reference/hypothesis-guide/">Hypothesis Guide</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">Pytest Fixer</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Developer Guide</li>
+          <li class="breadcrumb-item">LLM Prompts</li>
+      <li class="breadcrumb-item active">Test Refactoring</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <p>You are given one or more automatically generated Python test files that test various classes and functions. These tests may have issues such as poor naming conventions, inconsistent usage of self, lack of setUp methods, minimal docstrings, redundant or duplicate tests, and limited assertion coverage. They may also fail to leverage hypothesis and unittest.mock effectively, and might not be logically grouped.</p>
+<p>Your task is to produce a single, consolidated, high-quality test file from the given input files. The refactored test file should incorporate the following improvements:
+    1.  Consolidation and Organization:
+        •   Combine all tests from the provided files into one coherent Python test file.
+        •   Group tests into classes that correspond logically to the functionality they are testing. For example, separate test classes by the class or function under test (e.g., TestDataPoint, TestMathOperationsAdd).
+        •   Within each class, order test methods logically (e.g., basic functionality first, edge cases, error handling, and round-trip tests afterward).
+    2.  Clean, Readable Code:
+        •   Use descriptive, PEP 8-compliant class and method names.
+        •   Add docstrings to each test class and test method, explaining their purpose and what they verify.
+        •   Remove redundant, duplicate, or meaningless tests. Combine or refactor tests that cover the same functionality into a single, comprehensive test method when appropriate.
+    3.  Proper Test Fixtures:
+        •   Utilize setUp methods to instantiate commonly used objects before each test method, reducing redundancy.
+        •   Ensure that instance methods of classes under test are called on properly instantiated objects rather than passing self incorrectly as an argument.
+    4.  Robust Assertions and Coverage:
+        •   Include multiple assertions in each test to thoroughly verify behavior and correctness.
+        •   Use unittest’s assertRaises for expected exceptions to validate error handling.
+        •   Implement at least one round-trip test (e.g., encode then decode a data structure, or transform an object multiple times to ensure idempotency).
+    5.  Effective Use of Hypothesis:
+        •   Employ hypothesis to generate a wide range of input data, ensuring better coverage and exposing edge cases.
+        •   Use strategies like st.builds to create complex objects (e.g., custom dataclasses) with varied attribute values.
+        •   Enforce constraints (e.g., allow_nan=False) to avoid nonsensical test inputs.
+    6.  Mocking External Dependencies:
+        •   Use unittest.mock where appropriate to simulate external dependencies or environments, ensuring tests are reliable and isolated from external conditions.</p>
+<p>Input:</p>
+<p>TEST CODE:
+FULL SRC CODE:</p>
+<p>Output:
+Provide a single Python code block containing the fully refactored, consolidated test file. The output should be ready-to-run with python -m unittest and should exhibit all the improvements listed above.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../Structured-Test-Development-Process/" class="btn btn-neutral float-left" title="Structured Test Development"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../../../design-and-research/01-strategic-analysis/" class="btn btn-neutral float-right" title="Strategic Analysis">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../Structured-Test-Development-Process/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../../../design-and-research/01-strategic-analysis/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../../..";</script>
+    <script src="../../../js/theme_extra.js"></script>
+    <script src="../../../js/theme.js"></script>
+      <script src="../../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
