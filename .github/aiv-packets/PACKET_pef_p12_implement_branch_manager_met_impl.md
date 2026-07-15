@@ -6,10 +6,10 @@
 |-------|-------|
 | **Repository** | github.com/ImmortalDemonGod/aiv-protocol |
 | **Change ID** | pef-p12-implement-branch-manager-met-impl |
-| **Commits** | `3522d79` |
-| **Head SHA** | `3522d79` |
-| **Base SHA** | `4ee31be` |
-| **Created** | 2026-07-15T17:50:06Z |
+| **Commits** | `0190e25` |
+| **Head SHA** | `0190e25` |
+| **Base SHA** | `9147eaf` |
+| **Created** | 2026-07-15T17:52:53Z |
 
 ## Classification
 
@@ -21,7 +21,7 @@ classification:
   blast_radius: component
   classification_rationale: "TODO: Describe why this tier was chosen"
   classified_by: "Claude"
-  classified_at: "2026-07-15T17:50:06Z"
+  classified_at: "2026-07-15T17:52:53Z"
 ```
 
 ## Claims
@@ -35,17 +35,15 @@ classification:
 
 | # | Evidence File | Commit SHA | Classes |
 |---|---------------|------------|---------|
-| 1 | EVIDENCE_BRANCH_FIXER_SERVICES_GIT_BRANCH_MANAGER.md | `3522d79` | A, B, E |
+| 1 | EVIDENCE_TESTS_UNIT_GIT_TEST_BRANCH_MANAGER.md | `0190e25` | A, B, E |
 
 
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (from 3 file references across evidence files)
+**Scope Inventory** (from 1 file references across evidence files)
 
-- `src/branch_fixer/services/git/branch_manager.py#L3-L4`
-- `src/branch_fixer/services/git/branch_manager.py#L170-L196`
-- `src/branch_fixer/services/git/branch_manager.py#L252-L262`
+- `tests/unit/git/test_branch_manager.py#L336-L351`
 
 ---
 
