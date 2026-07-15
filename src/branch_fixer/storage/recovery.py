@@ -132,7 +132,7 @@ class RecoveryManager:
         if not self.recovery_index_file.exists():
             self.recovery_index_file.write_text("[]", encoding="utf-8")
 
-    async def create_checkpoint(
+    def create_checkpoint(
         self, session: "FixSession", metadata: Optional[Dict] = None
     ) -> RecoveryPoint:
         """
@@ -171,7 +171,7 @@ class RecoveryManager:
         except Exception as e:
             raise CheckpointError(f"Failed to create checkpoint: {e}") from e
 
-    async def restore_checkpoint(
+    def restore_checkpoint(
         self, checkpoint_id: str, cleanup: bool = True
     ) -> bool:
         """
@@ -222,7 +222,7 @@ class RecoveryManager:
                 f"Failed to restore checkpoint {checkpoint_id}: {e}"
             ) from e
 
-    async def handle_failure(
+    def handle_failure(
         self, error: Exception, session: "FixSession", context: Dict[str, Any]
     ) -> bool:
         """
@@ -256,7 +256,7 @@ class RecoveryManager:
 
         try:
             print(f"Attempting to restore last checkpoint {latest_rp.id}")
-            restored = await self.restore_checkpoint(latest_rp.id, cleanup=False)
+            restored = self.restore_checkpoint(latest_rp.id, cleanup=False)
             print(f"Restore result: {restored}")
             return restored
         except RestoreError as e:
