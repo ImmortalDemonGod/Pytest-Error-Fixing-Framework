@@ -6,10 +6,10 @@
 |-------|-------|
 | **Repository** | github.com/ImmortalDemonGod/aiv-protocol |
 | **Change ID** | pef-p29-fix-always-true-and-broken-r-impl |
-| **Commits** | `f477028`, `874c5c1` |
-| **Head SHA** | `874c5c1` |
-| **Base SHA** | `156ab2d` |
-| **Created** | 2026-07-15T18:05:44Z |
+| **Commits** | `cda07e1`, `a95b8c3` |
+| **Head SHA** | `a95b8c3` |
+| **Base SHA** | `594620f` |
+| **Created** | 2026-07-15T18:14:26Z |
 
 ## Classification
 
@@ -21,7 +21,7 @@ classification:
   blast_radius: component
   classification_rationale: "TODO: Describe why this tier was chosen"
   classified_by: "Claude"
-  classified_at: "2026-07-15T18:05:44Z"
+  classified_at: "2026-07-15T18:14:26Z"
 ```
 
 ## Claims
@@ -35,8 +35,8 @@ classification:
 
 | # | Evidence File | Commit SHA | Classes |
 |---|---------------|------------|---------|
-| 1 | EVIDENCE_TESTS_UNIT_ORCHESTRATION_TEST_ORCHESTRATOR.md | `f477028` | A, B, E |
-| 2 | EVIDENCE_TESTS_UNIT_SERVICES_PYTEST_TEST_RUNNER.md | `874c5c1` | A, B, E |
+| 1 | EVIDENCE_TESTS_UNIT_ORCHESTRATION_TEST_ORCHESTRATOR.md | `cda07e1` | A, B, E |
+| 2 | EVIDENCE_TESTS_UNIT_SERVICES_PYTEST_TEST_RUNNER.md | `a95b8c3` | A, B, E |
 
 
 
