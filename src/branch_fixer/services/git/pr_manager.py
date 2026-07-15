@@ -107,6 +107,8 @@ class PRManager:
             status=PRStatus.OPEN,
             created_at=datetime.now(),
             url=url,
+            modified_files=modified_files,
+            metadata=metadata if metadata is not None else {},
         )
         self.prs[pr_id] = details
         return details
