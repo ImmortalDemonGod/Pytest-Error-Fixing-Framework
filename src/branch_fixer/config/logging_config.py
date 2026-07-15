@@ -27,6 +27,10 @@ def setup_logging():
     snoop_logger = logging.getLogger("snoop")
     snoop_logger.setLevel(logging.INFO)
 
+    # Remove any existing handlers to keep setup_logging idempotent
+    for existing_handler in list(snoop_logger.handlers):
+        snoop_logger.removeHandler(existing_handler)
+
     # Create a handler for snoop
     snoop_handler = logging.FileHandler(str(log_file))
     snoop_handler.setFormatter(
