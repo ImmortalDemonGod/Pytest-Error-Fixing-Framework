@@ -215,7 +215,10 @@ class PytestRunner:
 
         for test_id, result in self._current_session.test_results.items():
             if result.failed:
-                file_path, test_name = test_id.split("::", 1)
+                if "::" in test_id:
+                    file_path, test_name = test_id.split("::", 1)
+                else:
+                    file_path, test_name = test_id, ""
                 lines.append(f"FAILED {file_path} {test_name}")
                 if result.error_message:
                     lines.append(f"E   {result.error_message}")
@@ -384,13 +387,18 @@ class PytestRunner:
         """
         Extracted method to handle all pass/fail/xfail logic for each reported outcome.
         """
-        # A test is considered 'passed' if setup and teardown pass,
-        # and the call is either passed or skipped.
+        # A test is considered 'passed' only if setup, call, and teardown all pass.
         result.passed = (
             result.setup_outcome == "passed"
-            and (result.call_outcome == "passed" or result.call_outcome == "skipped")
+            and result.call_outcome == "passed"
             and result.teardown_outcome == "passed"
         )
+
+        # A test is considered 'skipped' if any phase reported a skip outcome
+        # (e.g. @pytest.mark.skip skips in setup), unless it's an xfail.
+        result.skipped = (
+            result.setup_outcome == "skipped" or result.call_outcome == "skipped"
+        ) and not result.xfailed
 
         # Handle xfail cases properly
         if hasattr(report, "wasxfail"):
