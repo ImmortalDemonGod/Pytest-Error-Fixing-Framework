@@ -1,6 +1,7 @@
 # branch_fixer/services/git/branch_manager.py
 import re
-from typing import Optional, Set
+from pathlib import Path
+from typing import List, Optional, Set
 
 # Add the missing GitRepository import (adjust the path if needed)
 from typing import TYPE_CHECKING
@@ -166,7 +167,33 @@ class BranchManager:
         Raises:
             GitError: If status check fails
         """
-        raise NotImplementedError()
+        try:
+            current_branch = self.repository.get_current_branch()
+            is_current = current_branch == branch_name
+
+            commit_result = self.repository.run_command(["rev-parse", branch_name])
+            last_commit = commit_result.stdout.strip()
+
+            upstream_result = self.repository.run_command(
+                ["for-each-ref", "--format=%(upstream:short)", f"refs/heads/{branch_name}"]
+            )
+            upstream = upstream_result.stdout.strip() or None
+
+            modified_files: List[Path] = []
+            if is_current:
+                modified_files = [
+                    Path(item.a_path) for item in self.repository.repo.index.diff(None)
+                ]
+
+            return BranchMetadata(
+                name=branch_name,
+                current=is_current,
+                upstream=upstream,
+                last_commit=last_commit,
+                modified_files=modified_files,
+            )
+        except Exception as e:
+            raise GitError(f"Failed to get branch metadata for {branch_name}: {str(e)}") from e
 
     def validate_branch_name(self, branch_name: str) -> bool:
         """Validate branch name follows conventions.
@@ -222,4 +249,14 @@ class BranchManager:
         Raises:
             GitError: If check fails
         """
-        raise NotImplementedError()
+        try:
+            target = target_branch or self.repository.main_branch
+            result = self.repository.run_command(["branch", "--merged", target])
+            merged_branches = {
+                line.strip().lstrip("*").strip() for line in result.stdout.splitlines()
+            }
+            return branch_name in merged_branches
+        except Exception as e:
+            raise GitError(
+                f"Failed to check if branch {branch_name} is merged: {str(e)}"
+            ) from e
