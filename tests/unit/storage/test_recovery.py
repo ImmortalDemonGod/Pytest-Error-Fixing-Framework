@@ -1,4 +1,3 @@
-import asyncio
 import json
 import uuid
 from types import SimpleNamespace
@@ -131,8 +130,7 @@ class TestRecoveryManager:
             with pytest.raises(PermissionError):
                 RecoveryManager(session_store=session_store, git_repo=git_repo, backup_dir=backup_dir)
 
-    @pytest.mark.asyncio
-    async def test_create_checkpoint_saves_rp_and_calls_session_store(self, tmp_path, session_store, git_repo):
+    def test_create_checkpoint_saves_rp_and_calls_session_store(self, tmp_path, session_store, git_repo):
         backup_dir = tmp_path / "bk"
         manager = RecoveryManager(session_store=session_store, git_repo=git_repo, backup_dir=backup_dir)
 
@@ -142,7 +140,7 @@ class TestRecoveryManager:
         # ensure file exists per rule about file operations
         (backup_dir / "file1.txt").write_text("content", encoding="utf-8")
 
-        rp = await manager.create_checkpoint(session, metadata={"a": 1})
+        rp = manager.create_checkpoint(session, metadata={"a": 1})
 
         # check returned rp
         assert isinstance(rp, RecoveryPoint)
@@ -157,8 +155,7 @@ class TestRecoveryManager:
         data = json.loads(idx.read_text(encoding="utf-8"))
         assert any(entry["id"] == rp.id for entry in data)
 
-    @pytest.mark.asyncio
-    async def test_create_checkpoint_propagates_as_checkpoint_error_on_inner_exception(self, tmp_path, session_store, git_repo):
+    def test_create_checkpoint_propagates_as_checkpoint_error_on_inner_exception(self, tmp_path, session_store, git_repo):
         backup_dir = tmp_path / "bk2"
         manager = RecoveryManager(session_store=session_store, git_repo=git_repo, backup_dir=backup_dir)
 
@@ -167,30 +164,27 @@ class TestRecoveryManager:
         session = SimpleNamespace(id=uuid.uuid4(), modified_files=[])
 
         with pytest.raises(CheckpointError) as excinfo:
-            await manager.create_checkpoint(session, metadata=None)
+            manager.create_checkpoint(session, metadata=None)
         assert "boom" in str(excinfo.value)
 
-    @pytest.mark.asyncio
-    async def test_create_checkpoint_metadata_defaults_to_empty_dict(self, tmp_path, session_store, git_repo):
+    def test_create_checkpoint_metadata_defaults_to_empty_dict(self, tmp_path, session_store, git_repo):
         backup_dir = tmp_path / "bk3"
         manager = RecoveryManager(session_store=session_store, git_repo=git_repo, backup_dir=backup_dir)
 
         session = SimpleNamespace(id=uuid.uuid4(), modified_files=[])
-        rp = await manager.create_checkpoint(session, metadata=None)
+        rp = manager.create_checkpoint(session, metadata=None)
         assert rp.metadata == {}
 
-    @pytest.mark.asyncio
-    async def test_restore_checkpoint_not_found_raises_restore_error(self, tmp_path, session_store, git_repo):
+    def test_restore_checkpoint_not_found_raises_restore_error(self, tmp_path, session_store, git_repo):
         backup_dir = tmp_path / "bk4"
         manager = RecoveryManager(session_store=session_store, git_repo=git_repo, backup_dir=backup_dir)
 
         with pytest.raises(RestoreError) as excinfo:
-            await manager.restore_checkpoint("no-such-id")
+            manager.restore_checkpoint("no-such-id")
         # message should mention checkpoint id or not found
         assert "no-such-id" in str(excinfo.value) or "not found" in str(excinfo.value)
 
-    @pytest.mark.asyncio
-    async def test_restore_checkpoint_branch_matches_removes_checkpoint_when_cleanup_true(self, tmp_path, session_store, git_repo):
+    def test_restore_checkpoint_branch_matches_removes_checkpoint_when_cleanup_true(self, tmp_path, session_store, git_repo):
         backup_dir = tmp_path / "bk5"
         manager = RecoveryManager(session_store=session_store, git_repo=git_repo, backup_dir=backup_dir)
 
@@ -198,14 +192,13 @@ class TestRecoveryManager:
         manager._save_recovery_point(rp)
 
         # current branch from git_repo is "main" by fixture default
-        result = await manager.restore_checkpoint(rp.id, cleanup=True)
+        result = manager.restore_checkpoint(rp.id, cleanup=True)
         assert result is True
 
         # ensure removed
         assert manager._load_recovery_point(rp.id) is None
 
-    @pytest.mark.asyncio
-    async def test_restore_checkpoint_branch_mismatch_checkout_success(self, tmp_path, session_store, git_repo):
+    def test_restore_checkpoint_branch_mismatch_checkout_success(self, tmp_path, session_store, git_repo):
         backup_dir = tmp_path / "bk6"
         manager = RecoveryManager(session_store=session_store, git_repo=git_repo, backup_dir=backup_dir)
 
@@ -217,15 +210,14 @@ class TestRecoveryManager:
 
         # simulate successful checkout
         git_repo.run_command.return_value = SimpleNamespace(failed=False, stderr="")
-        result = await manager.restore_checkpoint(rp.id, cleanup=True)
+        result = manager.restore_checkpoint(rp.id, cleanup=True)
         assert result is True
         # run_command called to checkout the rp.git_branch
         git_repo.run_command.assert_called_with(["checkout", rp.git_branch])
         # entry removed
         assert manager._load_recovery_point(rp.id) is None
 
-    @pytest.mark.asyncio
-    async def test_restore_checkpoint_checkout_failure_raises_restore_error_and_keeps_checkpoint(self, tmp_path, session_store, git_repo):
+    def test_restore_checkpoint_checkout_failure_raises_restore_error_and_keeps_checkpoint(self, tmp_path, session_store, git_repo):
         backup_dir = tmp_path / "bk7"
         manager = RecoveryManager(session_store=session_store, git_repo=git_repo, backup_dir=backup_dir)
 
@@ -236,35 +228,32 @@ class TestRecoveryManager:
         git_repo.run_command.return_value = SimpleNamespace(failed=True, stderr="conflict occurred")
 
         with pytest.raises(RestoreError) as excinfo:
-            await manager.restore_checkpoint(rp.id, cleanup=True)
+            manager.restore_checkpoint(rp.id, cleanup=True)
         assert "conflict occurred" in str(excinfo.value)
         # ensure checkpoint still exists (cleanup should not have been performed)
         assert manager._load_recovery_point(rp.id) is not None
 
-    @pytest.mark.asyncio
-    async def test_restore_checkpoint_cleanup_false_keeps_checkpoint(self, tmp_path, session_store, git_repo):
+    def test_restore_checkpoint_cleanup_false_keeps_checkpoint(self, tmp_path, session_store, git_repo):
         backup_dir = tmp_path / "bk8"
         manager = RecoveryManager(session_store=session_store, git_repo=git_repo, backup_dir=backup_dir)
 
         rp = RecoveryPoint.create(session_id=uuid.uuid4(), git_branch="main", modified_files=[Path("f")], metadata={})
         manager._save_recovery_point(rp)
 
-        result = await manager.restore_checkpoint(rp.id, cleanup=False)
+        result = manager.restore_checkpoint(rp.id, cleanup=False)
         assert result is True
         # checkpoint should still be present
         assert manager._load_recovery_point(rp.id) is not None
 
-    @pytest.mark.asyncio
-    async def test_handle_failure_no_checkpoints_returns_false(self, tmp_path, session_store, git_repo):
+    def test_handle_failure_no_checkpoints_returns_false(self, tmp_path, session_store, git_repo):
         backup_dir = tmp_path / "bk9"
         manager = RecoveryManager(session_store=session_store, git_repo=git_repo, backup_dir=backup_dir)
 
         session = SimpleNamespace(id=uuid.uuid4(), modified_files=[])
-        result = await manager.handle_failure(Exception("x"), session, context={})
+        result = manager.handle_failure(Exception("x"), session, context={})
         assert result is False
 
-    @pytest.mark.asyncio
-    async def test_handle_failure_calls_restore_with_cleanup_false_and_returns_true(self, tmp_path, session_store, git_repo):
+    def test_handle_failure_calls_restore_with_cleanup_false_and_returns_true(self, tmp_path, session_store, git_repo):
         backup_dir = tmp_path / "bk10"
         manager = RecoveryManager(session_store=session_store, git_repo=git_repo, backup_dir=backup_dir)
 
@@ -281,7 +270,7 @@ class TestRecoveryManager:
         # Spy on restore_checkpoint by replacing it with an async function
         called = {}
 
-        async def fake_restore(cpid, cleanup=False):
+        def fake_restore(cpid, cleanup=False):
             called["id"] = cpid
             called["cleanup"] = cleanup
             return True
@@ -290,27 +279,26 @@ class TestRecoveryManager:
         manager.restore_checkpoint = fake_restore
 
         session = SimpleNamespace(id=rp_old.session_id, modified_files=[])
-        result = await manager.handle_failure(Exception("boom"), session, context={})
+        result = manager.handle_failure(Exception("boom"), session, context={})
         assert result is True
         # latest rp should have been used (rp_new)
         assert called["id"] == rp_new.id
         assert called["cleanup"] is False
 
-    @pytest.mark.asyncio
-    async def test_handle_failure_restore_raises_restoreerror_returns_false(self, tmp_path, session_store, git_repo):
+    def test_handle_failure_restore_raises_restoreerror_returns_false(self, tmp_path, session_store, git_repo):
         backup_dir = tmp_path / "bk11"
         manager = RecoveryManager(session_store=session_store, git_repo=git_repo, backup_dir=backup_dir)
 
         rp = RecoveryPoint.create(session_id=uuid.uuid4(), git_branch="main", modified_files=[], metadata={})
         manager._save_recovery_point(rp)
 
-        async def raising_restore(_cid, cleanup=False):
+        def raising_restore(_cid, cleanup=False):
             raise RestoreError("fail")
 
         manager.restore_checkpoint = raising_restore
 
         session = SimpleNamespace(id=rp.session_id, modified_files=[])
-        result = await manager.handle_failure(Exception("err"), session, context={"x": 1})
+        result = manager.handle_failure(Exception("err"), session, context={"x": 1})
         assert result is False
 
     def test_save_recovery_point_appends_to_index(self, tmp_path, session_store, git_repo):
@@ -423,8 +411,7 @@ class TestRecoveryManager:
         with pytest.raises(json.JSONDecodeError):
             manager._list_recovery_points_for_session(uuid.uuid4())
 
-    @pytest.mark.asyncio
-    async def test_end_to_end_checkpoint_and_restore_cycle(self, tmp_path, session_store, git_repo):
+    def test_end_to_end_checkpoint_and_restore_cycle(self, tmp_path, session_store, git_repo):
         backup_dir = tmp_path / "bk22"
         manager = RecoveryManager(session_store=session_store, git_repo=git_repo, backup_dir=backup_dir)
 
@@ -432,17 +419,16 @@ class TestRecoveryManager:
         session = SimpleNamespace(id=sid, modified_files=[backup_dir / "x.txt"])
         (backup_dir / "x.txt").write_text("hello", encoding="utf-8")
 
-        rp = await manager.create_checkpoint(session, metadata={"end": True})
+        rp = manager.create_checkpoint(session, metadata={"end": True})
         assert manager._load_recovery_point(rp.id) is not None
 
         # restore when branch matches
         git_repo.get_current_branch.return_value = rp.git_branch
-        restored = await manager.restore_checkpoint(rp.id, cleanup=True)
+        restored = manager.restore_checkpoint(rp.id, cleanup=True)
         assert restored is True
         assert manager._load_recovery_point(rp.id) is None
 
-    @pytest.mark.asyncio
-    async def test_restore_with_checkout_sequence(self, tmp_path, session_store, git_repo):
+    def test_restore_with_checkout_sequence(self, tmp_path, session_store, git_repo):
         backup_dir = tmp_path / "bk23"
         manager = RecoveryManager(session_store=session_store, git_repo=git_repo, backup_dir=backup_dir)
 
@@ -454,7 +440,7 @@ class TestRecoveryManager:
         git_repo.get_current_branch.return_value = "develop"
         # simulate successful checkout
         git_repo.run_command.return_value = SimpleNamespace(failed=False, stderr="")
-        ok = await manager.restore_checkpoint(rp.id, cleanup=True)
+        ok = manager.restore_checkpoint(rp.id, cleanup=True)
         assert ok is True
         git_repo.run_command.assert_called_with(["checkout", rp.git_branch])
         assert manager._load_recovery_point(rp.id) is None

@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/unit/storage/test_recovery.py`
-**Commit:** `58f90fb`
-**Generated:** 2026-07-15T17:55:56Z
+**Commit:** `7b0d656`
+**Previous:** `f5891ac`
+**Generated:** 2026-07-15T18:04:59Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/unit/storage/test_recovery.py"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T17:55:56Z"
+  classified_at: "2026-07-15T18:04:59Z"
 ```
 
 ## Claim(s)
@@ -36,37 +37,37 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`58f90fb`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/58f90fb940b5ece3c26340396d44ef75f03308d7))
+**Scope Inventory** (SHA: [`7b0d656`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2))
 
-- [`tests/unit/storage/test_recovery.py#L133`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L133)
-- [`tests/unit/storage/test_recovery.py#L143`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L143)
-- [`tests/unit/storage/test_recovery.py#L158`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L158)
-- [`tests/unit/storage/test_recovery.py#L167`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L167)
-- [`tests/unit/storage/test_recovery.py#L170`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L170)
-- [`tests/unit/storage/test_recovery.py#L175`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L175)
-- [`tests/unit/storage/test_recovery.py#L178`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L178)
-- [`tests/unit/storage/test_recovery.py#L183`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L183)
-- [`tests/unit/storage/test_recovery.py#L187`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L187)
-- [`tests/unit/storage/test_recovery.py#L195`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L195)
-- [`tests/unit/storage/test_recovery.py#L201`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L201)
-- [`tests/unit/storage/test_recovery.py#L213`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L213)
-- [`tests/unit/storage/test_recovery.py#L220`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L220)
-- [`tests/unit/storage/test_recovery.py#L231`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L231)
-- [`tests/unit/storage/test_recovery.py#L236`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L236)
-- [`tests/unit/storage/test_recovery.py#L243`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L243)
-- [`tests/unit/storage/test_recovery.py#L248`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L248)
-- [`tests/unit/storage/test_recovery.py#L253`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L253)
-- [`tests/unit/storage/test_recovery.py#L256`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L256)
-- [`tests/unit/storage/test_recovery.py#L273`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L273)
-- [`tests/unit/storage/test_recovery.py#L282`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L282)
-- [`tests/unit/storage/test_recovery.py#L288`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L288)
-- [`tests/unit/storage/test_recovery.py#L295`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L295)
-- [`tests/unit/storage/test_recovery.py#L301`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L301)
-- [`tests/unit/storage/test_recovery.py#L414`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L414)
-- [`tests/unit/storage/test_recovery.py#L422`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L422)
-- [`tests/unit/storage/test_recovery.py#L427`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L427)
-- [`tests/unit/storage/test_recovery.py#L431`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L431)
-- [`tests/unit/storage/test_recovery.py#L443`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/58f90fb940b5ece3c26340396d44ef75f03308d7/tests/unit/storage/test_recovery.py#L443)
+- [`tests/unit/storage/test_recovery.py#L133`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L133)
+- [`tests/unit/storage/test_recovery.py#L143`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L143)
+- [`tests/unit/storage/test_recovery.py#L158`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L158)
+- [`tests/unit/storage/test_recovery.py#L167`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L167)
+- [`tests/unit/storage/test_recovery.py#L170`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L170)
+- [`tests/unit/storage/test_recovery.py#L175`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L175)
+- [`tests/unit/storage/test_recovery.py#L178`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L178)
+- [`tests/unit/storage/test_recovery.py#L183`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L183)
+- [`tests/unit/storage/test_recovery.py#L187`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L187)
+- [`tests/unit/storage/test_recovery.py#L195`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L195)
+- [`tests/unit/storage/test_recovery.py#L201`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L201)
+- [`tests/unit/storage/test_recovery.py#L213`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L213)
+- [`tests/unit/storage/test_recovery.py#L220`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L220)
+- [`tests/unit/storage/test_recovery.py#L231`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L231)
+- [`tests/unit/storage/test_recovery.py#L236`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L236)
+- [`tests/unit/storage/test_recovery.py#L243`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L243)
+- [`tests/unit/storage/test_recovery.py#L248`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L248)
+- [`tests/unit/storage/test_recovery.py#L253`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L253)
+- [`tests/unit/storage/test_recovery.py#L256`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L256)
+- [`tests/unit/storage/test_recovery.py#L273`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L273)
+- [`tests/unit/storage/test_recovery.py#L282`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L282)
+- [`tests/unit/storage/test_recovery.py#L288`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L288)
+- [`tests/unit/storage/test_recovery.py#L295`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L295)
+- [`tests/unit/storage/test_recovery.py#L301`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L301)
+- [`tests/unit/storage/test_recovery.py#L414`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L414)
+- [`tests/unit/storage/test_recovery.py#L422`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L422)
+- [`tests/unit/storage/test_recovery.py#L427`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L427)
+- [`tests/unit/storage/test_recovery.py#L431`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L431)
+- [`tests/unit/storage/test_recovery.py#L443`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7b0d65656a39bcf13838dc29df3dd0b0e63a56f2/tests/unit/storage/test_recovery.py#L443)
 
 ### Class A (Execution Evidence)
 
