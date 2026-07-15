@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/test_pef_p25_remove_misleading_empty_orig.py`
-**Commit:** `921d350`
-**Generated:** 2026-07-15T18:03:26Z
+**Commit:** `5a868ec`
+**Previous:** `c0ec6b4`
+**Generated:** 2026-07-15T18:06:18Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/test_pef_p25_remove_misleading_empty_orig.py"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T18:03:26Z"
+  classified_at: "2026-07-15T18:06:18Z"
 ```
 
 ## Claim(s)
@@ -36,15 +37,17 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`921d350`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/921d35053b6c549cc047f510262251d0397a938e))
+**Scope Inventory** (SHA: [`5a868ec`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/5a868ec92d40c115817d725add262e31f2b4f8ce))
 
-- [`tests/test_pef_p25_remove_misleading_empty_orig.py#L1-L11`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/921d35053b6c549cc047f510262251d0397a938e/tests/test_pef_p25_remove_misleading_empty_orig.py#L1-L11)
+- [`tests/test_pef_p25_remove_misleading_empty_orig.py#L1`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/5a868ec92d40c115817d725add262e31f2b4f8ce/tests/test_pef_p25_remove_misleading_empty_orig.py#L1)
+- [`tests/test_pef_p25_remove_misleading_empty_orig.py#L4-L5`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/5a868ec92d40c115817d725add262e31f2b4f8ce/tests/test_pef_p25_remove_misleading_empty_orig.py#L4-L5)
+- [`tests/test_pef_p25_remove_misleading_empty_orig.py#L8-L11`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/5a868ec92d40c115817d725add262e31f2b4f8ce/tests/test_pef_p25_remove_misleading_empty_orig.py#L8-L11)
 
 ### Class A (Execution Evidence)
 
 **Per-symbol test coverage (AST analysis):**
 
-- **`test_codechanges_pins_the_finding_defect`** (L1-L11): FAIL -- WARNING: No tests import or call `test_codechanges_pins_the_finding_defect`
+- **`test_codechanges_pins_the_finding_defect`** (L1): FAIL -- WARNING: No tests import or call `test_codechanges_pins_the_finding_defect`
 
 **Coverage summary:** 0/1 symbols verified by tests.
 
