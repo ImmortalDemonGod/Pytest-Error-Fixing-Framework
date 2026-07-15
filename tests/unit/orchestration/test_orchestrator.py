@@ -578,21 +578,12 @@ class TestFixOrchestrator:
         assert 'timestamp' in called['metadata']
 
     def test_create_checkpoint_handles_checkpoint_error(self, dummy_ai_manager, dummy_test_runner, dummy_change_applier, dummy_git_repo, simple_error):
+        from branch_fixer.storage.recovery import CheckpointError as CE
+
         class RM:
             def create_checkpoint(self, session, metadata):
-                raise SimpleNamespace.__class__("CheckpointError")("fail")  # create general exception-like
-        # Use a real CheckpointError class from storage if available, else a generic exception is fine.
-        # The orchestrator catches CheckpointError specifically; if that class is not present,
-        # provide an object raising the same name exception; orchestrator catches CheckpointError
-        # from import; to be safe, raise CheckpointError if available.
-        try:
-            from branch_fixer.storage.recovery import CheckpointError as CE
-            class RM2:
-                def create_checkpoint(self, session, metadata):
-                    raise CE("boom")
-            rm = RM2()
-        except Exception:
-            rm = RM()
+                raise CE("boom")
+        rm = RM()
         orch = FixOrchestrator(dummy_ai_manager, dummy_test_runner, dummy_change_applier, dummy_git_repo, recovery_manager=rm)
         # should not raise even if checkpoint creation fails
         orch._create_checkpoint_if_needed(simple_error, "lbl")

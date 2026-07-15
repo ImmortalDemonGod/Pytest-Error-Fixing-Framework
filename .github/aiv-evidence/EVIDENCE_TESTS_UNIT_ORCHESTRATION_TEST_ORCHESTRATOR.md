@@ -1,9 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/unit/orchestration/test_orchestrator.py`
-**Commit:** `594620f`
-**Previous:** `f477028`
-**Generated:** 2026-07-15T18:14:12Z
+**Commit:** `8f55a53`
+**Previous:** `cda07e1`
+**Generated:** 2026-07-15T18:19:00Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -18,7 +18,7 @@ classification:
   blast_radius: "tests/unit/orchestration/test_orchestrator.py"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T18:14:12Z"
+  classified_at: "2026-07-15T18:19:00Z"
 ```
 
 ## Claim(s)
@@ -37,16 +37,17 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`594620f`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/594620fb485a93017bfa775bd26a23c5392260ba))
+**Scope Inventory** (SHA: [`8f55a53`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/8f55a534d81bac26a79bc89b9c94fa4bacc96304))
 
-- [`tests/unit/orchestration/test_orchestrator.py#L583`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/594620fb485a93017bfa775bd26a23c5392260ba/tests/unit/orchestration/test_orchestrator.py#L583)
+- [`tests/unit/orchestration/test_orchestrator.py#L581-L582`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/8f55a534d81bac26a79bc89b9c94fa4bacc96304/tests/unit/orchestration/test_orchestrator.py#L581-L582)
+- [`tests/unit/orchestration/test_orchestrator.py#L585-L586`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/8f55a534d81bac26a79bc89b9c94fa4bacc96304/tests/unit/orchestration/test_orchestrator.py#L585-L586)
 
 ### Class A (Execution Evidence)
 
 **Per-symbol test coverage (AST analysis):**
 
-- **`TestFixOrchestrator`** (L583): FAIL -- WARNING: No tests import or call `TestFixOrchestrator`
-- **`TestFixOrchestrator.test_create_checkpoint_handles_checkpoint_error`** (unknown): FAIL -- WARNING: No tests import or call `test_create_checkpoint_handles_checkpoint_error`
+- **`TestFixOrchestrator`** (L581-L582): FAIL -- WARNING: No tests import or call `TestFixOrchestrator`
+- **`TestFixOrchestrator.test_create_checkpoint_handles_checkpoint_error`** (L585-L586): FAIL -- WARNING: No tests import or call `test_create_checkpoint_handles_checkpoint_error`
 - **`RM`** (unknown): PASS -- 5 test(s) call `RM` directly
   - `tests/unit/orchestration/test_orchestrator.py::test_handle_error_with_recovery_success`
   - `tests/unit/orchestration/test_orchestrator.py::test_handle_error_with_recovery_failure_sets_error`
