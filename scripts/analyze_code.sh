@@ -93,10 +93,25 @@ if ! command -v cs >/dev/null 2>&1; then
     # On Windows or other OS, user might need a manual approach.
     
     if command -v curl >/dev/null 2>&1; then
-        if ! curl -sSf https://downloads.codescene.io/enterprise/cli/install-codescene-cli.sh | sh; then
+        # shellcheck source=lib/verify_installer_checksum.sh
+        source "$(dirname "${BASH_SOURCE[0]}")/lib/verify_installer_checksum.sh"
+        CS_INSTALLER_TMP=$(mktemp)
+        if ! curl -sSf https://downloads.codescene.io/enterprise/cli/install-codescene-cli.sh -o "$CS_INSTALLER_TMP"; then
             echo "Failed to install CodeScene CLI with the official script. Exiting."
+            rm -f "$CS_INSTALLER_TMP"
             exit 1
         fi
+        if ! verify_codescene_installer_checksum "$CS_INSTALLER_TMP"; then
+            echo "CodeScene CLI installer checksum verification FAILED, refusing to execute. Exiting."
+            rm -f "$CS_INSTALLER_TMP"
+            exit 1
+        fi
+        if ! sh "$CS_INSTALLER_TMP"; then
+            echo "Failed to install CodeScene CLI with the official script. Exiting."
+            rm -f "$CS_INSTALLER_TMP"
+            exit 1
+        fi
+        rm -f "$CS_INSTALLER_TMP"
     else
         echo "curl not found or not available. Cannot auto-install CodeScene CLI."
         echo "Please install it manually, or ensure 'cs' is in PATH."
