@@ -1,2 +1,4 @@
 # regenerable per-finding specs (produced by aiv-workflow specgen_from_audit.mjs)
 spec_*.json
+# runtime fleet state (produced by aiv-workflow drive_all.mjs)
+fleet-state.json
