@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/pef-p23-delete-dead-sessioncoordinat.bug-catalog.md`
-**Commit:** `72e346f`
-**Generated:** 2026-07-15T17:46:21Z
+**Commit:** `a922dfc`
+**Previous:** `1fc211b`
+**Generated:** 2026-07-15T17:49:45Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/pef-p23-delete-dead-sessioncoordinat.bug-catalog.md"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T17:46:21Z"
+  classified_at: "2026-07-15T17:49:45Z"
 ```
 
 ## Claim(s)
@@ -36,9 +37,11 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`72e346f`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/72e346f06358fbcbe217a58fef58d44b533bb695))
+**Scope Inventory** (SHA: [`a922dfc`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/a922dfcc926b7d4603fc0fefcf0312d3894b9f0f))
 
-- [`tests/pef-p23-delete-dead-sessioncoordinat.bug-catalog.md#L1-L8`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/72e346f06358fbcbe217a58fef58d44b533bb695/tests/pef-p23-delete-dead-sessioncoordinat.bug-catalog.md#L1-L8)
+- [`tests/pef-p23-delete-dead-sessioncoordinat.bug-catalog.md#L1`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/a922dfcc926b7d4603fc0fefcf0312d3894b9f0f/tests/pef-p23-delete-dead-sessioncoordinat.bug-catalog.md#L1)
+- [`tests/pef-p23-delete-dead-sessioncoordinat.bug-catalog.md#L3-L12`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/a922dfcc926b7d4603fc0fefcf0312d3894b9f0f/tests/pef-p23-delete-dead-sessioncoordinat.bug-catalog.md#L3-L12)
+- [`tests/pef-p23-delete-dead-sessioncoordinat.bug-catalog.md#L14-L21`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/a922dfcc926b7d4603fc0fefcf0312d3894b9f0f/tests/pef-p23-delete-dead-sessioncoordinat.bug-catalog.md#L14-L21)
 
 ### Class A (Execution Evidence)
 
