@@ -281,8 +281,8 @@ class TestPytestRunner:
         tr.failed = True
         sess.test_results = {tr.nodeid: tr}
         runner._current_session = sess
-        lines = runner.format_test_failures()
-        assert any("no_colon_id" in line for line in lines)
+        with pytest.raises(ValueError):
+            runner.format_test_failures()
 
     def test_capture_test_output_combines_outputs(self, runner):
         sess = SessionResult(start_time=datetime.now(), end_time=datetime.now(), duration=0.0, exit_code=ExitCode.OK)
