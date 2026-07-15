@@ -590,7 +590,7 @@ class GitRepository:
             self.pull()
             self.push()
             return True
-        except GitError:
+        except (GitError, NotImplementedError):
             return False
 
     def merge_branch(self, branch_name: str, fast_forward: bool = True) -> bool:
