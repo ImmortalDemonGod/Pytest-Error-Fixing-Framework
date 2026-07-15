@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/pef-p20-make-setup-logging-idempoten.bug-catalog.md`
-**Commit:** `3340ba6`
-**Generated:** 2026-07-15T17:45:54Z
+**Commit:** `298dafd`
+**Previous:** `28abc2d`
+**Generated:** 2026-07-15T17:47:00Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/pef-p20-make-setup-logging-idempoten.bug-catalog.md"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T17:45:54Z"
+  classified_at: "2026-07-15T17:47:00Z"
 ```
 
 ## Claim(s)
@@ -36,9 +37,10 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`3340ba6`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/3340ba6716a228f6a2ac9aaf49acef0e60251ae2))
+**Scope Inventory** (SHA: [`298dafd`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/298dafd75cf5d5c3e939c005d9bd9b334656b009))
 
-- [`tests/pef-p20-make-setup-logging-idempoten.bug-catalog.md#L1-L8`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/3340ba6716a228f6a2ac9aaf49acef0e60251ae2/tests/pef-p20-make-setup-logging-idempoten.bug-catalog.md#L1-L8)
+- [`tests/pef-p20-make-setup-logging-idempoten.bug-catalog.md#L3`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/298dafd75cf5d5c3e939c005d9bd9b334656b009/tests/pef-p20-make-setup-logging-idempoten.bug-catalog.md#L3)
+- [`tests/pef-p20-make-setup-logging-idempoten.bug-catalog.md#L5-L7`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/298dafd75cf5d5c3e939c005d9bd9b334656b009/tests/pef-p20-make-setup-logging-idempoten.bug-catalog.md#L5-L7)
 
 ### Class A (Execution Evidence)
 
