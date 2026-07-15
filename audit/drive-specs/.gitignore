@@ -1,0 +1,2 @@
+# regenerable per-finding specs (produced by aiv-workflow specgen_from_audit.mjs)
+spec_*.json
