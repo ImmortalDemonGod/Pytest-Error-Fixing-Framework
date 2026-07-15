@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/test_pef_p23_delete_dead_sessioncoordinat.py`
-**Commit:** `1fc211b`
-**Generated:** 2026-07-15T17:46:22Z
+**Commit:** `12a443d`
+**Previous:** `0090728`
+**Generated:** 2026-07-15T17:49:47Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/test_pef_p23_delete_dead_sessioncoordinat.py"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T17:46:22Z"
+  classified_at: "2026-07-15T17:49:47Z"
 ```
 
 ## Claim(s)
@@ -36,15 +37,16 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`1fc211b`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/1fc211ba7797afb28a9b3bfe8ded96ca6a10cf3a))
+**Scope Inventory** (SHA: [`12a443d`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/12a443dd7c159b3ea4e955790902a6f97dd70a9f))
 
-- [`tests/test_pef_p23_delete_dead_sessioncoordinat.py#L1-L11`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/1fc211ba7797afb28a9b3bfe8ded96ca6a10cf3a/tests/test_pef_p23_delete_dead_sessioncoordinat.py#L1-L11)
+- [`tests/test_pef_p23_delete_dead_sessioncoordinat.py#L1`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/12a443dd7c159b3ea4e955790902a6f97dd70a9f/tests/test_pef_p23_delete_dead_sessioncoordinat.py#L1)
+- [`tests/test_pef_p23_delete_dead_sessioncoordinat.py#L6-L25`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/12a443dd7c159b3ea4e955790902a6f97dd70a9f/tests/test_pef_p23_delete_dead_sessioncoordinat.py#L6-L25)
 
 ### Class A (Execution Evidence)
 
 **Per-symbol test coverage (AST analysis):**
 
-- **`test_sessioncoordinator_pins_the_finding_defect`** (L1-L11): FAIL -- WARNING: No tests import or call `test_sessioncoordinator_pins_the_finding_defect`
+- **`test_sessioncoordinator_pins_the_finding_defect`** (L1): FAIL -- WARNING: No tests import or call `test_sessioncoordinator_pins_the_finding_defect`
 
 **Coverage summary:** 0/1 symbols verified by tests.
 
