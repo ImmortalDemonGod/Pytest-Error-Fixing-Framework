@@ -341,6 +341,7 @@ class FixOrchestrator:
                 f"at temperature={current_temp}"
             )
 
+            from branch_fixer.orchestration.exceptions import FixServiceError
             from branch_fixer.orchestration.fix_service import FixService
 
             fix_service = FixService(
@@ -354,7 +355,15 @@ class FixOrchestrator:
                 session=self._session,
             )
 
-            success = fix_service.attempt_fix(error, temperature=current_temp)
+            try:
+                success = fix_service.attempt_fix(error, temperature=current_temp)
+            except FixServiceError as e:
+                logger.warning(
+                    f"Attempt {attempt_index + 1} for error '{error.test_function}' raised "
+                    f"{e.__class__.__name__}: {e}. Treating as a failed attempt and retrying."
+                )
+                success = False
+
             if success:
                 logger.info(
                     f"Successfully fixed error '{error.test_function}' on attempt {attempt_index + 1}."
