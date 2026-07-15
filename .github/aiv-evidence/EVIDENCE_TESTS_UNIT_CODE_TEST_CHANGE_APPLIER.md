@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/unit/code/test_change_applier.py`
-**Commit:** `e2cf2e2`
-**Generated:** 2026-07-15T18:14:26Z
+**Commit:** `91e1ae8`
+**Previous:** `942ebcc`
+**Generated:** 2026-07-15T18:20:33Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/unit/code/test_change_applier.py"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T18:14:26Z"
+  classified_at: "2026-07-15T18:20:33Z"
 ```
 
 ## Claim(s)
@@ -36,9 +37,9 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`e2cf2e2`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/e2cf2e2866207000cb73d46cd23c7e4a500de141))
+**Scope Inventory** (SHA: [`91e1ae8`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/91e1ae84f6d788620bdf1e6f1d642c9357e9c716))
 
-- [`tests/unit/code/test_change_applier.py#L123`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/e2cf2e2866207000cb73d46cd23c7e4a500de141/tests/unit/code/test_change_applier.py#L123)
+- [`tests/unit/code/test_change_applier.py#L123`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/91e1ae84f6d788620bdf1e6f1d642c9357e9c716/tests/unit/code/test_change_applier.py#L123)
 
 ### Class A (Execution Evidence)
 

@@ -29,7 +29,6 @@ def valid_py(tmp_path) -> Path:
 @pytest.fixture
 def valid_changes(valid_py) -> CodeChanges:
     return CodeChanges(
-        original_code="def test_foo():\n    assert 1 == 1\n",
         modified_code="def test_foo():\n    assert True\n",
     )
 
@@ -60,7 +59,6 @@ class TestApplyChangesHappyPath:
 
     def test_strips_markdown_code_fences(self, applier, valid_py):
         changes = CodeChanges(
-            original_code="def test_foo():\n    assert 1 == 1\n",
             modified_code="```python\ndef test_foo():\n    assert True\n```",
         )
         success, _ = applier.apply_changes_with_backup(valid_py, changes)
@@ -70,7 +68,6 @@ class TestApplyChangesHappyPath:
     def test_strips_backtick_fence_no_stray_n(self, applier, valid_py):
         """Regression: off-by-one on ```python strip left a stray 'n' at start of file."""
         changes = CodeChanges(
-            original_code="def test_foo():\n    assert 1 == 1\n",
             modified_code="```python\ndef test_foo():\n    assert True\n```",
         )
         _, _ = applier.apply_changes_with_backup(valid_py, changes)
@@ -80,7 +77,6 @@ class TestApplyChangesHappyPath:
 
     def test_strips_plain_backtick_fence(self, applier, valid_py):
         changes = CodeChanges(
-            original_code="def test_foo():\n    assert 1 == 1\n",
             modified_code="```\ndef test_foo():\n    assert True\n```",
         )
         success, _ = applier.apply_changes_with_backup(valid_py, changes)
@@ -96,7 +92,6 @@ class TestApplyChangesSyntaxFailure:
     def test_returns_false_on_syntax_error(self, applier, valid_py):
         original = valid_py.read_text()
         bad_changes = CodeChanges(
-            original_code=original,
             modified_code="def test_foo(:\n    pass\n",  # syntax error
         )
         success, backup_path = applier.apply_changes_with_backup(valid_py, bad_changes)
@@ -105,7 +100,6 @@ class TestApplyChangesSyntaxFailure:
     def test_original_restored_after_syntax_failure(self, applier, valid_py):
         original = valid_py.read_text()
         bad_changes = CodeChanges(
-            original_code=original,
             modified_code="def test_foo(:\n    pass\n",
         )
         applier.apply_changes_with_backup(valid_py, bad_changes)
@@ -113,7 +107,6 @@ class TestApplyChangesSyntaxFailure:
 
     def test_backup_still_returned_after_syntax_failure(self, applier, valid_py):
         bad_changes = CodeChanges(
-            original_code=valid_py.read_text(),
             modified_code="def test_foo(:\n    pass\n",
         )
         _, backup_path = applier.apply_changes_with_backup(valid_py, bad_changes)
@@ -127,7 +120,7 @@ class TestApplyChangesSyntaxFailure:
 class TestApplyChangesMissingFile:
     def test_returns_false_for_nonexistent_file(self, applier, tmp_path):
         ghost = tmp_path / "ghost.py"
-        changes = CodeChanges(original_code="x", modified_code="y")
+        changes = CodeChanges(modified_code="y")
         success, backup_path = applier.apply_changes_with_backup(ghost, changes)
         assert success is False
 
