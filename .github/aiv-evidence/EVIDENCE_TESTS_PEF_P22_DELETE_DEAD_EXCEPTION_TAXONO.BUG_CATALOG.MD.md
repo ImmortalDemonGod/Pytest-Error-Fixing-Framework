@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/pef-p22-delete-dead-exception-taxono.bug-catalog.md`
-**Commit:** `d231aa9`
-**Generated:** 2026-07-15T17:49:16Z
+**Commit:** `b6aedc1`
+**Previous:** `4c45b56`
+**Generated:** 2026-07-15T17:52:46Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/pef-p22-delete-dead-exception-taxono.bug-catalog.md"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T17:49:16Z"
+  classified_at: "2026-07-15T17:52:46Z"
 ```
 
 ## Claim(s)
@@ -36,9 +37,9 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`d231aa9`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/d231aa93ff390d6629e960a9c9bd89137dc01143))
+**Scope Inventory** (SHA: [`b6aedc1`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/b6aedc190e33c42b8558637ec57dd5f9f8df8465))
 
-- [`tests/pef-p22-delete-dead-exception-taxono.bug-catalog.md#L1-L8`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/d231aa93ff390d6629e960a9c9bd89137dc01143/tests/pef-p22-delete-dead-exception-taxono.bug-catalog.md#L1-L8)
+- [`tests/pef-p22-delete-dead-exception-taxono.bug-catalog.md#L9-L46`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/b6aedc190e33c42b8558637ec57dd5f9f8df8465/tests/pef-p22-delete-dead-exception-taxono.bug-catalog.md#L9-L46)
 
 ### Class A (Execution Evidence)
 
