@@ -164,7 +164,7 @@ class TestSetupLogging:
         assert "snoop test" in content
 
     def test_repeated_calls_add_snoop_handler_but_basicconfig_is_noop_for_root(self, tmp_cwd):
-        # Happy path & edge behavior: basicConfig should only configure root once, but snoop handlers accumulate
+        # Happy path & edge behavior: basicConfig should only configure root once, and snoop handlers must not accumulate (F37)
         setup_logging()
 
         root_handlers_before = list(logging.root.handlers)
@@ -178,8 +178,8 @@ class TestSetupLogging:
         # basicConfig is a no-op for root if already configured; handlers count should remain the same
         assert len(root_handlers_after) == len(root_handlers_before)
 
-        # snoop handler should have been added again
-        assert len(snoop_handlers_after) == len(snoop_handlers_before) + 1
+        # snoop handler must be idempotent — repeated calls must not duplicate it (see .aiv/oracle-corrections)
+        assert len(snoop_handlers_after) == len(snoop_handlers_before)
 
     def test_mkdir_permission_error_propagates(self, tmp_cwd, monkeypatch):
         # Error handling: if Path.mkdir raises PermissionError, it should propagate

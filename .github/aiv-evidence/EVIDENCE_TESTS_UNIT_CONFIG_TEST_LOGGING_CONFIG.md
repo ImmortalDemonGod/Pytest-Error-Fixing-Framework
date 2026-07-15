@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/unit/config/test_logging_config.py`
-**Commit:** `d2e7153`
-**Generated:** 2026-07-15T17:51:19Z
+**Commit:** `b93399c`
+**Previous:** `3778fb0`
+**Generated:** 2026-07-15T17:58:04Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/unit/config/test_logging_config.py"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T17:51:19Z"
+  classified_at: "2026-07-15T17:58:04Z"
 ```
 
 ## Claim(s)
@@ -36,17 +37,17 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`d2e7153`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/d2e71537545c9670f84b8cbfbb18a70c0b54a0cf))
+**Scope Inventory** (SHA: [`b93399c`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/b93399c2a2972b650625e07e342e1bfa7d8d569d))
 
-- [`tests/unit/config/test_logging_config.py#L166-L167`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/d2e71537545c9670f84b8cbfbb18a70c0b54a0cf/tests/unit/config/test_logging_config.py#L166-L167)
-- [`tests/unit/config/test_logging_config.py#L181-L182`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/d2e71537545c9670f84b8cbfbb18a70c0b54a0cf/tests/unit/config/test_logging_config.py#L181-L182)
+- [`tests/unit/config/test_logging_config.py#L167`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/b93399c2a2972b650625e07e342e1bfa7d8d569d/tests/unit/config/test_logging_config.py#L167)
+- [`tests/unit/config/test_logging_config.py#L181-L182`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/b93399c2a2972b650625e07e342e1bfa7d8d569d/tests/unit/config/test_logging_config.py#L181-L182)
 
 ### Class A (Execution Evidence)
 
 **Per-symbol test coverage (AST analysis):**
 
-- **`TestSetupLogging`** (L166-L167): FAIL -- WARNING: No tests import or call `TestSetupLogging`
-- **`TestSetupLogging.test_repeated_calls_do_not_duplicate_snoop_handler`** (L181-L182): FAIL -- WARNING: No tests import or call `test_repeated_calls_do_not_duplicate_snoop_handler`
+- **`TestSetupLogging`** (L167): FAIL -- WARNING: No tests import or call `TestSetupLogging`
+- **`TestSetupLogging.test_repeated_calls_add_snoop_handler_but_basicconfig_is_noop_for_root`** (L181-L182): FAIL -- WARNING: No tests import or call `test_repeated_calls_add_snoop_handler_but_basicconfig_is_noop_for_root`
 
 **Coverage summary:** 0/2 symbols verified by tests.
 
