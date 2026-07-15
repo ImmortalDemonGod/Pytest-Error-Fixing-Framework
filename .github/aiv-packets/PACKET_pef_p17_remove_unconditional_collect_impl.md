@@ -6,10 +6,10 @@
 |-------|-------|
 | **Repository** | github.com/ImmortalDemonGod/aiv-protocol |
 | **Change ID** | pef-p17-remove-unconditional-collect-impl |
-| **Commits** | `d8cf373` |
-| **Head SHA** | `d8cf373` |
-| **Base SHA** | `6ed4f4c` |
-| **Created** | 2026-07-15T17:51:53Z |
+| **Commits** | `d9cf577` |
+| **Head SHA** | `d9cf577` |
+| **Base SHA** | `7e0273e` |
+| **Created** | 2026-07-15T17:56:13Z |
 
 ## Classification
 
@@ -21,7 +21,7 @@ classification:
   blast_radius: component
   classification_rationale: "TODO: Describe why this tier was chosen"
   classified_by: "Claude"
-  classified_at: "2026-07-15T17:51:53Z"
+  classified_at: "2026-07-15T17:56:13Z"
 ```
 
 ## Claims
@@ -35,7 +35,7 @@ classification:
 
 | # | Evidence File | Commit SHA | Classes |
 |---|---------------|------------|---------|
-| 1 | EVIDENCE_TESTS_UNIT_SERVICES_PYTEST_TEST_RUNNER.md | `d8cf373` | A, B, E |
+| 1 | EVIDENCE_TESTS_UNIT_SERVICES_PYTEST_TEST_RUNNER.md | `d9cf577` | A, B, E |
 
 
 
