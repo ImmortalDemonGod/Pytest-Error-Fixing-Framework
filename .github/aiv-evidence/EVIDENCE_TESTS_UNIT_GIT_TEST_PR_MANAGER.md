@@ -1,9 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/unit/git/test_pr_manager.py`
-**Commit:** `fceaf85`
-**Previous:** `81d9aba`
-**Generated:** 2026-07-15T18:08:18Z
+**Commit:** `35b6b71`
+**Previous:** `126507d`
+**Generated:** 2026-07-15T18:16:48Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -18,7 +18,7 @@ classification:
   blast_radius: "tests/unit/git/test_pr_manager.py"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T18:08:18Z"
+  classified_at: "2026-07-15T18:16:48Z"
 ```
 
 ## Claim(s)
@@ -37,12 +37,12 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`fceaf85`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/fceaf8578f5f961c2b52885b070ea6b05ca20b8d))
+**Scope Inventory** (SHA: [`35b6b71`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/35b6b71c56f819eb00aa918016c65a3e10b43b09))
 
-- [`tests/unit/git/test_pr_manager.py#L24`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/fceaf8578f5f961c2b52885b070ea6b05ca20b8d/tests/unit/git/test_pr_manager.py#L24)
-- [`tests/unit/git/test_pr_manager.py#L32-L33`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/fceaf8578f5f961c2b52885b070ea6b05ca20b8d/tests/unit/git/test_pr_manager.py#L32-L33)
-- [`tests/unit/git/test_pr_manager.py#L141`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/fceaf8578f5f961c2b52885b070ea6b05ca20b8d/tests/unit/git/test_pr_manager.py#L141)
-- [`tests/unit/git/test_pr_manager.py#L148-L150`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/fceaf8578f5f961c2b52885b070ea6b05ca20b8d/tests/unit/git/test_pr_manager.py#L148-L150)
+- [`tests/unit/git/test_pr_manager.py#L24`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/35b6b71c56f819eb00aa918016c65a3e10b43b09/tests/unit/git/test_pr_manager.py#L24)
+- [`tests/unit/git/test_pr_manager.py#L32-L33`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/35b6b71c56f819eb00aa918016c65a3e10b43b09/tests/unit/git/test_pr_manager.py#L32-L33)
+- [`tests/unit/git/test_pr_manager.py#L141`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/35b6b71c56f819eb00aa918016c65a3e10b43b09/tests/unit/git/test_pr_manager.py#L141)
+- [`tests/unit/git/test_pr_manager.py#L148-L150`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/35b6b71c56f819eb00aa918016c65a3e10b43b09/tests/unit/git/test_pr_manager.py#L148-L150)
 
 ### Class A (Execution Evidence)
 

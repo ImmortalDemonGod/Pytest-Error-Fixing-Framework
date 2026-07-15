@@ -21,7 +21,7 @@ def patched_types(monkeypatch):
     """
     # Fake PRDetails that stores attributes provided by create_pr
     class FakePRDetails:
-        def __init__(self, *, id, title, description, branch_name, status, created_at, url=None):
+        def __init__(self, *, id, title, description, branch_name, status, created_at, url=None, modified_files=None, metadata=None):
             self.id = id
             self.title = title
             self.description = description
@@ -29,6 +29,8 @@ def patched_types(monkeypatch):
             self.status = status
             self.created_at = created_at
             self.url = url
+            self.modified_files = modified_files if modified_files is not None else []
+            self.metadata = metadata if metadata is not None else {}
 
         def __repr__(self):
             return f"<FakePRDetails id={self.id} title={self.title!r}>"
@@ -136,14 +138,16 @@ class TestPRManager:
         assert manager.prs[1] is d1
         assert manager.prs[2] is d2
 
-    def test_create_pr_accepts_modified_files_and_metadata_without_using_them(self, patched_types, fake_repo):
+    def test_create_pr_propagates_modified_files_and_metadata_into_pr_details(self, patched_types, fake_repo):
         manager = PRManager(repository=fake_repo)
         # Create some actual Path objects to pass in
         tmp_files = [Path("file1.py"), Path("dir/file2.py")]
         meta = {"reviewer": "alice", "priority": 5}
         details = manager.create_pr("Title", "Desc", "branch", tmp_files, meta)
 
-        # Method doesn't raise and returns a PRDetails object stored in prs
+        # modified_files and metadata must be propagated into the stored PRDetails
+        assert details.modified_files == tmp_files
+        assert details.metadata == meta
         assert details.id == 1
         assert manager.prs[1] is details
 
