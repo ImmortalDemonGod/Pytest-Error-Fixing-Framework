@@ -104,3 +104,8 @@ tools/llm/onefilellm/uncompressed_output.txt
 data/*
 vector_db_storage/*
 uv.lock
+# AIV scaffolding (corpus-captured) + provisioned venv — kept off the PR (#1/#40; .venv dangles on CI)
+.aiv/launch-briefs/
+.aiv/plans/
+.venv
+.aiv-workflow.yml
