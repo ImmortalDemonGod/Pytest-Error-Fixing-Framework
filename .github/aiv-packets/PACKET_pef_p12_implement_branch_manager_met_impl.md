@@ -6,10 +6,10 @@
 |-------|-------|
 | **Repository** | github.com/ImmortalDemonGod/aiv-protocol |
 | **Change ID** | pef-p12-implement-branch-manager-met-impl |
-| **Commits** | `0190e25` |
-| **Head SHA** | `0190e25` |
-| **Base SHA** | `9147eaf` |
-| **Created** | 2026-07-15T17:52:53Z |
+| **Commits** | `7454b1c` |
+| **Head SHA** | `7454b1c` |
+| **Base SHA** | `64111a2` |
+| **Created** | 2026-07-15T17:57:20Z |
 
 ## Classification
 
@@ -21,7 +21,7 @@ classification:
   blast_radius: component
   classification_rationale: "TODO: Describe why this tier was chosen"
   classified_by: "Claude"
-  classified_at: "2026-07-15T17:52:53Z"
+  classified_at: "2026-07-15T17:57:20Z"
 ```
 
 ## Claims
@@ -35,15 +35,18 @@ classification:
 
 | # | Evidence File | Commit SHA | Classes |
 |---|---------------|------------|---------|
-| 1 | EVIDENCE_TESTS_UNIT_GIT_TEST_BRANCH_MANAGER.md | `0190e25` | A, B, E |
+| 1 | EVIDENCE_TESTS_UNIT_GIT_TEST_BRANCH_MANAGER.md | `7454b1c` | A, B, E |
 
 
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (from 1 file references across evidence files)
+**Scope Inventory** (from 4 file references across evidence files)
 
-- `tests/unit/git/test_branch_manager.py#L336-L351`
+- `tests/unit/git/test_branch_manager.py#L336-L346`
+- `tests/unit/git/test_branch_manager.py#L348-L351`
+- `tests/unit/git/test_branch_manager.py#L353`
+- `tests/unit/git/test_branch_manager.py#L355-L358`
 
 ---
 
