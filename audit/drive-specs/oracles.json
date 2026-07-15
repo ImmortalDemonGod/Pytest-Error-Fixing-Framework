@@ -1,0 +1,31 @@
+{
+  "_README": "Hand-authored machine-checkable goalConditions for the prose plan items, keyed by plan id. Fed to aiv-workflow's specgen_from_audit.mjs via --oracles to override the plan's prose verification_signal. Each is an approach-AGNOSTIC OUTCOME (exit-code / assert / count), not a fix-MECHANISM grep (those oscillate the review gate — see fix_pipeline.mjs isMechanismGrep/#191). Tests named as outcomes are authored by the drive's design-tests stage; the string is the acceptance the harness grades.",
+
+  "P02": "A test feeding a byte-mutated installer fixture makes the CodeScene-CLI install path abort (exit != 0) before executing, and a fixture matching the pinned sha256 proceeds (exit 0); .venv/bin/python -m pytest -k 'codescene and installer' -q exits 0.",
+
+  "P03": ".venv/bin/python -m pytest -k 'hypot_gen and (injection or retry or snoop or venv_bin)' -q exits 0: a source path containing $(...) or backticks executes NO injected command (no marker file is created); with max_retries=5 the retry-wait fires on attempts 1-4 and the final-failure error only on attempt 5; importing scripts.hypot_test_gen creates no snoop_debug.log; the hypothesis subprocess is Path(sys.executable).parent/'hypothesis'.",
+
+  "P04": "Importing branch_fixer.config.settings with BRANCH_FIXER_SECRET_KEY unset emits a warning or raises (assert via warnings.catch_warnings / pytest.raises), and no code path consumes an empty-string secret (assert settings.SECRET_KEY not in (None, '')); .venv/bin/python -m pytest -k 'settings and secret' -q exits 0.",
+
+  "P05": ".venv/bin/python -m pytest -k 'pr and (push_before_create or returns_real_bool)' -q exits 0: with git push and gh-pr-create stubbed, the delivery path calls push BEFORE create_pull_request_sync; create_pull_request_sync returns False when gh pr create exits non-zero, and True with a non-None PRDetails.url when it exits 0.",
+
+  "P11": ".venv/bin/python -m branch_fixer.main fix --help prints no 'dev-force-success' (grep -c == 0); and a test asserts the fix path always calls AIManager.generate_fix (mocked) with no dev_force_success short-circuit and that --non-interactive raises no interactive prompt; pytest -k 'no_dev_force' -q exits 0.",
+
+  "P13": "A test that calls _find_git_root on a subdirectory (e.g. <repo>/src) of a git repository returns the repo root and does NOT raise NotAGitRepositoryError, while a genuinely non-repo path still raises it; .venv/bin/python -m pytest -k 'find_git_root and subdir' -q exits 0.",
+
+  "P15": "A test where the underlying git command exits non-zero shows push() raises GitError (per its docstring) rather than returning False/None, and merge_branch() surfaces failure via GitError (the previously-unreachable failure branch is now exercised); .venv/bin/python -m pytest -k 'push_raises or merge_failure' -q exits 0.",
+
+  "P20": ".venv/bin/python -c \"import logging; from branch_fixer.config.logging_config import setup_logging; setup_logging(); a=len(logging.getLogger('snoop').handlers); setup_logging(); b=len(logging.getLogger('snoop').handlers); assert a==b, (a,b)\" exits 0 (calling setup_logging twice adds no duplicate snoop FileHandler).",
+
+  "P21": "'snoop' is not in WorkspaceValidator.REQUIRED_DEPENDENCIES (assert), and check_dependencies() returns without raising ImportError when snoop is unimportable (simulate the missing import in the test); .venv/bin/python -m pytest -k 'dependencies and snoop_optional' -q exits 0.",
+
+  "P24": ".venv/bin/python -m pytest tests/unit/git/test_pr_manager.py -q exits 0: update_pr returns a PRDetails whose status/metadata reflect its arguments and whose history grew by exactly one PRChange; create_pr stores the passed modified_files into PRDetails.modified_files; deleting a PR then creating another yields a fresh, non-colliding id.",
+
+  "P25": ".venv/bin/python -m pytest -q exits 0 after CodeChanges.original_code is removed (or populated with real pre-fix content); no source reads CodeChanges.original_code as a diff input (grep -rc 'original_code' src/branch_fixer resolves to only the single construction site, or 0 once removed).",
+
+  "P26": ".venv/bin/python -c \"from datetime import datetime, timezone; from branch_fixer.services.git.models import PRDetails; p=PRDetails(pr_number=1, branch_name='b', title='t'); assert p.created_at.tzinfo is not None; _=datetime.now(timezone.utc)-p.created_at\" exits 0 (PRDetails timestamps are tz-aware and compare cleanly); manager.py has exactly one module-level 'import re' and no function-local one.",
+
+  "P38": ".venv/bin/python -c \"xs=[1,2,3]; assert list(reversed(list(reversed(xs))))==xs\" exits 0 (the documented roundtrip no longer raises TypeError); `task setup` provisions a Python 3.13 venv (assert the created interpreter reports 3.13); the coverage commands resolve to the project venv (uv run) rather than a system interpreter.",
+
+  "P39": ".venv/bin/python -m pytest -k 'parser and property_skip' -q exits 0: a class with an @property-decorated method has that property excluded from generated variants (skipped by decorator inspection, not by the literal method name 'property'); and scripts/runner_debug.py imports cleanly on this checkout (no hardcoded macOS volume path) or is absent."
+}
