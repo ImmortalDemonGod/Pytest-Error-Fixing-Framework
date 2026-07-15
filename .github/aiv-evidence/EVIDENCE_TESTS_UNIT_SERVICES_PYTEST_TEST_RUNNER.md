@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/unit/services/pytest/test_runner.py`
-**Commit:** `f97dcbe`
-**Generated:** 2026-07-15T18:09:15Z
+**Commit:** `6397e1b`
+**Previous:** `6bc13d4`
+**Generated:** 2026-07-15T18:27:44Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/unit/services/pytest/test_runner.py"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T18:09:15Z"
+  classified_at: "2026-07-15T18:27:44Z"
 ```
 
 ## Claim(s)
@@ -36,17 +37,16 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`f97dcbe`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/f97dcbe642908e0f2742cec62d9a2f70d82daff7))
+**Scope Inventory** (SHA: [`6397e1b`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/6397e1bf1eab28fa0aad77ce2dc7ee70d38b91d5))
 
-- [`tests/unit/services/pytest/test_runner.py#L278`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/f97dcbe642908e0f2742cec62d9a2f70d82daff7/tests/unit/services/pytest/test_runner.py#L278)
-- [`tests/unit/services/pytest/test_runner.py#L284-L285`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/f97dcbe642908e0f2742cec62d9a2f70d82daff7/tests/unit/services/pytest/test_runner.py#L284-L285)
+- [`tests/unit/services/pytest/test_runner.py#L284-L285`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/6397e1bf1eab28fa0aad77ce2dc7ee70d38b91d5/tests/unit/services/pytest/test_runner.py#L284-L285)
 
 ### Class A (Execution Evidence)
 
 **Per-symbol test coverage (AST analysis):**
 
-- **`TestPytestRunner`** (L278): FAIL -- WARNING: No tests import or call `TestPytestRunner`
-- **`TestPytestRunner.test_format_test_failures_nodeid_without_double_colons_handled_gracefully`** (L284-L285): FAIL -- WARNING: No tests import or call `test_format_test_failures_nodeid_without_double_colons_handled_gracefully`
+- **`TestPytestRunner`** (L284-L285): FAIL -- WARNING: No tests import or call `TestPytestRunner`
+- **`TestPytestRunner.test_format_test_failures_nodeid_without_double_colons_raises`** (unknown): FAIL -- WARNING: No tests import or call `test_format_test_failures_nodeid_without_double_colons_raises`
 
 **Coverage summary:** 0/2 symbols verified by tests.
 
