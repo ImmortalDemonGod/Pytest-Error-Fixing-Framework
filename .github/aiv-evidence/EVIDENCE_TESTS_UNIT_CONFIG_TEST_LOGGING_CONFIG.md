@@ -1,9 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/unit/config/test_logging_config.py`
-**Commit:** `6a6376f`
-**Previous:** `ba9fc19`
-**Generated:** 2026-07-15T18:08:37Z
+**Commit:** `235dd05`
+**Previous:** `d53c4e9`
+**Generated:** 2026-07-15T18:17:18Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -18,7 +18,7 @@ classification:
   blast_radius: "tests/unit/config/test_logging_config.py"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T18:08:37Z"
+  classified_at: "2026-07-15T18:17:18Z"
 ```
 
 ## Claim(s)
@@ -37,10 +37,10 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`6a6376f`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/6a6376fbab60deea017ecdb3d99a23a0458f0e50))
+**Scope Inventory** (SHA: [`235dd05`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/235dd053f2fc2f705a96c12592dc7926d857b097))
 
-- [`tests/unit/config/test_logging_config.py#L166-L167`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/6a6376fbab60deea017ecdb3d99a23a0458f0e50/tests/unit/config/test_logging_config.py#L166-L167)
-- [`tests/unit/config/test_logging_config.py#L181-L182`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/6a6376fbab60deea017ecdb3d99a23a0458f0e50/tests/unit/config/test_logging_config.py#L181-L182)
+- [`tests/unit/config/test_logging_config.py#L166-L167`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/235dd053f2fc2f705a96c12592dc7926d857b097/tests/unit/config/test_logging_config.py#L166-L167)
+- [`tests/unit/config/test_logging_config.py#L181-L182`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/235dd053f2fc2f705a96c12592dc7926d857b097/tests/unit/config/test_logging_config.py#L181-L182)
 
 ### Class A (Execution Evidence)
 
