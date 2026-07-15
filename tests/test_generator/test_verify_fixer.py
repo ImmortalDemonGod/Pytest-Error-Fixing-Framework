@@ -46,7 +46,7 @@ def _make_fixer(max_attempts=2):
     ai_manager = MagicMock()
     from branch_fixer.core.models import CodeChanges
     ai_manager.generate_fix.return_value = CodeChanges(
-        original_code="", modified_code="# fixed code\n" + "x = 1\n" * 20
+        modified_code="# fixed code\n" + "x = 1\n" * 20
     )
 
     change_applier = MagicMock()
