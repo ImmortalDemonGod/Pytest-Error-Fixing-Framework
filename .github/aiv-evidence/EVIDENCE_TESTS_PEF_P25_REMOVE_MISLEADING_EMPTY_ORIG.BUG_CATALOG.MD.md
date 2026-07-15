@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/pef-p25-remove-misleading-empty-orig.bug-catalog.md`
-**Commit:** `2068b92`
-**Generated:** 2026-07-15T18:03:23Z
+**Commit:** `27d36be`
+**Previous:** `921d350`
+**Generated:** 2026-07-15T18:06:15Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/pef-p25-remove-misleading-empty-orig.bug-catalog.md"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T18:03:23Z"
+  classified_at: "2026-07-15T18:06:15Z"
 ```
 
 ## Claim(s)
@@ -36,9 +37,11 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`2068b92`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/2068b92ea00a212818fe936a534c5b4e17e5eb22))
+**Scope Inventory** (SHA: [`27d36be`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/27d36be5eba9550e68cd363da43c97b6ce18d2fd))
 
-- [`tests/pef-p25-remove-misleading-empty-orig.bug-catalog.md#L1-L8`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/2068b92ea00a212818fe936a534c5b4e17e5eb22/tests/pef-p25-remove-misleading-empty-orig.bug-catalog.md#L1-L8)
+- [`tests/pef-p25-remove-misleading-empty-orig.bug-catalog.md#L1`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/27d36be5eba9550e68cd363da43c97b6ce18d2fd/tests/pef-p25-remove-misleading-empty-orig.bug-catalog.md#L1)
+- [`tests/pef-p25-remove-misleading-empty-orig.bug-catalog.md#L3-L9`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/27d36be5eba9550e68cd363da43c97b6ce18d2fd/tests/pef-p25-remove-misleading-empty-orig.bug-catalog.md#L3-L9)
+- [`tests/pef-p25-remove-misleading-empty-orig.bug-catalog.md#L11-L27`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/27d36be5eba9550e68cd363da43c97b6ce18d2fd/tests/pef-p25-remove-misleading-empty-orig.bug-catalog.md#L11-L27)
 
 ### Class A (Execution Evidence)
 
