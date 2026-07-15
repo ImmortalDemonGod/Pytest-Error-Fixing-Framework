@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/unit/ai/test_ai_manager.py`
-**Commit:** `33740ff`
-**Generated:** 2026-07-15T18:14:21Z
+**Commit:** `08a1bac`
+**Previous:** `e2cf2e2`
+**Generated:** 2026-07-15T18:20:28Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/unit/ai/test_ai_manager.py"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T18:14:21Z"
+  classified_at: "2026-07-15T18:20:28Z"
 ```
 
 ## Claim(s)
@@ -36,10 +37,10 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`33740ff`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/33740ff1d789c0fc391795c34b64c3e99f46277c))
+**Scope Inventory** (SHA: [`08a1bac`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/08a1bacbf14251ae0c1ee44960b8124d13f3c2a3))
 
-- [`tests/unit/ai/test_ai_manager.py#L317`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/33740ff1d789c0fc391795c34b64c3e99f46277c/tests/unit/ai/test_ai_manager.py#L317)
-- [`tests/unit/ai/test_ai_manager.py#L320`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/33740ff1d789c0fc391795c34b64c3e99f46277c/tests/unit/ai/test_ai_manager.py#L320)
+- [`tests/unit/ai/test_ai_manager.py#L317`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/08a1bacbf14251ae0c1ee44960b8124d13f3c2a3/tests/unit/ai/test_ai_manager.py#L317)
+- [`tests/unit/ai/test_ai_manager.py#L320`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/08a1bacbf14251ae0c1ee44960b8124d13f3c2a3/tests/unit/ai/test_ai_manager.py#L320)
 
 ### Class A (Execution Evidence)
 
