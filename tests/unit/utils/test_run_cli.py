@@ -176,7 +176,7 @@ class Test_fix:
                 self.warnings = []
         orchestrator_mod.FixSession = FakeFixSession
         orchestrator_mod.FixSessionState = SimpleNamespace(COMPLETED="completed")
-        monkeypatch.setitem(sys.modules, "branch_fixer.orchestration.orchestrator", orchestrator_mod)
+        sys.modules["branch_fixer.orchestration.orchestrator"] = orchestrator_mod
 
         # Patch platform info for deterministic environment_info
         monkeypatch.setattr(run_cli.platform, "system", lambda: "TestOS")
@@ -214,7 +214,7 @@ class Test_fix:
         # Ensure process_pytest_results returns empty list
         err_proc_mod = types.ModuleType("branch_fixer.services.pytest.error_processor")
         err_proc_mod.process_pytest_results = lambda result: []
-        monkeypatch.setitem(sys.modules, "branch_fixer.services.pytest.error_processor", err_proc_mod)
+        sys.modules["branch_fixer.services.pytest.error_processor"] = err_proc_mod
 
         res = run_cli.fix.callback(
             api_key="key",
@@ -244,7 +244,7 @@ class Test_fix:
             return [SimpleNamespace(test_file=Path("tests/test_x.py"), test_function="test_x")]
         err_proc_mod = types.ModuleType("branch_fixer.services.pytest.error_processor")
         err_proc_mod.process_pytest_results = fake_process
-        monkeypatch.setitem(sys.modules, "branch_fixer.services.pytest.error_processor", err_proc_mod)
+        sys.modules["branch_fixer.services.pytest.error_processor"] = err_proc_mod
 
         res = run_cli.fix.callback(
             api_key="key",
@@ -271,7 +271,7 @@ class Test_fix:
         # Return two fake errors
         err_proc_mod = types.ModuleType("branch_fixer.services.pytest.error_processor")
         err_proc_mod.process_pytest_results = lambda result: [SimpleNamespace(), SimpleNamespace()]
-        monkeypatch.setitem(sys.modules, "branch_fixer.services.pytest.error_processor", err_proc_mod)
+        sys.modules["branch_fixer.services.pytest.error_processor"] = err_proc_mod
 
         res = run_cli.fix.callback(
             api_key="key",
