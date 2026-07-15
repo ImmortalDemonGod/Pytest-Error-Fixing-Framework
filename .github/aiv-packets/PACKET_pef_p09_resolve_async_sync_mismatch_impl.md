@@ -6,10 +6,10 @@
 |-------|-------|
 | **Repository** | github.com/ImmortalDemonGod/aiv-protocol |
 | **Change ID** | pef-p09-resolve-async-sync-mismatch-impl |
-| **Commits** | `be73ac1` |
-| **Head SHA** | `be73ac1` |
-| **Base SHA** | `7b0d656` |
-| **Created** | 2026-07-15T18:05:08Z |
+| **Commits** | `de01122` |
+| **Head SHA** | `de01122` |
+| **Base SHA** | `21c400f` |
+| **Created** | 2026-07-15T18:16:54Z |
 
 ## Classification
 
@@ -21,7 +21,7 @@ classification:
   blast_radius: component
   classification_rationale: "TODO: Describe why this tier was chosen"
   classified_by: "Claude"
-  classified_at: "2026-07-15T18:05:08Z"
+  classified_at: "2026-07-15T18:16:54Z"
 ```
 
 ## Claims
@@ -35,13 +35,13 @@ classification:
 
 | # | Evidence File | Commit SHA | Classes |
 |---|---------------|------------|---------|
-| 1 | EVIDENCE_TESTS_UNIT_STORAGE_TEST_RECOVERY.md | `be73ac1` | A, B, E |
+| 1 | EVIDENCE_TESTS_UNIT_STORAGE_TEST_RECOVERY.md | `de01122` | A, B, E |
 
 
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (from 29 file references across evidence files)
+**Scope Inventory** (from 30 file references across evidence files)
 
 - `tests/unit/storage/test_recovery.py#L133`
 - `tests/unit/storage/test_recovery.py#L143`
@@ -62,6 +62,7 @@ classification:
 - `tests/unit/storage/test_recovery.py#L248`
 - `tests/unit/storage/test_recovery.py#L253`
 - `tests/unit/storage/test_recovery.py#L256`
+- `tests/unit/storage/test_recovery.py#L270`
 - `tests/unit/storage/test_recovery.py#L273`
 - `tests/unit/storage/test_recovery.py#L282`
 - `tests/unit/storage/test_recovery.py#L288`
