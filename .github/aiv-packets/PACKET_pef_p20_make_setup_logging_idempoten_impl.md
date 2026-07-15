@@ -6,10 +6,10 @@
 |-------|-------|
 | **Repository** | github.com/ImmortalDemonGod/aiv-protocol |
 | **Change ID** | pef-p20-make-setup-logging-idempoten-impl |
-| **Commits** | `d53c4e9` |
-| **Head SHA** | `d53c4e9` |
-| **Base SHA** | `6a6376f` |
-| **Created** | 2026-07-15T18:08:46Z |
+| **Commits** | `6e3825b` |
+| **Head SHA** | `6e3825b` |
+| **Base SHA** | `235dd05` |
+| **Created** | 2026-07-15T18:17:26Z |
 
 ## Classification
 
@@ -21,7 +21,7 @@ classification:
   blast_radius: component
   classification_rationale: "TODO: Describe why this tier was chosen"
   classified_by: "Claude"
-  classified_at: "2026-07-15T18:08:46Z"
+  classified_at: "2026-07-15T18:17:26Z"
 ```
 
 ## Claims
@@ -35,7 +35,7 @@ classification:
 
 | # | Evidence File | Commit SHA | Classes |
 |---|---------------|------------|---------|
-| 1 | EVIDENCE_TESTS_UNIT_CONFIG_TEST_LOGGING_CONFIG.md | `d53c4e9` | A, B, E |
+| 1 | EVIDENCE_TESTS_UNIT_CONFIG_TEST_LOGGING_CONFIG.md | `6e3825b` | A, B, E |
 
 
 
