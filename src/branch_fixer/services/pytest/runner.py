@@ -55,10 +55,8 @@ class PytestPlugin:
 
     @pytest.hookimpl
     def pytest_collection_modifyitems(self, session, config, items) -> None:
-        """Print information about collected tests."""
-        # print(f"Collected {len(items)} test items:")
-        for item in items:
-            print(f"  - {item.nodeid}")
+        """Handle collected tests without polluting stdout."""
+        logger.debug(f"Collected {len(items)} test items: {[item.nodeid for item in items]}")
 
     @pytest.hookimpl
     def pytest_runtest_logreport(self, report: TestReport) -> None:
