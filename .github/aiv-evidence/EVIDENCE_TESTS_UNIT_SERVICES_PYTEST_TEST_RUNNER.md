@@ -1,9 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/unit/services/pytest/test_runner.py`
-**Commit:** `7e0273e`
-**Previous:** `d8cf373`
-**Generated:** 2026-07-15T17:56:06Z
+**Commit:** `e652db9`
+**Previous:** `d9cf577`
+**Generated:** 2026-07-15T18:09:17Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -18,7 +18,7 @@ classification:
   blast_radius: "tests/unit/services/pytest/test_runner.py"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T17:56:06Z"
+  classified_at: "2026-07-15T18:09:17Z"
 ```
 
 ## Claim(s)
@@ -37,9 +37,9 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`7e0273e`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/7e0273e8668e513b781961e004752765b6337c7f))
+**Scope Inventory** (SHA: [`e652db9`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/e652db99aaf9934f256b7084edafa7841a6b1d14))
 
-- [`tests/unit/services/pytest/test_runner.py#L144`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/7e0273e8668e513b781961e004752765b6337c7f/tests/unit/services/pytest/test_runner.py#L144)
+- [`tests/unit/services/pytest/test_runner.py#L144`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/e652db99aaf9934f256b7084edafa7841a6b1d14/tests/unit/services/pytest/test_runner.py#L144)
 
 ### Class A (Execution Evidence)
 
