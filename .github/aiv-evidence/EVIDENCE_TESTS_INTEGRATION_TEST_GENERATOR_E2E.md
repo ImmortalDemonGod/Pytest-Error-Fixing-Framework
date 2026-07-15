@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/integration/test_generator_e2e.py`
-**Commit:** `d754fe2`
-**Generated:** 2026-07-15T18:04:20Z
+**Commit:** `2af9916`
+**Previous:** `29bdec6`
+**Generated:** 2026-07-15T18:10:09Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/integration/test_generator_e2e.py"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T18:04:20Z"
+  classified_at: "2026-07-15T18:10:09Z"
 ```
 
 ## Claim(s)
@@ -36,9 +37,9 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`d754fe2`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/d754fe223ab7c6cb99ccaa61084110a0cef10fbc))
+**Scope Inventory** (SHA: [`2af9916`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/2af9916eda62a220b20211052bd379713fd96d23))
 
-- [`tests/integration/test_generator_e2e.py#L182-L185`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/d754fe223ab7c6cb99ccaa61084110a0cef10fbc/tests/integration/test_generator_e2e.py#L182-L185)
+- [`tests/integration/test_generator_e2e.py#L182-L185`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/2af9916eda62a220b20211052bd379713fd96d23/tests/integration/test_generator_e2e.py#L182-L185)
 
 ### Class A (Execution Evidence)
 
