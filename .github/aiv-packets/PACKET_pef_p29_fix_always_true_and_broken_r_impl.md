@@ -6,10 +6,10 @@
 |-------|-------|
 | **Repository** | github.com/ImmortalDemonGod/aiv-protocol |
 | **Change ID** | pef-p29-fix-always-true-and-broken-r-impl |
-| **Commits** | `cda07e1`, `a95b8c3` |
-| **Head SHA** | `a95b8c3` |
-| **Base SHA** | `594620f` |
-| **Created** | 2026-07-15T18:14:26Z |
+| **Commits** | `c4ebca5`, `95bc238` |
+| **Head SHA** | `95bc238` |
+| **Base SHA** | `8f55a53` |
+| **Created** | 2026-07-15T18:19:13Z |
 
 ## Classification
 
@@ -21,7 +21,7 @@ classification:
   blast_radius: component
   classification_rationale: "TODO: Describe why this tier was chosen"
   classified_by: "Claude"
-  classified_at: "2026-07-15T18:14:26Z"
+  classified_at: "2026-07-15T18:19:13Z"
 ```
 
 ## Claims
@@ -35,16 +35,17 @@ classification:
 
 | # | Evidence File | Commit SHA | Classes |
 |---|---------------|------------|---------|
-| 1 | EVIDENCE_TESTS_UNIT_ORCHESTRATION_TEST_ORCHESTRATOR.md | `cda07e1` | A, B, E |
-| 2 | EVIDENCE_TESTS_UNIT_SERVICES_PYTEST_TEST_RUNNER.md | `a95b8c3` | A, B, E |
+| 1 | EVIDENCE_TESTS_UNIT_ORCHESTRATION_TEST_ORCHESTRATOR.md | `c4ebca5` | A, B, E |
+| 2 | EVIDENCE_TESTS_UNIT_SERVICES_PYTEST_TEST_RUNNER.md | `95bc238` | A, B, E |
 
 
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (from 2 file references across evidence files)
+**Scope Inventory** (from 3 file references across evidence files)
 
-- `tests/unit/orchestration/test_orchestrator.py#L583`
+- `tests/unit/orchestration/test_orchestrator.py#L581-L582`
+- `tests/unit/orchestration/test_orchestrator.py#L585-L586`
 - `tests/unit/services/pytest/test_runner.py#L470`
 
 ---
