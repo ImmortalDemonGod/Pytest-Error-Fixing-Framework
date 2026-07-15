@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/unit/services/pytest/test_runner.py`
-**Commit:** `b5e028e`
-**Generated:** 2026-07-15T17:47:43Z
+**Commit:** `6ed4f4c`
+**Previous:** `8f8fd09`
+**Generated:** 2026-07-15T17:51:46Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,7 +18,7 @@ classification:
   blast_radius: "tests/unit/services/pytest/test_runner.py"
   classification_rationale: "R1"
   classified_by: "Claude"
-  classified_at: "2026-07-15T17:47:43Z"
+  classified_at: "2026-07-15T17:51:46Z"
 ```
 
 ## Claim(s)
@@ -36,17 +37,16 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`b5e028e`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/b5e028e98dedf105620ebe994afd63ebe54b5233))
+**Scope Inventory** (SHA: [`6ed4f4c`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/tree/6ed4f4c78ab1e0954df14796d239de683315d5bd))
 
-- [`tests/unit/services/pytest/test_runner.py#L137`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/b5e028e98dedf105620ebe994afd63ebe54b5233/tests/unit/services/pytest/test_runner.py#L137)
-- [`tests/unit/services/pytest/test_runner.py#L144`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/b5e028e98dedf105620ebe994afd63ebe54b5233/tests/unit/services/pytest/test_runner.py#L144)
+- [`tests/unit/services/pytest/test_runner.py#L144`](https://github.com/ImmortalDemonGod/Pytest-Error-Fixing-Framework/blob/6ed4f4c78ab1e0954df14796d239de683315d5bd/tests/unit/services/pytest/test_runner.py#L144)
 
 ### Class A (Execution Evidence)
 
 **Per-symbol test coverage (AST analysis):**
 
-- **`TestPytestPlugin`** (L137): FAIL -- WARNING: No tests import or call `TestPytestPlugin`
-- **`TestPytestPlugin.test_pytest_collection_modifyitems_emits_no_stdout`** (L144): FAIL -- WARNING: No tests import or call `test_pytest_collection_modifyitems_emits_no_stdout`
+- **`TestPytestPlugin`** (L144): FAIL -- WARNING: No tests import or call `TestPytestPlugin`
+- **`TestPytestPlugin.test_pytest_collection_modifyitems_prints_nodeids`** (unknown): FAIL -- WARNING: No tests import or call `test_pytest_collection_modifyitems_prints_nodeids`
 
 **Coverage summary:** 0/2 symbols verified by tests.
 
